@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolidGround", "Server\SolidGround.csproj", "{25E5EBA6-3FEC-40CD-AF37-C567F4E57A7C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolidGround", "Server\Server.csproj", "{25E5EBA6-3FEC-40CD-AF37-C567F4E57A7C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

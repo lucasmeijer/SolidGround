@@ -79,8 +79,8 @@ public class InputComponent
     public Input Input { get; set; }
 
     public ComponentType Type { get; set; }
-    public string StringValue { get; set; }
-    public byte[] BinaryValue { get; set; }
+    public string? StringValue { get; set; }
+    public byte[]? BinaryValue { get; set; }
 }
 
 public enum ComponentType
