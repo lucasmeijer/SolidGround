@@ -1,0 +1,9 @@
+### GET request to example server
+POST https://localhost:7109/api/inputs
+Content-Type: application/json
+
+{
+    "appName": "TestApp",
+    "data": "Sample input data"
+}
+
