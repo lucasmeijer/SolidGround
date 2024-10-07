@@ -51,7 +51,7 @@ public class Execution
     public int Id { get; set; }
     public DateTime StartTime { get; set; }
     public string Name { get; set; }
-    public List<Output> Outputs { get; set; } = new();
+    public List<Output> Outputs { get; set; } = [];
 }
 
 public enum ExecutionStatus
@@ -101,8 +101,6 @@ public class Output
     public Input Input { get; set; }
 
     public ExecutionStatus Status { get; set; }
-    
-    public bool IsComplete { get; set; }
 
     public List<OutputComponent> Components { get; set; } = [];
 }
@@ -117,6 +115,3 @@ public class OutputComponent
     public string Name { get; set; }
     public string? Value { get; set; }
 }
-
-
-record InputsParams(string AppName, string Data);

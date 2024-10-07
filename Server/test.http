@@ -7,3 +7,12 @@ Content-Type: application/json
     "data": "Sample input data"
 }
 
+###
+POST https://localhost:7109/api/execution
+Content-Type: application/json
+
+{
+  "inputids": [1,2],
+  "name": "production"  
+}
+

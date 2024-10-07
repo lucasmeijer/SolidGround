@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SolidGround;
 
@@ -10,9 +11,11 @@ using SolidGround;
 namespace SolidGround.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241007124410_optionality")]
+    partial class optionality
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
@@ -84,6 +87,9 @@ namespace SolidGround.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("InputId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsComplete")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Status")

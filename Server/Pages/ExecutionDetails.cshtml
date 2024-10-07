@@ -1,0 +1,104 @@
+@page "/Executions/{id:int}"
+@model SolidGround.Pages.ExecutionDetailsModel
+@{
+    ViewData["Title"] = $"Execution Details - {Model.Execution.Name}";
+
+    ExecutionStatus StatusForAll()
+    {
+        if (Model.Execution.Outputs.All(o => o.Status == ExecutionStatus.Completed))
+            return ExecutionStatus.Completed;
+        return Model.Execution.Outputs.Any(o => o.Status == ExecutionStatus.Failed) 
+            ? ExecutionStatus.Failed 
+            : ExecutionStatus.Started;
+    }
+
+    var allStatus = StatusForAll();
+
+    var executionBgColor = allStatus switch
+    {
+        ExecutionStatus.Completed => "bg-green-50",
+        ExecutionStatus.Started => "bg-blue-50",
+        ExecutionStatus.Failed => "bg-red-50",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+    string TruncateString(string input, int wordCount)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+        var words = input.Split(' ');
+        return words.Length <= wordCount ? input : string.Join(" ", words.Take(wordCount)) + "...";
+    }
+}
+
+<div class="container mx-auto px-2 py-4">
+    <div class="flex justify-between items-center mb-4 @executionBgColor p-2 rounded">
+        <h1 class="text-xl font-bold">@Model.Execution.Name</h1>
+        <span class="text-sm text-gray-600">Started: @Model.Execution.StartTime.ToString("yyyy-MM-dd HH:mm:ss")</span>
+    </div>
+
+    @foreach (var output in Model.Execution.Outputs)
+    {
+        <div class="bg-white shadow-sm rounded-md mb-2 overflow-hidden">
+            <div class="p-2 @(output.Status == ExecutionStatus.Failed ? "bg-red-100" : "")">
+                @if (output.Status == ExecutionStatus.Started)
+                {
+                    <div class="flex items-center justify-center py-4">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    </div>
+                }
+                else
+                {
+                    <div class="space-y-2">
+                        <div class="border rounded-lg">
+                            <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this, 'inputComponents')">
+                                <span class="text-sm font-semibold">Input Components</span>
+                                <svg class="w-4 h-4 transform transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            <div class="hidden p-2" id="inputComponents">
+                                @foreach (var component in output.Input.Components)
+                                {
+                                    <details class="mb-1">
+                                        <summary class="text-xs cursor-pointer hover:bg-gray-100 p-1 rounded">@component.Type: @TruncateString(component.StringValue ?? "Binary Data", 10)</summary>
+                                        <div class="text-xs p-1 bg-gray-50 rounded mt-1 max-w-full overflow-x-auto">
+                                            @(component.StringValue ?? "Binary Data")
+                                        </div>
+                                    </details>
+                                }
+                            </div>
+                        </div>
+                        <div class="border rounded-lg">
+                            <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this, 'outputComponents')">
+                                <span class="text-sm font-semibold">Output Components</span>
+                                <svg class="w-4 h-4 transform transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            <div class="hidden p-2" id="outputComponents">
+                                @foreach (var component in output.Components)
+                                {
+                                    <details class="mb-1">
+                                        <summary class="text-xs cursor-pointer hover:bg-gray-100 p-1 rounded">@component.Name</summary>
+                                        <div class="text-xs p-1 bg-gray-50 rounded mt-1 max-w-full overflow-x-auto">
+                                            @component.Value
+                                        </div>
+                                    </details>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<script>
+    function toggleAccordion(button, contentId) {
+        const content = button.nextElementSibling;
+        const icon = button.querySelector('svg');
+        content.classList.toggle('hidden');
+        icon.classList.toggle('rotate-180');
+    }
+</script>
