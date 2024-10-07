@@ -8,7 +8,8 @@ using Microsoft.EntityFrameworkCore;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Input> Inputs { get; set; }
-    public DbSet<InputComponent> InputComponents { get; set; }
+    public DbSet<InputString> InputStrings { get; set; }
+    public DbSet<InputFile> InputFiles { get; set; }
     public DbSet<Output> Outputs { get; set; }
     public DbSet<OutputComponent> OutputComponents { get; set; }
     public DbSet<Execution> Executions { get; set; }
@@ -22,9 +23,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(o => o.ExecutionId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Configure Input -> InputComponent relationship
+        // Configure Input -> InputStrings relationship
         modelBuilder.Entity<Input>()
-            .HasMany(i => i.Components)
+            .HasMany(i => i.Strings)
+            .WithOne(ic => ic.Input)
+            .HasForeignKey(ic => ic.InputId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        // Configure Input -> InputFiles relationship
+        modelBuilder.Entity<Input>()
+            .HasMany(i => i.Files)
             .WithOne(ic => ic.Input)
             .HasForeignKey(ic => ic.InputId)
             .OnDelete(DeleteBehavior.Cascade);
@@ -65,13 +73,13 @@ public enum ExecutionStatus
 public class Input
 {
     public int Id { get; set; }
-
     public string? Name { get; set; }
-    
-    public List<InputComponent> Components { get; set; } = [];
+    public List<InputString> Strings { get; set; } = [];
+    public List<InputFile> Files { get; set; } = [];
+    public string RawJson { get; set; }
 }
 
-public class InputComponent
+public class InputString
 {
     public int Id { get; set; }
 
@@ -79,9 +87,25 @@ public class InputComponent
     public int InputId { get; set; }
     public Input Input { get; set; }
 
-    public ComponentType Type { get; set; }
-    public string? StringValue { get; set; }
-    public byte[]? BinaryValue { get; set; }
+    public string Name { get; set; }
+    
+    public int Index { get; set; }
+    public string StringValue { get; set; }
+}
+
+public class InputFile
+{
+    public int Id { get; set; }
+
+    // Foreign key to Input
+    public int InputId { get; set; }
+    public Input Input { get; set; }
+
+    public string Name { get; set; }
+    
+    public int Index { get; set; }
+    public string MimeType { get; set; }
+    public byte[] Bytes { get; set; }
 }
 
 public enum ComponentType

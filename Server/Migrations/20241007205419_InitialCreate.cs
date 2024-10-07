@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace SolidGround.Migrations
+namespace Server.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -18,7 +18,8 @@ namespace SolidGround.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     StartTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false)
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    IsReference = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -31,7 +32,8 @@ namespace SolidGround.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", nullable: true)
+                    Name = table.Column<string>(type: "TEXT", nullable: true),
+                    RawJson = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -39,21 +41,44 @@ namespace SolidGround.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "InputComponents",
+                name: "InputFiles",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     InputId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Type = table.Column<int>(type: "INTEGER", nullable: false),
-                    StringValue = table.Column<string>(type: "TEXT", nullable: false),
-                    BinaryValue = table.Column<byte[]>(type: "BLOB", nullable: false)
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Index = table.Column<int>(type: "INTEGER", nullable: false),
+                    MimeType = table.Column<string>(type: "TEXT", nullable: false),
+                    Bytes = table.Column<byte[]>(type: "BLOB", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_InputComponents", x => x.Id);
+                    table.PrimaryKey("PK_InputFiles", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_InputComponents_Inputs_InputId",
+                        name: "FK_InputFiles_Inputs_InputId",
+                        column: x => x.InputId,
+                        principalTable: "Inputs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "InputStrings",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    InputId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Index = table.Column<int>(type: "INTEGER", nullable: false),
+                    StringValue = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_InputStrings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_InputStrings_Inputs_InputId",
                         column: x => x.InputId,
                         principalTable: "Inputs",
                         principalColumn: "Id",
@@ -68,8 +93,7 @@ namespace SolidGround.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     ExecutionId = table.Column<int>(type: "INTEGER", nullable: false),
                     InputId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsComplete = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Status = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -110,8 +134,13 @@ namespace SolidGround.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_InputComponents_InputId",
-                table: "InputComponents",
+                name: "IX_InputFiles_InputId",
+                table: "InputFiles",
+                column: "InputId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_InputStrings_InputId",
+                table: "InputStrings",
                 column: "InputId");
 
             migrationBuilder.CreateIndex(
@@ -134,7 +163,10 @@ namespace SolidGround.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "InputComponents");
+                name: "InputFiles");
+
+            migrationBuilder.DropTable(
+                name: "InputStrings");
 
             migrationBuilder.DropTable(
                 name: "OutputComponents");

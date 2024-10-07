@@ -1,34 +1,94 @@
 @page "/Executions/{id:int}"
+@using Microsoft.AspNetCore.Mvc.Razor
 @model SolidGround.Pages.ExecutionDetailsModel
 @{
-ViewData["Title"] = $"Execution Details - {Model.Execution.Name}";
+    ViewData["Title"] = $"Execution Details - {Model.Execution.Name}";
 
-ExecutionStatus StatusForAll()
-{
-if (Model.Execution.Outputs.All(o => o.Status == ExecutionStatus.Completed))
-return ExecutionStatus.Completed;
-return Model.Execution.Outputs.Any(o => o.Status == ExecutionStatus.Failed)
-? ExecutionStatus.Failed
-: ExecutionStatus.Started;
+    ExecutionStatus StatusForAll()
+    {
+        if (Model.Execution.Outputs.All(o => o.Status == ExecutionStatus.Completed))
+            return ExecutionStatus.Completed;
+        return Model.Execution.Outputs.Any(o => o.Status == ExecutionStatus.Failed)
+            ? ExecutionStatus.Failed
+            : ExecutionStatus.Started;
+    }
+
+    var allStatus = StatusForAll();
+
+    var executionBgColor = allStatus switch
+    {
+        ExecutionStatus.Completed => "bg-green-50",
+        ExecutionStatus.Started => "bg-blue-50",
+        ExecutionStatus.Failed => "bg-red-50",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+    void AccordionTitle(string name, bool startOpened)
+    {
+        <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this)">
+            <span class="text-sm font-semibold">@name</span>
+            <svg class="w-4 h-4 transform transition-transform duration-200 @(startOpened ? "rotate-180" : "")" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+        </button>
+    }
+
+    void AccordionRow(string caption, Func<object, HelperResult> content, bool startOpened)
+    {
+        <div class="border-t">
+            <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this)">
+                <span class="text-xs">@caption</span>
+                <svg class="w-3 h-3 transform transition-transform duration-200 @(startOpened ? "rotate-180" : "")" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+            <div class="@(startOpened ? "" : "hidden")">
+                <div class="text-xs p-2 bg-gray-50">
+                    @content(null!)
+                </div>
+            </div>
+        </div>
+    }
+    
+    void EmitOutput(string name, Output output, bool firstRowStartsOpened, bool outputStartsOpened)
+    {
+        <div class="border rounded-lg m-4">
+            @{ AccordionTitle(name, outputStartsOpened); }
+            <div class="@(outputStartsOpened ? "" : "hidden")">
+                @{
+                    var isFirst = true;
+                    foreach (var component in output.Components)
+                    {
+                        AccordionRow(component.Name, @<text>@component.Value</text>, isFirst && firstRowStartsOpened);
+                        isFirst = false;
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    void EmitInput(Input input)
+    {
+        <div class="border rounded-lg m-4">
+            @{ AccordionTitle("Input", false); }
+            <div class="hidden">
+                @foreach (var inputString in input.Strings)
+                {
+                    AccordionRow(inputString.Name, @<text>@inputString.StringValue</text>, true );
+                }
+                @foreach (var inputFile in input.Files)
+                {
+                    AccordionRow(inputFile.Name, @<img src="/images/@inputFile.Input/@inputFile.Index"/>, true);
+                }
+            </div>
+        </div>
+    }
 }
-
-var allStatus = StatusForAll();
-
-var executionBgColor = allStatus switch
-{
-ExecutionStatus.Completed => "bg-green-50",
-ExecutionStatus.Started => "bg-blue-50",
-ExecutionStatus.Failed => "bg-red-50",
-_ => throw new ArgumentOutOfRangeException()
-};
-
-string TruncateString(string input, int wordCount)
-{
-if (string.IsNullOrWhiteSpace(input)) return string.Empty;
-var words = input.Split(' ');
-return words.Length <= wordCount ? input : string.Join(" ", words.Take(wordCount)) + "...";
-}
-}
+<style>
+    html {
+        overflow-y: scroll;
+    }
+</style>
 
 <div class="container mx-auto px-2 py-4">
     <div class="flex justify-between items-center mb-4 @executionBgColor p-2 rounded">
@@ -38,8 +98,7 @@ return words.Length <= wordCount ? input : string.Join(" ", words.Take(wordCount
 
     @foreach (var output in Model.Execution.Outputs)
     {
-    <div class="bg-white shadow-sm rounded-md mb-8 overflow-hidden">
-        <div class="p-2 @(output.Status == ExecutionStatus.Failed ? "bg-red-100" : "")">
+        <div class="bg-white shadow rounded-md mb-12 overflow-hidden @(output.Status == ExecutionStatus.Failed ? "bg-red-100" : "")">
             @if (output.Status == ExecutionStatus.Started)
             {
             <div class="flex items-center justify-center py-4">
@@ -48,64 +107,15 @@ return words.Length <= wordCount ? input : string.Join(" ", words.Take(wordCount
             }
             else
             {
-            <div class="space-y-2">
-                <div class="border rounded-lg">
-                    <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this)">
-                        <span class="text-sm font-semibold">Input Components</span>
-                        <svg class="w-4 h-4 transform transition-transform duration-200 rotate-180" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
-                    </button>
-                    <div>
-                        @foreach (var component in output.Input.Components)
-                        {
-                        <div class="border-t">
-                            <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this)">
-                                <span class="text-xs">@component.Type: @TruncateString(component.StringValue ?? "Binary Data", 10)</span>
-                                <svg class="w-3 h-3 transform transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                                </svg>
-                            </button>
-                            <div class="hidden">
-                                <div class="text-xs p-2 bg-gray-50">
-                                    @(component.StringValue ?? "Binary Data")
-                                </div>
-                            </div>
-                        </div>
-                        }
-                    </div>
-                </div>
-                <div class="border rounded-lg">
-                    <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this)">
-                        <span class="text-sm font-semibold">Output Components</span>
-                        <svg class="w-4 h-4 transform transition-transform duration-200 rotate-180" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
-                    </button>
-                    <div>
-                        @{var isFirst = true;}
-                        @foreach (var component in output.Components)
-                        {
-                        <div class="border-t">
-                            <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this)">
-                                <span class="text-xs">@component.Name</span>
-                                <svg class="w-3 h-3 transform transition-transform duration-200 @(isFirst ? "rotate-180" : "")" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                                </svg>
-                            </button>
-                            <div class="@(isFirst ? "" : "hidden")">
-                                <div class="text-xs p-2 bg-gray-50">
-                                    @component.Value
-                                </div>
-                            </div>
-                        </div>
-                        isFirst = false;
-                        }
-                    </div>
-                </div>
-            </div>
+                EmitOutput(Model.Execution.Name, output, true, true);
+                foreach (var referenceExecution in Model.AllReferences)
+                {
+                    Output? o = Model.FindOutput(referenceExecution, output);
+                    if (o != null)
+                        EmitOutput(referenceExecution.Name, o, true, false);
+                }
+                EmitInput(output.Input);
             }
-        </div>
     </div>
     }
 </div>

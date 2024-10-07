@@ -5,26 +5,25 @@ using System.Threading.Tasks;
 
 namespace SolidGround.Pages
 {
-    public class ExecutionDetailsModel : PageModel
+    public class ExecutionDetailsModel(AppDbContext context) : PageModel
     {
-        private readonly AppDbContext _context;
-
         public Execution Execution { get; set; }
-
-        public ExecutionDetailsModel(AppDbContext context)
-        {
-            _context = context;
-        }
+        public IQueryable<Execution> AllReferences { get; set; }
 
         public async Task<IActionResult> OnGetAsync(int id)
         {
-            var execution = await _context.Executions
+            var execution = await context.Executions
                 .Include(e => e.Outputs)
                 .ThenInclude(o => o.Input)
-                .ThenInclude(i => i.Components)
+                .ThenInclude(i => i.Strings)
                 .Include(e => e.Outputs)
                 .ThenInclude(o => o.Components)
                 .FirstOrDefaultAsync(e => e.Id == id);
+
+            AllReferences = context.Executions
+                .Where(e => e.IsReference && e != execution)
+                .Include(e => e.Outputs)
+                .ThenInclude(o => o.Components);
             
             if (execution == null)
                 return NotFound();
@@ -32,6 +31,12 @@ namespace SolidGround.Pages
             Execution = execution;
 
             return Page();
+        }
+
+
+        public Output? FindOutput(Execution referenceExecution, Output output)
+        {
+            return referenceExecution.Outputs.FirstOrDefault(o => o.InputId == output.InputId);
         }
     }
 }

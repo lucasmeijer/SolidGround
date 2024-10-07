@@ -3,8 +3,8 @@ POST https://localhost:7109/api/inputs
 Content-Type: application/json
 
 {
-    "appName": "TestApp",
-    "data": "Sample input data"
+    "text": "the moment, so blinded by desire, that they cannot foresee the pain and trouble that are bound to ensue; and equal blame belongs to those who fail in their duty through weakness of will, which is the same as saying through shrinking from toil and pain. These cases are perfectly simple and easy to distinguish. In a free hour, when our power of choice is untrammelled and when nothing prevents our being able to do what we like best, every pleasure is to be welcomed and every pain avoided. But in certain circumstances and owing to the claims of duty or the obligations of business it will frequently occur that pleasures have to be repudiated and annoyances accepted. The wise man therefore always holds in these matters to this principle of selection",
+    "language": "nl_NL"
 }
 
 ###
@@ -12,7 +12,7 @@ POST https://localhost:7109/api/executions
 Content-Type: application/json
 
 {
-  "inputids": [1,2],
-  "name": "production"  
+  "inputids": [1,2,3,4],
+  "name": "experiment"  
 }
 

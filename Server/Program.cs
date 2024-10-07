@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using SolidGround;
 
@@ -31,21 +32,74 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
 
-app.MapPost("/api/inputs", async (RestInput restInput, AppDbContext db) =>
+app.MapPost("/api/inputs", async (HttpRequest request, AppDbContext db) =>
 {
-    InputComponent InputComponentFor(RestInputComponent ric) => new()
+    using var sr = new StreamReader(request.Body);
+    var body = await sr.ReadToEndAsync();
+    var jsonDocument = JsonDocument.Parse(body);
+    
+    IEnumerable<InputString> InputStrings()
     {
-        Type = ric.Type,
-        BinaryValue = ric.Type is ComponentType.File or ComponentType.Image
-            ? Convert.FromBase64String(ric.Data)
-            : null,
-        StringValue = ric.Type is ComponentType.String ? ric.Data : null,
-    };
+        int counter = 0;
+        foreach (var kvp in jsonDocument.RootElement.EnumerateObject())
+        {
+            if (kvp.Value.ValueKind == JsonValueKind.String)
+            {
+                yield return new()
+                {
+                    Name = kvp.Name,
+                    StringValue = kvp.Value.GetString()!, 
+                    Index = counter++
+                };
+            }
 
-    var newInput = new Input
+            if (kvp.Value.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var o in kvp.Value.EnumerateArray().Where(o => o.ValueKind == JsonValueKind.String))
+                    yield return new() { Name = kvp.Name, StringValue = o.GetString()!, Index = counter++ };
+            }
+        }
+    }
+    
+    IEnumerable<InputFile> InputFiles()
     {
-        Name = restInput.Name,
-        Components = [..restInput.Components.Select(InputComponentFor)]
+        int counter = 0;
+        foreach (var kvp in jsonDocument.RootElement.EnumerateObject())
+        {
+            InputFile InputFileFor(string name, int index, JsonElement o)
+            {
+                if (!o.TryGetProperty("mimetype", out var mimeTypeElement) || mimeTypeElement.ValueKind != JsonValueKind.String)
+                    throw new ArgumentException("No mimetype");
+                if (!o.TryGetProperty("base64", out var base64Element) || mimeTypeElement.ValueKind != JsonValueKind.String)
+                    throw new ArgumentException("No base64 element");
+
+                return new()
+                {
+                    Name = name,
+                    Index = index,
+                    MimeType = mimeTypeElement.GetString()!,
+                    Bytes = Convert.FromBase64String(base64Element.GetString()!)
+                };
+            }
+
+            if (kvp.Value.ValueKind == JsonValueKind.Object)
+            {
+                yield return InputFileFor(kvp.Name, counter++, kvp.Value);
+            }
+
+            if (kvp.Value.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var o in kvp.Value.EnumerateArray().Where(o => o.ValueKind == JsonValueKind.Object))
+                    yield return InputFileFor(kvp.Name, counter++, o);
+            }
+        }
+    }
+
+    var newInput = new Input()
+    {
+        Files = InputFiles().ToList(),
+        Strings = InputStrings().ToList(),
+        RawJson = body
     };
 
     db.Inputs.Add(newInput);
@@ -165,8 +219,9 @@ async Task ExecutionForInput(int inputId, RestExecution restExecution, Output ou
     await dbContext.SaveChangesAsync();
 }
 
-record RestInput(string? Name, RestInputComponent[] Components);
-record RestInputComponent(ComponentType Type, string Data);
+// record RestInput(string? Name, RestInputComponent[] Components);
+// record RestInputComponent(ComponentType Type, string Data);
+
 record RestExecution(int[] InputIds, string Endpoint, string Name);
 
 record RestPatchExecutionRequest(bool IsReference);

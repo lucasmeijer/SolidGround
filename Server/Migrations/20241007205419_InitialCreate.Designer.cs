@@ -8,11 +8,11 @@ using SolidGround;
 
 #nullable disable
 
-namespace SolidGround.Migrations
+namespace Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241007151752_removecomplete")]
-    partial class removecomplete
+    [Migration("20241007205419_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,9 @@ namespace SolidGround.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsReference")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
@@ -47,34 +50,71 @@ namespace SolidGround.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RawJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Inputs");
                 });
 
-            modelBuilder.Entity("SolidGround.InputComponent", b =>
+            modelBuilder.Entity("SolidGround.InputFile", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<byte[]>("BinaryValue")
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
                         .HasColumnType("BLOB");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("InputId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("StringValue")
+                    b.Property<string>("MimeType")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("InputId");
 
-                    b.ToTable("InputComponents");
+                    b.ToTable("InputFiles");
+                });
+
+            modelBuilder.Entity("SolidGround.InputString", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("InputId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StringValue")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InputId");
+
+                    b.ToTable("InputStrings");
                 });
 
             modelBuilder.Entity("SolidGround.Output", b =>
@@ -124,10 +164,21 @@ namespace SolidGround.Migrations
                     b.ToTable("OutputComponents");
                 });
 
-            modelBuilder.Entity("SolidGround.InputComponent", b =>
+            modelBuilder.Entity("SolidGround.InputFile", b =>
                 {
                     b.HasOne("SolidGround.Input", "Input")
-                        .WithMany("Components")
+                        .WithMany("Files")
+                        .HasForeignKey("InputId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Input");
+                });
+
+            modelBuilder.Entity("SolidGround.InputString", b =>
+                {
+                    b.HasOne("SolidGround.Input", "Input")
+                        .WithMany("Strings")
                         .HasForeignKey("InputId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -172,7 +223,9 @@ namespace SolidGround.Migrations
 
             modelBuilder.Entity("SolidGround.Input", b =>
                 {
-                    b.Navigation("Components");
+                    b.Navigation("Files");
+
+                    b.Navigation("Strings");
                 });
 
             modelBuilder.Entity("SolidGround.Output", b =>
