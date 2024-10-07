@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ###
-POST https://localhost:7109/api/execution
+POST https://localhost:7109/api/executions
 Content-Type: application/json
 
 {

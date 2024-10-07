@@ -54,7 +54,18 @@ app.MapPost("/api/inputs", async (RestInput restInput, AppDbContext db) =>
     return Results.Created($"/api/inputs/{newInput.Id}", null);
 });
 
-app.MapPost("/api/execution", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
+app.MapPatch("/api/executions/{id}", async (int id,RestPatchExecutionRequest req, AppDbContext db) =>
+{
+    var execution = await db.Executions.FindAsync(id);
+    if (execution == null)
+        return Results.NotFound($"Execution with ID {id} not found.");
+    
+    execution.IsReference = req.IsReference;
+    await db.SaveChangesAsync();
+    return Results.Ok(execution);
+});
+
+app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
 {
     var inputsToOutputs = restExecution.InputIds.ToDictionary(id => id, OutputFor);
     var execution = new Execution()
@@ -157,3 +168,5 @@ async Task ExecutionForInput(int inputId, RestExecution restExecution, Output ou
 record RestInput(string? Name, RestInputComponent[] Components);
 record RestInputComponent(ComponentType Type, string Data);
 record RestExecution(int[] InputIds, string Endpoint, string Name);
+
+record RestPatchExecutionRequest(bool IsReference);

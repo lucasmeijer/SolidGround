@@ -51,6 +51,7 @@ public class Execution
     public int Id { get; set; }
     public DateTime StartTime { get; set; }
     public string Name { get; set; }
+    public bool IsReference { get; set; }
     public List<Output> Outputs { get; set; } = [];
 }
 
