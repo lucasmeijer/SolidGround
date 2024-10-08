@@ -2,27 +2,18 @@
 @using Microsoft.AspNetCore.Mvc.Razor
 @model SolidGround.Pages.ExecutionDetailsModel
 @{
-    ViewData["Title"] = $"Execution Details - {Model.Execution.Name}";
+    ViewData["Title"] = $"Execution Details";
+    
+    // var executionBgColor = allStatus switch
+    // {
+    //     ExecutionStatus.Completed => "bg-green-50",
+    //     ExecutionStatus.Started => "bg-blue-50",
+    //     ExecutionStatus.Failed => "bg-red-50",
+    //     _ => throw new ArgumentOutOfRangeException()
+    // };
 
-    ExecutionStatus StatusForAll()
-    {
-        if (Model.Execution.Outputs.All(o => o.Status == ExecutionStatus.Completed))
-            return ExecutionStatus.Completed;
-        return Model.Execution.Outputs.Any(o => o.Status == ExecutionStatus.Failed)
-            ? ExecutionStatus.Failed
-            : ExecutionStatus.Started;
-    }
-
-    var allStatus = StatusForAll();
-
-    var executionBgColor = allStatus switch
-    {
-        ExecutionStatus.Completed => "bg-green-50",
-        ExecutionStatus.Started => "bg-blue-50",
-        ExecutionStatus.Failed => "bg-red-50",
-        _ => throw new ArgumentOutOfRangeException()
-    };
-
+    var executionBgColor = ExecutionStatus.Completed;
+    
     void AccordionTitle(string name, bool startOpened)
     {
         <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this)">
@@ -43,44 +34,82 @@
                 </svg>
             </button>
             <div class="@(startOpened ? "" : "hidden")">
-                <div class="text-xs p-2 bg-gray-50">
+                <div class="text-xs p-2 bg-gray-50 json-cell">
                     @content(null!)
                 </div>
             </div>
         </div>
     }
+
+    void EmitUnit(string name, bool startsOpened, Func<object, HelperResult> content)
+    {
+        
+            <div class="border rounded-lg m-4">
+                @{ AccordionTitle(name, startsOpened); }
+                <div class="@(startsOpened ? "" : "hidden")">
+                    @content(null!)
+                </div>
+            </div>
+        
+    }
     
     void EmitOutput(string name, Output output, bool firstRowStartsOpened, bool outputStartsOpened)
     {
-        <div class="border rounded-lg m-4">
-            @{ AccordionTitle(name, outputStartsOpened); }
-            <div class="@(outputStartsOpened ? "" : "hidden")">
-                @{
-                    var isFirst = true;
-                    foreach (var component in output.Components)
-                    {
-                        AccordionRow(component.Name, @<text>@component.Value</text>, isFirst && firstRowStartsOpened);
-                        isFirst = false;
-                    }
-                }
-            </div>
-        </div>
+        //<div class="bg-white shadow rounded-md mb-12 overflow-hidden @(output.Status == ExecutionStatus.Failed ? "bg-red-100" : "")">
+        
+        @* <div class="flex items-center justify-center py-4"> *@
+        @*     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div> *@
+        @* </div> *@
+        @* *@
+        void BodyForOutput()
+        {
+            var isFirst = true;
+            foreach (var component in output.Components)
+            {
+                AccordionRow(component.Name, @<text>@component.Value</text>, isFirst && firstRowStartsOpened);
+                isFirst = false;
+            }
+        }
+
+        EmitUnit(name, outputStartsOpened, @<div>@{ BodyForOutput(); }</div>);
     }
 
     void EmitInput(Input input)
     {
-        <div class="border rounded-lg m-4">
-            @{ AccordionTitle("Input", false); }
-            <div class="hidden">
-                @foreach (var inputString in input.Strings)
-                {
-                    AccordionRow(inputString.Name, @<text>@inputString.StringValue</text>, true );
-                }
-                @foreach (var inputFile in input.Files)
-                {
-                    AccordionRow(inputFile.Name, @<img src="/images/@inputFile.Input/@inputFile.Index"/>, true);
-                }
-            </div>
+        void EmitBody()
+        {
+            foreach (var inputString in input.Strings)
+            {
+                AccordionRow(inputString.Name, @<text>@inputString.StringValue</text>, true );
+            }
+            foreach (var inputFile in input.Files)
+            {
+                AccordionRow(inputFile.Name, @<img src="/images/@inputFile.InputId/@inputFile.Index"/>, true);
+            }
+        }
+        
+        EmitUnit("Input", false, @<div>@{EmitBody();}</div>);
+    }
+
+    void Kruisje()
+    {
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+    }
+
+    void EmitTags(Input i)
+    {
+        <div class="flex flex-wrap gap-2 items-center m-4">
+            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center">
+                ManualEval
+                <a href="/remove-tag?inputId=1&tag=AppliedTag1" class="ml-1 text-red-500 hover:text-red-700">
+                    @{ Kruisje(); }
+                </a>
+            </span>
+            <button onclick="openNewTagModal(1)" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors">
+                Add Tag
+            </button>
         </div>
     }
 }
@@ -90,34 +119,50 @@
     }
 </style>
 
-<div class="container mx-auto px-2 py-4">
-    <div class="flex justify-between items-center mb-4 @executionBgColor p-2 rounded">
-        <h1 class="text-xl font-bold">@Model.Execution.Name</h1>
-        <span class="text-sm text-gray-600">Started: @Model.Execution.StartTime.ToString("yyyy-MM-dd HH:mm:ss")</span>
-    </div>
-
-    @foreach (var output in Model.Execution.Outputs)
+<div class="container mx-auto px-2 py-4 ">
+    @foreach (var input in Model.Inputs)
     {
-        <div class="bg-white shadow rounded-md mb-12 overflow-hidden @(output.Status == ExecutionStatus.Failed ? "bg-red-100" : "")">
-            @if (output.Status == ExecutionStatus.Started)
-            {
-            <div class="flex items-center justify-center py-4">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-            }
-            else
-            {
-                EmitOutput(Model.Execution.Name, output, true, true);
-                foreach (var referenceExecution in Model.AllReferences)
+        <div class="bg-white shadow rounded-md mb-12 overflow-hidden">
+
+            @{
+                bool first = true;
+                foreach (var output in input.Outputs.OrderByDescending(o => o.Execution.StartTime))
                 {
-                    Output? o = Model.FindOutput(referenceExecution, output);
-                    if (o != null)
-                        EmitOutput(referenceExecution.Name, o, true, false);
+                    EmitOutput(output.Execution.Name, output, true, first);
+                    first = false;
                 }
-                EmitInput(output.Input);
+                EmitInput(input);
+                EmitTags(input);
             }
-    </div>
+        </div>
     }
+</div>
+
+<!-- Modal for adding new tag (hidden by default) -->
+<div id="newTagModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2">Add New Tag</h3>
+            <div class="mb-4">
+                <select id="tagSelector" onchange="toggleNewTagInput()" class="w-full p-2 border rounded">
+                    <option value="">Select existing tag or create new</option>
+                    <option value="new">Create new tag</option>
+                    <!-- Other options will be populated dynamically -->
+                </select>
+            </div>
+            <div id="newTagInputContainer" class="mb-4 hidden">
+                <input type="text" id="newTagName" placeholder="Enter new tag name" class="w-full p-2 border rounded">
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button onclick="closeNewTagModal()" class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
+                    Close
+                </button>
+                <button onclick="addNewTag()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    Add Tag
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -128,3 +173,113 @@
         icon.classList.toggle('rotate-180');
     }
 </script>
+
+<script>
+    let currentInputId;
+
+    function openNewTagModal(inputId) {
+        currentInputId = inputId;
+        document.getElementById('newTagModal').classList.remove('hidden');
+        populateExistingTags(inputId);
+    }
+
+    function closeNewTagModal() {
+        document.getElementById('newTagModal').classList.add('hidden');
+        document.getElementById('tagSelector').value = '';
+        document.getElementById('newTagName').value = '';
+        document.getElementById('newTagInputContainer').classList.add('hidden');
+    }
+
+    function populateExistingTags(inputId) {
+        // This function should be implemented to fetch and populate unapplied tags
+        // For demonstration, we'll add some dummy options
+        const select = document.getElementById('tagSelector');
+        select.innerHTML = '<option value="">Select existing tag or create new</option><option value="new">Create new tag</option>';
+        ['Unapplied Tag 1', 'Unapplied Tag 2', 'Unapplied Tag 3'].forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag;
+            option.textContent = tag;
+            select.appendChild(option);
+        });
+    }
+
+    function toggleNewTagInput() {
+        const selector = document.getElementById('tagSelector');
+        const newTagInputContainer = document.getElementById('newTagInputContainer');
+        if (selector.value === 'new') {
+            newTagInputContainer.classList.remove('hidden');
+        } else {
+            newTagInputContainer.classList.add('hidden');
+        }
+    }
+
+    function addNewTag() {
+        const selector = document.getElementById('tagSelector');
+        const newTagInput = document.getElementById('newTagName');
+        let tagToAdd;
+
+        if (selector.value === 'new') {
+            tagToAdd = newTagInput.value.trim();
+        } else {
+            tagToAdd = selector.value;
+        }
+
+        if (tagToAdd) {
+            fetch(`/api/inputs/${currentInputId}/tags`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ tagName: tagToAdd }),
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    console.error('Failed to add tag');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        closeNewTagModal();
+    }
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+<style>
+    .json-cell {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        word-break: break-word;
+        width: 100%
+    }
+</style>
+<script>
+        function formatJson(jsonString) {
+            try {
+                // Parse and re-stringify to format
+                const obj = JSON.parse(jsonString);
+                const formatted = JSON.stringify(obj, null, 2);
+                
+                // Replace Unicode escape sequences
+                const readable = formatted.replace(/\\u[\dA-F]{4}/gi, 
+                    match => String.fromCharCode(parseInt(match.replace(/\\u/g, ''), 16)));
+                
+                return readable;
+            } catch (e) {
+                return jsonString; // Return original if not valid JSON
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const cells = document.querySelectorAll('.json-cell');
+            cells.forEach(cell => {
+                const formatted = formatJson(cell.textContent);
+                if (formatted !== cell.textContent) {
+                    cell.innerHTML = `<pre><code class="json">${formatted}</code></pre>`;
+                    hljs.highlightElement(cell.querySelector('code'));
+                }
+            });
+        });
+    </script>

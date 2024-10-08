@@ -1,3 +1,4 @@
+using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,9 +24,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(o => o.ExecutionId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<InputSet>()
+            .HasMany(i => i.Inputs)
+            .WithMany(i => i.InputSets)
+            .UsingEntity(j => j.ToTable("InputSetInputs"));
+        
         // Configure Input -> InputStrings relationship
         modelBuilder.Entity<Input>()
             .HasMany(i => i.Strings)
+            .WithOne(ic => ic.Input)
+            .HasForeignKey(ic => ic.InputId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Input>()
+            .HasMany(i => i.Outputs)
             .WithOne(ic => ic.Input)
             .HasForeignKey(ic => ic.InputId)
             .OnDelete(DeleteBehavior.Cascade);
@@ -43,13 +55,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithOne(oc => oc.Output)
             .HasForeignKey(oc => oc.OutputId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Configure Output -> Input relationship
-        modelBuilder.Entity<Output>()
-            .HasOne(o => o.Input)
-            .WithMany()
-            .HasForeignKey(o => o.InputId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -63,6 +68,13 @@ public class Execution
     public List<Output> Outputs { get; set; } = [];
 }
 
+public class InputSet
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public List<Input> Inputs { get; set; } = [];
+}
+
 public enum ExecutionStatus
 {
     Started,
@@ -74,9 +86,11 @@ public class Input
 {
     public int Id { get; set; }
     public string? Name { get; set; }
+    public List<InputSet> InputSets { get; set; } = [];
     public List<InputString> Strings { get; set; } = [];
     public List<InputFile> Files { get; set; } = [];
     public string RawJson { get; set; }
+    public List<Output> Outputs { get; set; } = [];
 }
 
 public class InputString
@@ -106,13 +120,6 @@ public class InputFile
     public int Index { get; set; }
     public string MimeType { get; set; }
     public byte[] Bytes { get; set; }
-}
-
-public enum ComponentType
-{
-    String,
-    Image,
-    File
 }
 
 public class Output

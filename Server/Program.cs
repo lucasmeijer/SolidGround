@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using SolidGround;
 
@@ -31,6 +32,17 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
+
+app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIndex, AppDbContext db, HttpContext httpContext) =>
+{
+    var inputFile = await db.InputFiles.FirstOrDefaultAsync(file => file.InputId == inputId && file.Index == imageIndex);
+    if (inputFile == null)
+        return Results.NotFound();
+    
+    httpContext.Response.ContentType = inputFile.MimeType;
+    await httpContext.Response.Body.WriteAsync(inputFile.Bytes);
+    return Results.Empty;
+});
 
 app.MapPost("/api/inputs", async (HttpRequest request, AppDbContext db) =>
 {
@@ -119,6 +131,88 @@ app.MapPatch("/api/executions/{id}", async (int id,RestPatchExecutionRequest req
     return Results.Ok(execution);
 });
 
+app.MapPost("/api/execution2", async (HttpRequest req, AppDbContext db) =>
+{
+    var jsonDoc = await JsonDocument.ParseAsync(req.Body);
+
+    var input = new Input
+    {
+        Files = [],
+        Strings = [],
+        RawJson = JsonSerializer.Serialize(jsonDoc.RootElement)
+    };
+
+    if (!jsonDoc.RootElement.TryGetProperty("input", out var inputElement))
+        throw new ArgumentException("no input found");
+
+    int stringCounter = 0;
+    int fileCounter = 0;
+    foreach (var kvp in inputElement.EnumerateObject())
+    {
+        if (kvp.Value.ValueKind != JsonValueKind.Array)
+            ProcessObject(kvp.Value, kvp.Name);
+        else
+        {
+            foreach (var o in kvp.Value.EnumerateArray())
+                ProcessObject(o, kvp.Name);
+        }
+    }
+
+    void ProcessObject(JsonElement value, string name)
+    {
+        if (value.ValueKind == JsonValueKind.Object)
+        {
+            if (!value.TryGetProperty("base64", out var base64Element))
+                throw new ArgumentException("object in input found without base64 element");
+            if (!value.TryGetProperty("mimeType", out var mimeTypeElement))
+                throw new ArgumentException("object in input found without base64 element");
+            input.Files.Add(new()
+            {
+                Name = name,
+                Index = fileCounter++,
+                MimeType = mimeTypeElement.GetString() ?? throw new ArgumentException("mimetype not string"),
+                Bytes = Convert.FromBase64String(base64Element.GetString() ??
+                                                 throw new ArgumentException("base64 not string"))
+            });
+        }
+
+        if (value.ValueKind == JsonValueKind.String)
+            input.Strings.Add(new()
+            {
+                Name = name, 
+                Index = stringCounter++, 
+                StringValue = value.GetString()!
+            });
+    }
+
+    var output = new Output()
+    {
+        Input = input,
+        Components = [], 
+        Status = ExecutionStatus.Completed
+    };
+
+    if (!jsonDoc.RootElement.TryGetProperty("output", out var outputElement))
+        throw new ArgumentException("no output element");
+
+    foreach (var kvp in outputElement.EnumerateObject())
+    {
+        if (kvp.Value.ValueKind != JsonValueKind.String)
+            throw new ArgumentException("Only string outputs currently supported");
+        output.Components.Add(new() { Name = kvp.Name, Value = kvp.Value.GetString()! });
+    }
+
+    var execution = new Execution()
+    {
+        Outputs = [output],
+        Name = "production",
+        StartTime = DateTime.Now
+    };
+
+    db.Add(execution);
+    await db.SaveChangesAsync();
+});
+
 app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
 {
     var inputsToOutputs = restExecution.InputIds.ToDictionary(id => id, OutputFor);
@@ -145,7 +239,7 @@ app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext 
     {
         InputId = inputId,
         Status = ExecutionStatus.Started,
-        Components = []
+        Components = [new OutputComponent() { Name = "testje", Value = "mooiman"}]
     };
 });
 
@@ -183,14 +277,16 @@ async Task Go2(HttpClient httpClient, RestExecution restExecution, Output output
     {
         var json = JsonDocument.Parse(result);
 
-        output.Components = [ ..json.RootElement
+        var outputComponents = json.RootElement
             .EnumerateObject()
             .Select(kvp => new OutputComponent
             {
-                Name = kvp.Name, 
+                Name = kvp.Name,
                 Value = kvp.Value.GetString()
-            }) 
-        ];
+            })
+            .ToArray();
+
+        output.Components.AddRange(outputComponents);
 
         output.Status = ExecutionStatus.Completed;
     }
@@ -214,8 +310,7 @@ async Task ExecutionForInput(int inputId, RestExecution restExecution, Output ou
             Value = ex.ToString()
         });
     }
-
-    dbContext.Update(output);
+    
     await dbContext.SaveChangesAsync();
 }
 
