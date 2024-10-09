@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Net.Http.Headers;
 using SolidGround;
 
@@ -12,6 +13,7 @@ builder.Services.AddRazorPages();
 var persistentStorage = builder.Configuration["PERSISTENT_STORAGE"] ?? ".";
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={persistentStorage}/solid_ground.db"));
 builder.Services.AddHttpClient();
+builder.Services.AddHealthChecks().AddCheck("Health", () => HealthCheckResult.Healthy("OK"));
 var app = builder.Build();
 
 // Apply any pending migrations
@@ -33,7 +35,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
-
+app.UseHealthChecks("/up");
 app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIndex, AppDbContext db, HttpContext httpContext) =>
 {
     var inputFile = await db.InputFiles.FirstOrDefaultAsync(file => file.InputId == inputId && file.Index == imageIndex);
