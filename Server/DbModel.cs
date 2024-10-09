@@ -24,9 +24,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(o => o.ExecutionId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<InputSet>()
+        modelBuilder.Entity<Tag>()
             .HasMany(i => i.Inputs)
-            .WithMany(i => i.InputSets)
+            .WithMany(i => i.Tags)
             .UsingEntity(j => j.ToTable("InputSetInputs"));
         
         // Configure Input -> InputStrings relationship
@@ -63,12 +63,12 @@ public class Execution
 {
     public int Id { get; set; }
     public DateTime StartTime { get; set; }
-    public string Name { get; set; }
+    public string? Name { get; set; }
     public bool IsReference { get; set; }
     public List<Output> Outputs { get; set; } = [];
 }
 
-public class InputSet
+public class Tag
 {
     public int Id { get; set; }
     public string Name { get; set; }
@@ -86,25 +86,27 @@ public class Input
 {
     public int Id { get; set; }
     public string? Name { get; set; }
-    public List<InputSet> InputSets { get; set; } = [];
+    public List<Tag> Tags { get; set; } = [];
     public List<InputString> Strings { get; set; } = [];
     public List<InputFile> Files { get; set; } = [];
-    public string RawJson { get; set; }
+    public string? OriginalRequest_Route { get; set; }
     public List<Output> Outputs { get; set; } = [];
+    public string OriginalRequest_ContentType { get; set; }
+    public string OriginalRequest_Body { get; set; }
+    public string OriginalRequest_Host { get; set; }
 }
 
 public class InputString
 {
     public int Id { get; set; }
 
-    // Foreign key to Input
     public int InputId { get; set; }
     public Input Input { get; set; }
 
     public string Name { get; set; }
     
     public int Index { get; set; }
-    public string StringValue { get; set; }
+    public string Value { get; set; }
 }
 
 public class InputFile

@@ -33,11 +33,27 @@ namespace Server.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Name = table.Column<string>(type: "TEXT", nullable: true),
-                    RawJson = table.Column<string>(type: "TEXT", nullable: false)
+                    OriginalRequest_Route = table.Column<string>(type: "TEXT", nullable: true),
+                    OriginalRequest_ContentType = table.Column<string>(type: "TEXT", nullable: false),
+                    OriginalRequest_Body = table.Column<string>(type: "TEXT", nullable: false),
+                    OriginalRequest_Host = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Inputs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tag",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Name = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tag", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -72,7 +88,7 @@ namespace Server.Migrations
                     InputId = table.Column<int>(type: "INTEGER", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Index = table.Column<int>(type: "INTEGER", nullable: false),
-                    StringValue = table.Column<string>(type: "TEXT", nullable: false)
+                    Value = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -109,7 +125,31 @@ namespace Server.Migrations
                         column: x => x.InputId,
                         principalTable: "Inputs",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "InputSetInputs",
+                columns: table => new
+                {
+                    InputsId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TagsId = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_InputSetInputs", x => new { x.InputsId, x.TagsId });
+                    table.ForeignKey(
+                        name: "FK_InputSetInputs_Inputs_InputsId",
+                        column: x => x.InputsId,
+                        principalTable: "Inputs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_InputSetInputs_Tag_TagsId",
+                        column: x => x.TagsId,
+                        principalTable: "Tag",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -139,6 +179,11 @@ namespace Server.Migrations
                 column: "InputId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_InputSetInputs_TagsId",
+                table: "InputSetInputs",
+                column: "TagsId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_InputStrings_InputId",
                 table: "InputStrings",
                 column: "InputId");
@@ -166,10 +211,16 @@ namespace Server.Migrations
                 name: "InputFiles");
 
             migrationBuilder.DropTable(
+                name: "InputSetInputs");
+
+            migrationBuilder.DropTable(
                 name: "InputStrings");
 
             migrationBuilder.DropTable(
                 name: "OutputComponents");
+
+            migrationBuilder.DropTable(
+                name: "Tag");
 
             migrationBuilder.DropTable(
                 name: "Outputs");

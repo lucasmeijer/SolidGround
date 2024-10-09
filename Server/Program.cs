@@ -1,7 +1,7 @@
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
 using SolidGround;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,82 +44,6 @@ app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIn
     return Results.Empty;
 });
 
-app.MapPost("/api/inputs", async (HttpRequest request, AppDbContext db) =>
-{
-    using var sr = new StreamReader(request.Body);
-    var body = await sr.ReadToEndAsync();
-    var jsonDocument = JsonDocument.Parse(body);
-    
-    IEnumerable<InputString> InputStrings()
-    {
-        int counter = 0;
-        foreach (var kvp in jsonDocument.RootElement.EnumerateObject())
-        {
-            if (kvp.Value.ValueKind == JsonValueKind.String)
-            {
-                yield return new()
-                {
-                    Name = kvp.Name,
-                    StringValue = kvp.Value.GetString()!, 
-                    Index = counter++
-                };
-            }
-
-            if (kvp.Value.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var o in kvp.Value.EnumerateArray().Where(o => o.ValueKind == JsonValueKind.String))
-                    yield return new() { Name = kvp.Name, StringValue = o.GetString()!, Index = counter++ };
-            }
-        }
-    }
-    
-    IEnumerable<InputFile> InputFiles()
-    {
-        int counter = 0;
-        foreach (var kvp in jsonDocument.RootElement.EnumerateObject())
-        {
-            InputFile InputFileFor(string name, int index, JsonElement o)
-            {
-                if (!o.TryGetProperty("mimetype", out var mimeTypeElement) || mimeTypeElement.ValueKind != JsonValueKind.String)
-                    throw new ArgumentException("No mimetype");
-                if (!o.TryGetProperty("base64", out var base64Element) || mimeTypeElement.ValueKind != JsonValueKind.String)
-                    throw new ArgumentException("No base64 element");
-
-                return new()
-                {
-                    Name = name,
-                    Index = index,
-                    MimeType = mimeTypeElement.GetString()!,
-                    Bytes = Convert.FromBase64String(base64Element.GetString()!)
-                };
-            }
-
-            if (kvp.Value.ValueKind == JsonValueKind.Object)
-            {
-                yield return InputFileFor(kvp.Name, counter++, kvp.Value);
-            }
-
-            if (kvp.Value.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var o in kvp.Value.EnumerateArray().Where(o => o.ValueKind == JsonValueKind.Object))
-                    yield return InputFileFor(kvp.Name, counter++, o);
-            }
-        }
-    }
-
-    var newInput = new Input()
-    {
-        Files = InputFiles().ToList(),
-        Strings = InputStrings().ToList(),
-        RawJson = body
-    };
-
-    db.Inputs.Add(newInput);
-    await db.SaveChangesAsync();
-
-    return Results.Created($"/api/inputs/{newInput.Id}", null);
-});
-
 app.MapPatch("/api/executions/{id}", async (int id,RestPatchExecutionRequest req, AppDbContext db) =>
 {
     var execution = await db.Executions.FindAsync(id);
@@ -131,85 +55,54 @@ app.MapPatch("/api/executions/{id}", async (int id,RestPatchExecutionRequest req
     return Results.Ok(execution);
 });
 
-app.MapPost("/api/execution2", async (HttpRequest req, AppDbContext db) =>
+app.MapDelete("/api/output/{id}", async (int id, AppDbContext db) =>
+{
+    var obj = db.Outputs.Find(id);
+    if (obj == null)
+        return Results.BadRequest();
+
+    db.Outputs.Remove(obj);
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
+app.MapPost("/api/output/{id}", async (int id, HttpRequest req, AppDbContext db) =>
 {
     var jsonDoc = await JsonDocument.ParseAsync(req.Body);
+    
+    var output = db.Outputs.Find(id);
+    if (output == null)
+        return Results.BadRequest($"Output {id} not found");
 
-    var input = new Input
+    output.Components = OutputComponentsFromJsonElement(jsonDoc.RootElement);
+    output.Status = ExecutionStatus.Completed;
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
+app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
+{
+    var jsonDoc = await JsonDocument.ParseAsync(req.Body);
+    var root = jsonDoc.RootElement;
+    
+    File.WriteAllText("/Users/lucas/SolidGround/sample_ingress.json", JsonSerializer.Serialize(root));
+    
+    var outputElement = root.GetRequired<JsonElement>("output");
+    
+    var input = await InputFor(root.GetRequired<JsonElement>("request"));
+
+    db.Add(new Execution
     {
-        Files = [],
-        Strings = [],
-        RawJson = JsonSerializer.Serialize(jsonDoc.RootElement)
-    };
-
-    if (!jsonDoc.RootElement.TryGetProperty("input", out var inputElement))
-        throw new ArgumentException("no input found");
-
-    int stringCounter = 0;
-    int fileCounter = 0;
-    foreach (var kvp in inputElement.EnumerateObject())
-    {
-        if (kvp.Value.ValueKind != JsonValueKind.Array)
-            ProcessObject(kvp.Value, kvp.Name);
-        else
+        Outputs = [new Output
         {
-            foreach (var o in kvp.Value.EnumerateArray())
-                ProcessObject(o, kvp.Name);
-        }
-    }
-
-    void ProcessObject(JsonElement value, string name)
-    {
-        if (value.ValueKind == JsonValueKind.Object)
-        {
-            if (!value.TryGetProperty("base64", out var base64Element))
-                throw new ArgumentException("object in input found without base64 element");
-            if (!value.TryGetProperty("mimeType", out var mimeTypeElement))
-                throw new ArgumentException("object in input found without base64 element");
-            input.Files.Add(new()
-            {
-                Name = name,
-                Index = fileCounter++,
-                MimeType = mimeTypeElement.GetString() ?? throw new ArgumentException("mimetype not string"),
-                Bytes = Convert.FromBase64String(base64Element.GetString() ??
-                                                 throw new ArgumentException("base64 not string"))
-            });
-        }
-
-        if (value.ValueKind == JsonValueKind.String)
-            input.Strings.Add(new()
-            {
-                Name = name, 
-                Index = stringCounter++, 
-                StringValue = value.GetString()!
-            });
-    }
-
-    var output = new Output()
-    {
-        Input = input,
-        Components = [], 
-        Status = ExecutionStatus.Completed
-    };
-
-    if (!jsonDoc.RootElement.TryGetProperty("output", out var outputElement))
-        throw new ArgumentException("no output element");
-
-    foreach (var kvp in outputElement.EnumerateObject())
-    {
-        if (kvp.Value.ValueKind != JsonValueKind.String)
-            throw new ArgumentException("Only string outputs currently supported");
-        output.Components.Add(new() { Name = kvp.Name, Value = kvp.Value.GetString()! });
-    }
-
-    var execution = new Execution()
-    {
-        Outputs = [output],
-        Name = "production",
+            Input = input,
+            Components = OutputComponentsFromJsonElement(outputElement), 
+            Status = ExecutionStatus.Completed
+        }],
+        Name = root.GetRequired<string>("name"),
         StartTime = DateTime.Now
-    };
-
-    db.Add(execution);
+    });
+    
     await db.SaveChangesAsync();
 });
 
@@ -219,7 +112,7 @@ app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext 
     var execution = new Execution()
     {
         StartTime = DateTime.Now,
-        Name = restExecution.Name, 
+        Name = string.IsNullOrEmpty(restExecution.Name) ? null : restExecution.Name, 
         Outputs = [
             ..inputsToOutputs.Values
         ]
@@ -239,7 +132,7 @@ app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext 
     {
         InputId = inputId,
         Status = ExecutionStatus.Started,
-        Components = [new OutputComponent() { Name = "testje", Value = "mooiman"}]
+        Components = []
     };
 });
 
@@ -250,56 +143,34 @@ app.MapRazorPages()
 app.Run();
 return;
 
-async Task Go2(HttpClient httpClient, RestExecution restExecution, Output output, Input Input)
-{
-    ApplyResult(await GetResult(), output);
-    return;
-
-    async Task<string> GetResult()
-    {
-        bool dummy = true;
-        if (dummy)
-        {
-            return """
-                   {
-                   "prompt": "Yeah it was a good prompt",
-                   "outcome1": "it was good"
-                   }
-                   """;
-        }
-
-        var result = await httpClient.PostAsync(restExecution.Endpoint, JsonContent.Create($"{Input.Id}"));
-        result.EnsureSuccessStatusCode();
-        return await result.Content.ReadAsStringAsync();
-    }
-
-    static void ApplyResult(string result, Output output)
-    {
-        var json = JsonDocument.Parse(result);
-
-        var outputComponents = json.RootElement
-            .EnumerateObject()
-            .Select(kvp => new OutputComponent
-            {
-                Name = kvp.Name,
-                Value = kvp.Value.GetString()
-            })
-            .ToArray();
-
-        output.Components.AddRange(outputComponents);
-
-        output.Status = ExecutionStatus.Completed;
-    }
-}
-
 async Task ExecutionForInput(int inputId, RestExecution restExecution, Output output)
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
+
+    dbContext.Attach(output);
     try
     {
-        await Go2(httpClient, restExecution, output, dbContext.Inputs.Find(inputId) ?? throw new ArgumentException("Input not found"));
+        var input = dbContext.Inputs.Find(inputId) ?? throw new ArgumentException("Input not found");
+
+        var request = new HttpRequestMessage
+        {
+            Method = HttpMethod.Post,
+            RequestUri = new(restExecution.Endpoint),
+            Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
+            {
+                Headers =
+                {
+                    {"SolidGroundOutputId",output.Id.ToString()},
+                    {"Content-Type",input.OriginalRequest_ContentType}
+                },
+            }
+        };
+        
+        httpClient.Timeout = TimeSpan.FromMinutes(10);
+        var result = await httpClient.SendAsync(request);
+        result.EnsureSuccessStatusCode();
     }
     catch (Exception ex)
     {
@@ -309,14 +180,87 @@ async Task ExecutionForInput(int inputId, RestExecution restExecution, Output ou
             Name = "Error",
             Value = ex.ToString()
         });
+        await dbContext.SaveChangesAsync();
     }
-    
-    await dbContext.SaveChangesAsync();
 }
+
+List<OutputComponent> OutputComponentsFromJsonElement(JsonElement jsonElement)
+{
+    return jsonElement
+        .EnumerateObject()
+        .Where(kvp => kvp.Value.ValueKind == JsonValueKind.String)
+        .Select(kvp => new OutputComponent() { Name = kvp.Name, Value = kvp.Value.GetString() })
+        .ToList();
+}
+
+async Task<Input> InputFor(JsonElement requestElement)
+{
+    var bodyBase64 = requestElement.GetRequired<string>("body_base64");
+    var originalRequestContentType = requestElement.GetRequired<string>("content_type");
+    var (inputFiles, inputStrings) = await ParseFormIntoStringsAndFiles(originalRequestContentType, bodyBase64);
+
+    return new()
+    {
+        Files = inputFiles,
+        Strings = inputStrings,
+        OriginalRequest_ContentType = originalRequestContentType,
+        OriginalRequest_Body = bodyBase64,
+        OriginalRequest_Route = requestElement.GetRequired<string>("route"),
+        OriginalRequest_Host = requestElement.GetRequired<string>("host"),
+    };
+}
+
+async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFormIntoStringsAndFiles(string s, string bodyBase65)
+{
+    var list = new List<InputFile>();
+    var inputStrings1 = new List<InputString>();
+    
+    var boundary = HeaderUtilities.RemoveQuotes(MediaTypeHeaderValue.Parse(s).Boundary).Value;
+    if (boundary == null)
+        throw new ArgumentException("No boundary specified in content-type");
+
+    using var ms = new MemoryStream(Convert.FromBase64String(bodyBase65));
+    var reader = new MultipartReader(boundary, ms);
+
+    int fileCounter = 0;
+    int stringCounter = 0;
+    while (await reader.ReadNextSectionAsync() is { } section)
+    {
+        var contentDisposition = ContentDispositionHeaderValue.Parse(section.ContentDisposition);
+        
+        var name = contentDisposition.Name.Value ?? throw new ArgumentException("Missing name in content-type");
+        
+        if (contentDisposition.IsFileDisposition())
+        {
+            list.Add(new()
+            {
+                Index = fileCounter++,
+                Name = name,
+                MimeType = contentDisposition.DispositionType.Value ?? throw new ArgumentException($"element {name} has no disposition-type"),
+                Bytes = await section.Body.ToBytesAsync()
+            });
+            continue;
+        }
+        
+        if (contentDisposition.IsFormDisposition())
+        {
+            using var streamReader = new StreamReader(section.Body);
+            inputStrings1.Add(new()
+            {
+                Index = stringCounter++,
+                Name = name,
+                Value = await streamReader.ReadToEndAsync()
+            });
+        }
+    }
+
+    return (list, inputStrings1);
+}
+
 
 // record RestInput(string? Name, RestInputComponent[] Components);
 // record RestInputComponent(ComponentType Type, string Data);
 
-record RestExecution(int[] InputIds, string Endpoint, string Name);
+record RestExecution(int[] InputIds, string Endpoint, string? Name);
 
 record RestPatchExecutionRequest(bool IsReference);

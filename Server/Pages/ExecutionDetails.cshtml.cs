@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
+using SolidGround;
 
 namespace SolidGround.Pages
 {
@@ -54,6 +55,21 @@ namespace SolidGround.Pages
         public Output? FindOutput(Execution referenceExecution, Output output)
         {
             return referenceExecution.Outputs.FirstOrDefault(o => o.InputId == output.InputId);
+        }
+    }
+}
+
+static class Extensions
+{
+    public static IEnumerable<OutputComponent> PutResultFirst(this ICollection<OutputComponent> self)
+    {
+        var result = self.FirstOrDefault(o => o.Name == "result");
+        if (result != null)
+            yield return result;
+        foreach (var o in self)
+        {
+            if (o != result)
+                yield return o;
         }
     }
 }

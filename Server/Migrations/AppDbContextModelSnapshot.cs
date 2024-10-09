@@ -17,6 +17,21 @@ namespace Server.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
 
+            modelBuilder.Entity("InputTag", b =>
+                {
+                    b.Property<int>("InputsId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TagsId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("InputsId", "TagsId");
+
+                    b.HasIndex("TagsId");
+
+                    b.ToTable("InputSetInputs", (string)null);
+                });
+
             modelBuilder.Entity("SolidGround.Execution", b =>
                 {
                     b.Property<int>("Id")
@@ -47,8 +62,19 @@ namespace Server.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("RawJson")
+                    b.Property<string>("OriginalRequest_Body")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalRequest_ContentType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalRequest_Host")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalRequest_Route")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -103,7 +129,7 @@ namespace Server.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("StringValue")
+                    b.Property<string>("Value")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -161,6 +187,36 @@ namespace Server.Migrations
                     b.ToTable("OutputComponents");
                 });
 
+            modelBuilder.Entity("SolidGround.Tag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tag");
+                });
+
+            modelBuilder.Entity("InputTag", b =>
+                {
+                    b.HasOne("SolidGround.Input", null)
+                        .WithMany()
+                        .HasForeignKey("InputsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SolidGround.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SolidGround.InputFile", b =>
                 {
                     b.HasOne("SolidGround.Input", "Input")
@@ -192,9 +248,9 @@ namespace Server.Migrations
                         .IsRequired();
 
                     b.HasOne("SolidGround.Input", "Input")
-                        .WithMany()
+                        .WithMany("Outputs")
                         .HasForeignKey("InputId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Execution");
@@ -221,6 +277,8 @@ namespace Server.Migrations
             modelBuilder.Entity("SolidGround.Input", b =>
                 {
                     b.Navigation("Files");
+
+                    b.Navigation("Outputs");
 
                     b.Navigation("Strings");
                 });
