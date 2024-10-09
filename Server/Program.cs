@@ -9,7 +9,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite("Data Source=solid_ground.db"));
+var persistentStorage = builder.Configuration["PERSISTENT_STORAGE"] ?? ".";
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={persistentStorage}/solid_ground.db"));
 builder.Services.AddHttpClient();
 var app = builder.Build();
 

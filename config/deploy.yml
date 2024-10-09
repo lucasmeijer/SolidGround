@@ -1,0 +1,30 @@
+#file: noinspection YAMLSchemaValidation,SpellCheckingInspection
+service: solidground
+image: lucasmeijer/solidground
+
+builder:
+  arch: arm64
+
+servers:
+  - 94.130.169.26    
+
+volumes:
+  - "/persistent_storage_solidground:/persistent_storage"
+  
+registry:
+  server: ghcr.io
+  username: lucasmeijer
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+    clear:
+      PERSISTENT_STORAGE: /persistent_storage
+
+proxy:
+  ssl: true
+  host: solidground.flashcards.lucasmeijer.com
+  app_port: 8080
+  response_timeout: 600
+  healthcheck:
+    path: /up
