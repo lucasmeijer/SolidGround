@@ -88,7 +88,7 @@ app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
     var jsonDoc = await JsonDocument.ParseAsync(req.Body);
     var root = jsonDoc.RootElement;
     
-    File.WriteAllText("/Users/lucas/SolidGround/sample_ingress.json", JsonSerializer.Serialize(root));
+    //File.WriteAllText("/Users/lucas/SolidGround/sample_ingress.json", JsonSerializer.Serialize(root));
     
     var outputElement = root.GetRequired<JsonElement>("output");
     
