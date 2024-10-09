@@ -13,7 +13,7 @@ COPY . .
 RUN dotnet publish -a arm64 --no-restore -o /app Server/Server.csproj
 
 # final stage/image
-FROM mcr.microsoft.com/dotnet/aspnet:9.0.0-rc.2-noble-chiseled-arm64v8
+FROM mcr.microsoft.com/dotnet/aspnet:9.0.0-rc.2-noble-arm64v8
 EXPOSE 8080
 WORKDIR /app
 
