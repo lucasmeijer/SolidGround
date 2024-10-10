@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Input> Inputs { get; set; }
+    public DbSet<Tag> Tags { get; set; }
     public DbSet<InputString> InputStrings { get; set; }
     public DbSet<InputFile> InputFiles { get; set; }
     public DbSet<Output> Outputs { get; set; }

@@ -1,129 +1,26 @@
 @page "/Executions/{id:int}"
-@using Microsoft.AspNetCore.Mvc.Razor
 @model SolidGround.Pages.ExecutionDetailsModel
 
 @{
     ViewData["Title"] = $"Execution Details";
     
-    // var executionBgColor = allStatus switch
-    // {
-    //     ExecutionStatus.Completed => "bg-green-50",
-    //     ExecutionStatus.Started => "bg-blue-50",
-    //     ExecutionStatus.Failed => "bg-red-50",
-    //     _ => throw new ArgumentOutOfRangeException()
-    // };
-
-    var executionBgColor = ExecutionStatus.Completed;
+    void EmitFilterBar()
+    {
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6 sticky top-0 z-10">
+            <div class="flex items-center space-x-4 overflow-x-auto scrollbar-hide">
+                <input type="text" id="search" placeholder="Search items..." class="flex-grow p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="flex space-x-2">
+                    @foreach (var tag in Model.Tags)
+                    {
+                        <button class="tag-btn px-3 py-1 rounded-full text-sm font-medium @tag.TailwindStyle()">
+                            @tag.Name
+                        </button>    
+                    }
+                </div>
+            </div>
+        </div>
+    }
     
-    void AccordionTitle(string name, bool startOpened, ExecutionStatus status)
-    {
-        <button class="w-full text-left p-2 flex justify-between items-center @status.ToTailwindColor()" onclick="toggleAccordion(this)">
-            <span class="text-sm font-semibold">@name</span>
-            <svg class="w-4 h-4 transform transition-transform duration-200 @(startOpened ? "rotate-180" : "")" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-            </svg>
-        </button>
-    }
-
-    void AccordionRow(string caption, Func<object, HelperResult> content, bool startOpened)
-    {
-        <div class="border-t">
-            <button class="w-full text-left p-2 flex justify-between items-center" onclick="toggleAccordion(this)">
-                <span class="text-xs">@caption</span>
-                <svg class="w-3 h-3 transform transition-transform duration-200 @(startOpened ? "rotate-180" : "")" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                </svg>
-            </button>
-            <div class="@(startOpened ? "" : "hidden")">
-                <div class="text-xs p-2 bg-gray-50 json-cell">
-                    @content(null!)
-                </div>
-            </div>
-        </div>
-    }
-
-    void EmitUnit(string name, bool startsOpened, Func<object, HelperResult> content, ExecutionStatus status, string? xButtonOnClick)
-    {
-        <div class="flex items-start m-4">
-            <div class="border rounded-lg flex-grow-1">
-                <div>
-                    @{ AccordionTitle(name, startsOpened, status); }
-                    <div class="@(startsOpened ? "" : "hidden")">
-                        @content(null!)
-                    </div>
-                </div>
-            </div>
-            @{
-                if (xButtonOnClick != null)
-                {
-                    <button class="bg-red-500 mx-3 px-1 rounded hover:bg-red-600 transition-colors" onclick="@xButtonOnClick">X</button>                    
-                }
-            }
-        </div>
-    }
-
-    void EmitOutput(string name, Output output, bool firstRowStartsOpened, bool outputStartsOpened)
-    {
-        //<div class="bg-white shadow rounded-md mb-12 overflow-hidden @(output.Status == ExecutionStatus.Failed ? "bg-red-100" : "")">
-        
-        @* <div class="flex items-center justify-center py-4"> *@
-        @*     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div> *@
-        @* </div> *@
-        @* *@
-        void BodyForOutput()
-        {
-            var isFirst = true;
-            foreach (var component in output.Components.PutResultFirst())
-            {
-                AccordionRow(component.Name, @<text>@component.Value</text>, isFirst && firstRowStartsOpened);
-                isFirst = false;
-            }
-        }
-
-        EmitUnit(name, outputStartsOpened, @<div>@{ BodyForOutput(); }</div>, output.Status, $"deleteOutput({output.Id});");
-    }
-
-    void EmitInput(Input input)
-    {
-        void EmitBody()
-        {
-            foreach (var inputString in input.Strings)
-            {
-                AccordionRow(inputString.Name, @<text>@inputString.Value</text>, true );
-            }
-            foreach (var inputFile in input.Files)
-            {
-                AccordionRow(inputFile.Name, @<img src="/images/@inputFile.InputId/@inputFile.Index"/>, true);
-            }
-        }
-        
-        EmitUnit("Input", false, @<div>@{EmitBody();}</div>, ExecutionStatus.Completed, null);
-    }
-
-    void Kruisje()
-    {
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-        </svg>
-    }
-
-    void EmitTags(Input i)
-    {
-        <div class="flex flex-wrap gap-2 items-center m-4">
-            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded flex items-center">
-                ManualEval
-                <a href="/remove-tag?inputId=1&tag=AppliedTag1" class="ml-1 text-red-500 hover:text-red-700">
-                    @{ Kruisje(); }
-                </a>
-            </span>
-            <button onclick="openNewTagModal(1)" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors">
-                Add Tag
-            </button>
-            <button onclick="openTriggerRunModal([@i.Id])" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors">
-                Run
-            </button>
-        </div>
-    }
 }
 <style>
     html {
@@ -132,21 +29,13 @@
 </style>
 
 <div class="container mx-auto px-2 py-4 ">
-    @foreach (var input in Model.Inputs)
-    {
-        <div class="bg-white shadow rounded-md mb-12 overflow-hidden">
-
-            @{
-                bool first = true;
-                foreach (var output in input.Outputs.OrderByDescending(o => o.Execution.StartTime))
-                {
-                    EmitOutput(output.Execution.Name ?? output.Execution.StartTime.HumanDate(), output, true, first);
-                    first = false;
-                }
-                EmitInput(input);
-                EmitTags(input);
-            }
-        </div>
+    @{
+        EmitFilterBar();
+        
+        foreach (var input in Model.Inputs)
+        {
+            @await Html.PartialAsync("_Input", input);
+        }
     }
 </div>
 
@@ -215,12 +104,12 @@
         captionElement.textContent = `Run ${inputIds.length} input${inputIds.length !== 1 ? 's' : ''}`;
 
         // Set up the cancel button
-        const cancelButton = modal.querySelector('button[onclick="closeTriggerRunModal()"]');
-        cancelButton.onclick = closeTriggerRunModal;
+        //const cancelButton = modal.querySelector('button[onclick="closeTriggerRunModal()"]');
+        //cancelButton.onclick = closeTriggerRunModal;
 
         // Set up the run button
-        const runButton = modal.querySelector('button[onclick="triggerRun()"]');
-        runButton.onclick = triggerRun;
+        //const runButton = modal.querySelector('button[onclick="triggerRun()"]');
+        //runButton.onclick = triggerRun;
 
         // Load the last used endpoint from localStorage
         const endpointInput = document.getElementById('endpointInput');
@@ -233,9 +122,7 @@
     function closeTriggerRunModal() {
         const modal = document.getElementById('triggerRunModal');
         modal.classList.add('hidden');
-        // Clear only the name input
         document.getElementById('nameInput').value = '';
-        // Don't clear the endpoint input to keep it sticky
     }
 
     function triggerRun() {
@@ -286,12 +173,14 @@
 
 
 <script>
+
     function toggleAccordion(button) {
         const content = button.nextElementSibling;
         const icon = button.querySelector('svg');
         content.classList.toggle('hidden');
         icon.classList.toggle('rotate-180');
     }
+
 </script>
 
 <script>
@@ -402,8 +291,6 @@
     }
 </script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
 <style>
     .json-cell pre {
         white-space: pre-wrap;

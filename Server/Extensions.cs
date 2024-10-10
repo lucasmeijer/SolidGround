@@ -40,6 +40,20 @@ public static class Extensions
             return executionStartTime.ToString("MMMM d, yyyy h:mmtt").ToLower();
         }
     }
+
+    public static string TailwindStyle(this Tag tag)
+    {
+        string[] options =
+        [
+            "bg-blue-100 text-blue-800 hover:bg-blue-200",
+            "bg-green-100 text-green-800 hover:bg-green-200",
+            "bg-yellow-100 text-yellow-800 hover:bg-yellow-200", 
+            "bg-red-100 text-red-800 hover:bg-red-200",
+            "bg-purple-100 text-purple-800 hover:bg-purple-200" 
+        ];
+
+        return options[tag.GetHashCode() % options.Length];
+    }
     
     public static string ToTailwindColor(this ExecutionStatus status)
     {

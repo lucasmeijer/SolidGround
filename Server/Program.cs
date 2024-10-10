@@ -63,10 +63,10 @@ app.MapDelete("/api/output/{id}", async (int id, AppDbContext db) =>
     var obj = db.Outputs.Find(id);
     if (obj == null)
         return Results.BadRequest();
-
+    
     db.Outputs.Remove(obj);
     await db.SaveChangesAsync();
-    return Results.Ok();
+    return Results.Content($"<turbo-stream action=\"remove\" target=\"output_{id}\"></turbo-stream>", "text/vnd.turbo-stream.html");
 });
 
 app.MapPost("/api/output/{id}", async (int id, HttpRequest req, AppDbContext db) =>

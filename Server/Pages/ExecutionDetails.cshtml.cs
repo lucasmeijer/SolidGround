@@ -12,10 +12,12 @@ namespace SolidGround.Pages
         // public IQueryable<Execution> AllReferences { get; set; }
 
         public Input[] Inputs { get; private set; }
+        public Tag[] Tags { get; private set; }
+        
         
         public async Task<IActionResult> OnGetAsync(int id)
         {
-            Inputs = context.Inputs
+            Inputs = await context.Inputs
                 .Include(i=>i.Outputs)
                 .ThenInclude(o => o.Execution)
                 
@@ -25,30 +27,10 @@ namespace SolidGround.Pages
                 .Include(i => i.Strings)
                 .Include(i => i.Files)
                 
-                .ToArray();
+                .ToArrayAsync();
             
-            //
-            // var execution = await context.Executions
-            //     .Include(e => e.Outputs)
-            //         .ThenInclude(o => o.Input)
-            //             .ThenInclude(i => i.Strings)
-            //     .Include(e => e.Outputs)
-            //         .ThenInclude(o => o.Input)
-            //             .ThenInclude(i => i.Files)
-            //     .Include(e => e.Outputs)
-            //         .ThenInclude(o => o.Components)
-            //     .FirstOrDefaultAsync(e => e.Id == id);
-            //
-            // AllReferences = context.Executions
-            //     .Where(e => e.IsReference && e != execution)
-            //     .Include(e => e.Outputs)
-            //     .ThenInclude(o => o.Components);
-            //
-            // if (execution == null)
-            //     return NotFound();
-            //
-            // Execution = execution;
-
+            Tags = [..await context.Tags.ToArrayAsync(), new Tag() { Name = "Dummy1"}, new Tag(){ Name = "Dummy2"}];
+            
             return Page();
         }
 
