@@ -137,7 +137,7 @@ app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
     var jsonDoc = await JsonDocument.ParseAsync(req.Body);
     var root = jsonDoc.RootElement;
     
-    var outputElement = root.GetRequired<JsonElement>("output");
+    var outputElement = root.GetRequired<JsonElement>("outputs");
     var variablesElement = root.GetRequired<JsonElement>("variables");
     
     var input = await InputFor(root.GetRequired<JsonElement>("request"));
