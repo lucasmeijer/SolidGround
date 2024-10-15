@@ -343,6 +343,7 @@ async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, 
         var input = dbContext.Inputs.Find(inputId) ?? throw new ArgumentException("Input not found");
 
         Uri requestUri;
+        appEndPoint = appEndPoint.Replace("http://", "https://");
         try
         {
             requestUri = new Uri(appEndPoint);
