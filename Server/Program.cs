@@ -174,7 +174,16 @@ app.MapGet("/runexperimentform", async (HttpClient httpClient, AppDbContext db) 
 async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVariable> overrideVariables,
     AppDbContext db)
 {
-    var result = await httpClient.GetAsync($"{await OriginalBasePathOfFirstInput(db)}/solidground");
+    var input = await LastInput(db);
+    if (input == null)
+        throw new ArgumentException("Input not found");
+    var originalBasePathOfFirstInput = input.OriginalRequest_Host;
+        
+    Console.WriteLine($"originalBasePathOfFirstInput: {originalBasePathOfFirstInput}");
+    var requestUri = $"{originalBasePathOfFirstInput}/solidground";
+    Console.WriteLine($"requestUri: {requestUri}");
+    
+    var result = await httpClient.GetAsync(requestUri);
     result.EnsureSuccessStatusCode();
     
     var jdoc = await JsonDocument.ParseAsync(await result.Content.ReadAsStreamAsync());
@@ -470,9 +479,9 @@ async Task<string> OriginalBasePathOfFirstInput(AppDbContext appDbContext)
     return input.OriginalRequest_Host;
 }
 
-async Task<Input> LastInput(AppDbContext appDbContext1)
+async Task<Input> LastInput(AppDbContext db)
 {
-    return await appDbContext1.Inputs.OrderByDescending(i => i.Id).FirstAsync() ?? throw new BadHttpRequestException("No inputs");
+    return await db.Inputs.OrderByDescending(i => i.Id).FirstAsync() ?? throw new BadHttpRequestException("No inputs");
 }
 
 
