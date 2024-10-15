@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="LucasWatch" type="RunDotNetWatch" factoryName="RunDotNetWatch">
+    <option name="exePath" value="$PROJECT_DIR$/Server/bin/Debug/net8.0/Server" />
+    <option name="programParameters" value="" />
+    <option name="projectFilePath" value="$PROJECT_DIR$/Server/Server.csproj" />
+    <option name="projectTfm" value="net8.0" />
+    <option name="restartOnRudeEditEditor" value="true" />
+    <option name="watchParameters" value="" />
+    <option name="workingDirectory" value="$PROJECT_DIR$/Server" />
+    <method v="2" />
+  </configuration>
+</component>

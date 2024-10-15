@@ -1,0 +1,34 @@
+@using Microsoft.AspNetCore.Mvc.Razor
+@model Input
+
+<turbo-frame id="@Model.TurboFrameId" >
+    <div class="shadow-md rounded-lg my-4 p-2 bg-gray-200">
+        @foreach (var output in Model.Outputs.OrderByDescending(o =>
+                  {
+                      return o.Execution?.StartTime ?? DateTime.Now;
+                  }))
+        {
+            @await Html.PartialAsync("_Output", output);
+        }
+
+        <details class="bg-white shadow-md rounded-lg group/output my-4">
+            <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg">
+                <h3 class="font-semibold">Inputs</h3>
+                <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </summary>
+            <div class="p-4">
+                @foreach (var c in @Model.Files)
+                {
+                    <img src="/images/@Model.Id/@c.Id"/>
+                }
+                <a href="/api/input/@Model.Id" data-turbo-method="delete" class="inline-block my-4 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75">
+                    Delete
+                </a>
+            </div>
+
+          
+        </details>
+    </div>
+</turbo-frame>

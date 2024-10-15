@@ -1,0 +1,4 @@
+@page "{id:int?}"
+@{ Layout = null; }
+@model SolidGround.Pages.OutputModel
+@await Html.PartialAsync("_Output", Model.Output);

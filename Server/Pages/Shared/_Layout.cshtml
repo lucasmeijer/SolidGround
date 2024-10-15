@@ -5,43 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>@ViewData["Title"] - SolidGround</title>
     <script type="importmap"></script>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
-    <link rel="stylesheet" href="~/SolidGround.styles.css" asp-append-version="true"/>
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/@@hotwired/turbo@7.3.0/dist/turbo.es2017-umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
-
+    @* @if (Environment.GetEnvironmentVariable("__ASPNETCORE_BROWSER_TOOLS") is not null) *@
+    @* { *@
+    @* <script src="/_framework/aspnetcore-browser-refresh.js"></script> *@
+    @* } *@
 </head>
-<body>
-<header>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-        <div class="container">
-            <a class="navbar-brand" asp-area="" asp-page="/Index">SolidGround</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                    aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                <ul class="navbar-nav flex-grow-1">
-                    <li class="nav-item">
-                        <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-</header>
-<div class="container">
-    <main role="main" class="pb-3">
-        @RenderBody()
-    </main>
-</div>
+<body style="scrollbar-gutter: stable; overflow-y: scroll">
+
+@RenderBody()
 
 @* <footer class="border-top footer text-muted"> *@
 @*     <div class="container"> *@
@@ -51,6 +26,25 @@
 
 <script src="~/js/site.js" asp-append-version="true"></script>
 
+<script>
+    function formatJson(root = document) {
+        root.querySelectorAll('pre > code.language-json').forEach(function(element) {
+            const jsonString = element.textContent;
+            try {
+                const formattedJson = JSON.stringify(JSON.parse(jsonString), null, 2);
+                element.textContent = formattedJson;
+                hljs.highlightElement(element);
+            } catch (e) {
+                console.error('Invalid JSON:', e);
+            }
+        });
+    }
+
+    // For Turbo Frame loads
+    document.addEventListener("turbo:frame-load", (event) => {
+        //formatJson(event.target);
+    });
+</script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

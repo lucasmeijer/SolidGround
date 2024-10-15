@@ -1,0 +1,10 @@
+@page 
+@{ Layout = null; } 
+@model SolidGround.Pages.InputList
+
+<turbo-frame id="@InputList.TurboFrameId">
+    @foreach (var input in Model.Inputs)
+    {
+        @await Html.PartialAsync("_Input", input);
+    }
+</turbo-frame>

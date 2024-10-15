@@ -3,6 +3,58 @@
 
 @{
     ViewData["Title"] = $"Execution Details";
+
+    void EmitVariables()
+    {
+        <div class="bg-white rounded-lg shadow-md p-4 mb-6 sticky top-0 z-10">
+    <div class="mb-4">
+        <button class="w-full text-left p-2 flex justify-between items-center bg-gray-100 rounded" onclick="toggleVariables()">
+            <span class="font-semibold">Variables</span>
+            <svg id="variableArrow" class="w-4 h-4 transform transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+        </button>
+        <div id="variableContent" class="mt-2">
+            <div class="mb-2">
+                <label for="var1" class="block text-sm font-medium text-gray-700">System Prompt</label>
+                <input type="text" id="var1" name="var1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm bg-gray-100" value="Locked Value" readonly>
+            </div>
+            <div class="mb-2">
+                <label for="var2" class="block text-sm font-medium text-gray-700">Prompt</label>
+                <pre id="var2" contenteditable="true" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 whitespace-pre-wrap">
+            You should think in steps:
+            - read the material closely.
+            - write into &lt;genre&gt;&lt;/genre&gt; what kind of learning material is in the photos.
+            - if the genre is a vocabulary test, analyze which language is the language to learn, and which is the known language. write to &lt;language_to_learn&gt; and &lt;known_language&gt;.
+              use the known language for all your quiz questions and quiz answers.
+            - if the genre is not cross language learning, write the language used in the material into &lt;language&gt; and use this for all your quiz questions and quiz answers.
+            - If the genre is like a text the student wants to learn, write a structured overview of the material in &lt;structuredoverview&gt;.
+            - write the topic of the learning material into &lt;topic&gt;&lt;/topic&gt;
+            - first lets only write the questions for the quiz into &lt;questions&gt;&lt;/questions&gt;.
+            - If the material is a vocabulary test, make the questions just be only the input word, and the answer just be the output word. make a question for every vocabulary word in the input material. 
+            - Keep writing questions to the point where if a student can answer them all correctly, she fully understands all provided material.
+</pre>
+            </div>
+            <div class="mb-2">
+                <label for="var3" class="block text-sm font-medium text-gray-700">Temperature</label>
+                <pre id="var3" contenteditable="true" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 whitespace-pre-wrap">0.5</pre>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center space-x-4 overflow-x-auto scrollbar-hide">
+        <input type="text" id="search" placeholder="Search items..." class="flex-grow p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="flex space-x-2">
+            <button class="tag-btn px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200">
+                Dummy1
+            </button>    
+            <button class="tag-btn px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 hover:bg-purple-200">
+                Dummy2
+            </button>    
+        </div>
+    </div>
+</div>
+
+    }
     
     void EmitFilterBar()
     {
@@ -30,6 +82,7 @@
 
 <div class="container mx-auto px-2 py-4 ">
     @{
+        EmitVariables();
         EmitFilterBar();
         
         foreach (var input in Model.Inputs)

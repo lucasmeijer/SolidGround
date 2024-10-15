@@ -1,5 +1,11 @@
 using System.Runtime.Serialization;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
@@ -94,5 +100,43 @@ public static class Extensions
             
             throw new NotSupportedException($"Property of type {typeof(T).Name} is not yet supported");
         }
+    }
+
+
+    public static async Task<string> RenderViewAsync(this HttpContext context, string viewName, object model = null)
+    {
+        var serviceProvider = context.RequestServices;
+
+        var viewEngine = serviceProvider.GetService<ICompositeViewEngine>();
+        var tempDataProvider = serviceProvider.GetService<ITempDataProvider>();
+        var htmlHelperOptions = serviceProvider.GetService<Microsoft.Extensions.Options.IOptions<HtmlHelperOptions>>();
+
+        var actionContext = new ActionContext(context, context.GetRouteData(), new ActionDescriptor());
+
+        using var sw = new StringWriter();
+        var viewResult = viewEngine.FindView(actionContext, viewName, isMainPage: false);
+
+        if (!viewResult.Success)
+        {
+            throw new InvalidOperationException($"Could not find view '{viewName}'");
+        }
+
+        var viewDictionary = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary())
+        {
+            Model = model
+        };
+
+        var viewContext = new ViewContext(
+            actionContext,
+            viewResult.View,
+            viewDictionary,
+            new TempDataDictionary(actionContext.HttpContext, tempDataProvider),
+            sw,
+            htmlHelperOptions.Value
+        );
+
+        await viewResult.View.RenderAsync(viewContext);
+
+        return sw.ToString();
     }
 }

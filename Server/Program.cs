@@ -1,4 +1,11 @@
+using System.Buffers.Text;
+using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -14,6 +21,8 @@ var persistentStorage = builder.Configuration["PERSISTENT_STORAGE"] ?? ".";
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={persistentStorage}/solid_ground.db"));
 builder.Services.AddHttpClient();
 builder.Services.AddHealthChecks().AddCheck("Health", () => HealthCheckResult.Healthy("OK"));
+builder.Services.AddSingleton<ViewRenderService>();
+builder.Services.AddControllersWithViews();
 var app = builder.Build();
 
 // Apply any pending migrations
@@ -38,7 +47,7 @@ app.UseAuthorization();
 app.UseHealthChecks("/up");
 app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIndex, AppDbContext db, HttpContext httpContext) =>
 {
-    var inputFile = await db.InputFiles.FirstOrDefaultAsync(file => file.InputId == inputId && file.Index == imageIndex);
+    var inputFile = await db.InputFiles.Include(f => f.Input).FirstOrDefaultAsync(file => file.InputId == inputId && file.Index == imageIndex);
     if (inputFile == null)
         return Results.NotFound();
     
@@ -58,6 +67,23 @@ app.MapPatch("/api/executions/{id}", async (int id,RestPatchExecutionRequest req
     return Results.Ok(execution);
 });
 
+app.MapDelete("/api/executions/{id}", async (int id, AppDbContext db) =>
+{
+    var execution = await db.Executions.FindAsync(id) ?? throw new BadHttpRequestException("Execution with ID " + id + " not found.");
+    await db.Entry(execution).Collection(e => e.Outputs).LoadAsync();
+    
+    db.Executions.Remove(execution);
+    await db.SaveChangesAsync();
+
+    var sb = new StringBuilder();
+    foreach(var o in execution.Outputs)
+    {
+        sb.AppendLine($"<turbo-stream action=\"remove\" target=\"output_{o.Id}\"></turbo-stream>");
+    }
+    return Results.Content(sb.ToString(), "text/vnd.turbo-stream.html");    
+});
+
+
 app.MapDelete("/api/output/{id}", async (int id, AppDbContext db) =>
 {
     var obj = db.Outputs.Find(id);
@@ -69,6 +95,7 @@ app.MapDelete("/api/output/{id}", async (int id, AppDbContext db) =>
     return Results.Content($"<turbo-stream action=\"remove\" target=\"output_{id}\"></turbo-stream>", "text/vnd.turbo-stream.html");
 });
 
+
 app.MapPost("/api/output/{id}", async (int id, HttpRequest req, AppDbContext db) =>
 {
     var jsonDoc = await JsonDocument.ParseAsync(req.Body);
@@ -77,10 +104,31 @@ app.MapPost("/api/output/{id}", async (int id, HttpRequest req, AppDbContext db)
     if (output == null)
         return Results.BadRequest($"Output {id} not found");
 
-    output.Components = OutputComponentsFromJsonElement(jsonDoc.RootElement);
+    if (!jsonDoc.RootElement.TryGetProperty("outputs", out var outputElement))
+        return Results.BadRequest("output element not found");
+    
+    output.Components = OutputComponentsFromJsonElement(outputElement);
     output.Status = ExecutionStatus.Completed;
     await db.SaveChangesAsync();
     return Results.Ok();
+});
+
+app.MapPost("/api/input/{id}/tags", async (int id, HttpRequest req, AppDbContext db, [FromBody] int tag) =>
+{
+    var input = db.Inputs.Find(id);
+    if (input == null)
+        return Results.BadRequest($"Input {id} not found");
+    var t = db.Tags.Find(tag);
+    if (t == null)
+        return Results.BadRequest($"Tag {tag} not found");
+    input.Tags.Add(t);
+    await db.SaveChangesAsync();
+    
+    return Results.Content($"""
+                            <turbo-stream action="append" target="{TurboFrameId.ForTagsInsideInput(input)}">
+                                
+                            </turbo-stream>
+                            """, "text/vnd.turbo-stream.html");    
 });
 
 app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
@@ -94,28 +142,47 @@ app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
     
     var input = await InputFor(root.GetRequired<JsonElement>("request"));
 
+    var output = new Output
+    {
+        Input = input,
+        Components = OutputComponentsFromJsonElement(outputElement),
+        Status = ExecutionStatus.Completed
+    };
+    db.Add(output);
+    
     db.Add(new Execution
     {
-        Outputs = [new Output
-        {
-            Input = input,
-            Components = OutputComponentsFromJsonElement(outputElement), 
-            Status = ExecutionStatus.Completed
-        }],
-        Name = root.GetRequired<string>("name"),
+        Outputs = [output],
         StartTime = DateTime.Now
     });
     
     await db.SaveChangesAsync();
 });
 
-app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
+app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpContext httpContext) =>
 {
-    var inputsToOutputs = restExecution.InputIds.ToDictionary(id => id, OutputFor);
+    var form = await httpContext.Request.ReadFormAsync();
+
+    if (!form.TryGetValue("ids", out var idValues))
+        return Results.BadRequest("no ids specified");
+
+    var inputIds = JsonDocument.Parse(idValues.ToString())
+        .RootElement
+        .EnumerateArray()
+        .Select(o => o.GetInt32())
+        .ToArray();
+
+    inputIds = (await db.Inputs.ToArrayAsync()).Select(i => i.Id).ToArray();
+
+    var prefix = "SolidGroundVariable_";
+    var variables = form
+        .Where(kvp => kvp.Key.StartsWith(prefix))
+        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
+    
+    var inputsToOutputs = inputIds.ToDictionary(id => id, OutputFor);
     var execution = new Execution()
     {
         StartTime = DateTime.Now,
-        Name = string.IsNullOrEmpty(restExecution.Name) ? null : restExecution.Name, 
         Outputs = [
             ..inputsToOutputs.Values
         ]
@@ -124,12 +191,26 @@ app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext 
     db.Executions.Add(execution);
     await db.SaveChangesAsync();
 
+    
+    var sb = new StringBuilder();
     foreach (var (inputId, output) in inputsToOutputs)
     {
-        _ = Task.Run(() => ExecutionForInput(inputId, restExecution, output));
-    }
+        sb.AppendLine($"""
+                      <turbo-stream action="replace" target="input_{inputId}">
+                      <template>
+                      <turbo-frame id="input_{inputId}" src="/api/input/{inputId}">
+                      </turbo-frame>
+                      </template>
+                      </turbo-stream>
+                      """);
 
-    return;
+
+        var request = httpContext.Request;
+        var outputEndPoint = $"{request.Scheme}://{request.Host.ToUriComponent()}/api/output/{output.Id}";
+        _ = Task.Run(() => ExecutionForInput(inputId, output, outputEndPoint, "https://localhost:7220/photos", variables));
+    }
+    
+    return Results.Content(sb.ToString(), "text/vnd.turbo-stream.html");
 
     Output OutputFor(int inputId) => new()
     {
@@ -139,14 +220,63 @@ app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext 
     };
 });
 
-app.MapStaticAssets();
-app.MapRazorPages()
-    .WithStaticAssets();
+app.MapDelete("/api/input/{id}", async (int id, AppDbContext db) =>
+{
+    var input = await db.Inputs.FindAsync(id);
+    if (input == null)
+        return Results.BadRequest($"Input {id} not found");
+    db.Inputs.Remove(input);
+    await db.SaveChangesAsync();
+    return Results.Content($"<turbo-stream action=\"remove\" target=\"input_{id}\"></turbo-stream>", "text/vnd.turbo-stream.html");
+});
+
+app.MapGet("/api/input/{id}", async (int id, AppDbContext db) =>
+{
+    var input = await db.Inputs.FindAsync(id) ?? throw new BadHttpRequestException("input not found");
+    await db.Entry(input).Collection(i=>i.Outputs).LoadAsync();
+    await db.Entry(input).Collection(i=>i.Files).LoadAsync();
+    return new ViewResult("_Input", model: input);
+});
+
+// app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
+// {
+//     var inputsToOutputs = restExecution.InputIds.ToDictionary(id => id, OutputFor);
+//     var execution = new Execution()
+//     {
+//         StartTime = DateTime.Now,
+//         Name = string.IsNullOrEmpty(restExecution.Name) ? null : restExecution.Name, 
+//         Outputs = [
+//             ..inputsToOutputs.Values
+//         ]
+//     };
+//     
+//     db.Executions.Add(execution);
+//     await db.SaveChangesAsync();
+//
+//     foreach (var (inputId, output) in inputsToOutputs)
+//     {
+//         _ = Task.Run(() => ExecutionForInput(inputId, output, restExecution.Endpoint));
+//     }
+//
+//     return;
+//
+//     Output OutputFor(int inputId) => new()
+//     {
+//         InputId = inputId,
+//         Status = ExecutionStatus.Started,
+//         Components = []
+//     };
+// });
+
+//app.MapStaticAssets();
+app.UseStaticFiles();
+app.MapRazorPages();
+//    .WithStaticAssets();
 
 app.Run();
 return;
 
-async Task ExecutionForInput(int inputId, RestExecution restExecution, Output output)
+async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, string endPoint, Dictionary<string,string> variables)
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -157,19 +287,31 @@ async Task ExecutionForInput(int inputId, RestExecution restExecution, Output ou
     {
         var input = dbContext.Inputs.Find(inputId) ?? throw new ArgumentException("Input not found");
 
+        Uri requestUri;
+        try
+        {
+            requestUri = new Uri(endPoint);
+        }
+        catch (UriFormatException ufe)
+        {
+            throw new BadHttpRequestException($"Invalid end point: {endPoint}", ufe);
+        }
+
         var request = new HttpRequestMessage
         {
             Method = HttpMethod.Post,
-            RequestUri = new(restExecution.Endpoint),
+            RequestUri = requestUri,
             Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
             {
                 Headers =
                 {
-                    {"SolidGroundOutputId",output.Id.ToString()},
+                    {"SolidGroundOutputEndPoint",outputEndPoint},
                     {"Content-Type",input.OriginalRequest_ContentType}
                 },
             }
         };
+        foreach(var variable in variables)
+            request.Headers.Add(variable.Key, Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
         
         httpClient.Timeout = TimeSpan.FromMinutes(10);
         var result = await httpClient.SendAsync(request);
@@ -192,7 +334,12 @@ List<OutputComponent> OutputComponentsFromJsonElement(JsonElement jsonElement)
     return jsonElement
         .EnumerateObject()
         .Where(kvp => kvp.Value.ValueKind == JsonValueKind.String)
-        .Select(kvp => new OutputComponent() { Name = kvp.Name, Value = kvp.Value.GetString() })
+        .Select(kvp =>
+        {
+            var argValue = kvp.Value;
+            var value = argValue.GetString();
+            return new OutputComponent() { Name = kvp.Name, Value = value };
+        })
         .ToList();
 }
 
@@ -267,3 +414,10 @@ async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFo
 record RestExecution(int[] InputIds, string Endpoint, string? Name);
 
 record RestPatchExecutionRequest(bool IsReference);
+
+
+public static class TurboFrameId
+{
+    public static string ForTagInsideInput(Input input, Tag tag) => $"input_{input.Id}_tag_{tag.Id}";
+    public static string ForTagsInsideInput(Input input) => $"input_{input.Id}_tags";
+}

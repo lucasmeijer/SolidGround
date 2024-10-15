@@ -4,7 +4,38 @@
     ViewData["Title"] = "Home page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="m-5">
+    <details class="bg-white shadow-md rounded-lg group">
+        <summary class="p-4 cursor-pointer flex justify-between items-center bg-green-100 rounded-lg">
+            <h3 class="font-semibold">Run Experiment</h3>
+            <svg class="w-5 h-5 transition-transform duration-200 group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </summary>
+        
+        <div class="p-4">
+            <turbo-frame id="runexperimentform" src="/RunExperimentForm">
+                <div>Loading...</div>
+            </turbo-frame>
+        </div>
+    </details>
+
+    <turbo-frame id="@InputList.TurboFrameId" src="/InputList">
+        <div>Loading...</div>
+    </turbo-frame>
 </div>
+
+    
+
+
+
+
+      
+
+
+
+
+
+
+
+

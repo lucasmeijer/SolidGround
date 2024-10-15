@@ -1,0 +1,88 @@
+@model Output
+
+
+@functions {
+
+    string ColorFor()
+    {
+        return Model.Status switch
+        {
+            ExecutionStatus.Started => "bg-blue-200",
+            ExecutionStatus.Failed => "bg-red-200",
+            _ => ""
+        };
+    }
+
+    static string HowMuchTimeAgo(DateTime dateTime)
+    {
+        var now = DateTime.Now;
+        var difference = now - dateTime;
+
+        if (difference.TotalSeconds < 60)
+            return "Just now";
+
+        if (difference.TotalMinutes < 60)
+        {
+            var minutes = (int)difference.TotalMinutes;
+            return $"{minutes} minute{(minutes == 1 ? "" : "s")} ago";
+        }
+
+        if (difference.TotalHours < 24)
+        {
+            var hours = (int)difference.TotalHours;
+            return $"{hours} hour{(hours == 1 ? "" : "s")} ago";
+        }
+
+        if (difference.TotalDays < 30)
+        {
+            var days = (int)difference.TotalDays;
+            return $"{days} day{(days == 1 ? "" : "s")} ago";
+        }
+
+        if (difference.TotalDays < 365)
+        {
+            var months = (int)(difference.TotalDays / 30);
+            return $"{months} month{(months == 1 ? "" : "s")} ago";
+        }
+
+        var years = (int)(difference.TotalDays / 365);
+        return $"{years} year{(years == 1 ? "" : "s")} ago";
+    }
+}
+<turbo-frame id="@Model.TurboFrameId">
+    <details class="bg-white shadow-md rounded-lg group/output my-4">
+        <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg @ColorFor()">
+            <h3 class="font-semibold">@HowMuchTimeAgo(Model.Execution.StartTime)</h3>
+            <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </summary>
+        <div class="px-4">
+            @foreach (var c in @Model.Components)
+            {
+                <details class="p-2 border-b last:border-b-0 text-sm group/component">
+                    <summary class="cursor-pointer flex justify-between items-center hover:bg-gray-50">
+                        <h3 class="font-semibold">@c.Name</h3>
+                        <svg class="w-5 h-5 transition-transform duration-200 transform rotate-0 group-open/component:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </summary>
+                    <div class="py-2 text-xs">
+                        <pre style="white-space: pre-wrap; word-wrap: break-word; max-width: 100%; overflow-x: auto; padding: 1em; background-color: #f0f0f0; border-radius: 4px; font-family: 'Courier New', Courier, monospace;"
+><code class="language-json2">@c.Value</code></pre>
+                    </div>
+                </details>
+            }
+            
+            <a href="/api/output/@Model.Id" data-turbo-method="delete" class="inline-block my-4 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75">
+                Delete
+            </a>
+
+            <a href="/api/executions/@Model.ExecutionId" data-turbo-method="delete" class="inline-block my-4 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75">
+                Delete For All Inputs
+            </a>
+            
+            
+        </div>
+    </details>
+</turbo-frame>

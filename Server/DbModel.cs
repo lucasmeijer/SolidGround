@@ -64,7 +64,6 @@ public class Execution
 {
     public int Id { get; set; }
     public DateTime StartTime { get; set; }
-    public string? Name { get; set; }
     public bool IsReference { get; set; }
     public List<Output> Outputs { get; set; } = [];
 }
@@ -95,7 +94,22 @@ public class Input
     public string OriginalRequest_ContentType { get; set; }
     public string OriginalRequest_Body { get; set; }
     public string OriginalRequest_Host { get; set; }
+    public string? TurboFrameId => $"input_{Id}";
+
+    public static Input Example => new()
+    {
+        Id = 1,
+        Name = "Our dummy input",
+        Files = [new InputFile() { Name = "input.png", Bytes = [0], Id = 0, MimeType = "image/png" }],
+        Strings = [new InputString() { Name = "language", Value = "nl"}],
+        Outputs = [
+            Output.Example
+        ]
+    };
+
 }
+
+
 
 public class InputString
 {
@@ -136,8 +150,21 @@ public class Output
     public Input Input { get; set; }
 
     public ExecutionStatus Status { get; set; }
-
     public List<OutputComponent> Components { get; set; } = [];
+    public string TurboFrameId => $"output_{Id}";
+
+    public static Output Example => new()
+    {
+        Status = ExecutionStatus.Completed,
+        Components = [new OutputComponent() { Name = "fullresponse.txt", Value = "heel lange output" }],
+    };
+}
+
+public class StringVariable
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Value { get; set; }
 }
 
 public class OutputComponent
