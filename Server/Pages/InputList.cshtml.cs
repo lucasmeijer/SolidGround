@@ -11,11 +11,6 @@ public class InputList(AppDbContext db) : PageModel
     
     public async Task OnGetAsync()
     {
-        Inputs = await db.Inputs
-            .Include(i=>i.Outputs)
-            .ThenInclude(o => o.Execution)
-            .Include(i=>i.Files)
-            .Include(i=>i.Strings)
-            .ToArrayAsync();
+        Inputs = await db.CompleteInputs.ToArrayAsync();
     }
 }

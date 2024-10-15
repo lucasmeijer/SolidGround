@@ -1,6 +1,7 @@
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace SolidGround;
 
@@ -16,6 +17,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OutputComponent> OutputComponents { get; set; }
     public DbSet<Execution> Executions { get; set; }
 
+    public IIncludableQueryable<Input, List<InputString>> CompleteInputs => this.Inputs
+        .Include(i => i.Outputs)
+        .ThenInclude(o => o.Execution)
+        .Include(i => i.Outputs)
+        .ThenInclude(o => o.Components)
+        .Include(i => i.Outputs)
+        .ThenInclude(o => o.StringVariables)
+        .Include(i => i.Files)
+        .Include(i => i.Strings);
+        
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Configure Execution -> Output relationship
@@ -56,6 +68,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithOne(oc => oc.Output)
             .HasForeignKey(oc => oc.OutputId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        // Configure Output -> StringVariable relationship
+        modelBuilder.Entity<Output>()
+            .HasMany(o => o.StringVariables)
+            .WithOne(oc => oc.Output)
+            .HasForeignKey(oc => oc.OutputId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -89,7 +108,7 @@ public class Input
     public List<Tag> Tags { get; set; } = [];
     public List<InputString> Strings { get; set; } = [];
     public List<InputFile> Files { get; set; } = [];
-    public string? OriginalRequest_Route { get; set; }
+    public string OriginalRequest_Route { get; set; }
     public List<Output> Outputs { get; set; } = [];
     public string OriginalRequest_ContentType { get; set; }
     public string OriginalRequest_Body { get; set; }
@@ -148,11 +167,16 @@ public class Output
 
     public int InputId { get; set; }
     public Input Input { get; set; }
-
+    
     public ExecutionStatus Status { get; set; }
     public List<OutputComponent> Components { get; set; } = [];
+    
+    public List<StringVariable> StringVariables { get; set; } = [];
+    
     public string TurboFrameId => $"output_{Id}";
 
+    
+    
     public static Output Example => new()
     {
         Status = ExecutionStatus.Completed,
@@ -162,6 +186,8 @@ public class Output
 
 public class StringVariable
 {
+    public Output Output { get; set; }
+    public int OutputId { get; set; }
     public int Id { get; set; }
     public string Name { get; set; }
     public string Value { get; set; }

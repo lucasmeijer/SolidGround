@@ -1,17 +1,13 @@
-@page
-@{
-    Layout = null;
-}
-@model SolidGround.Pages.RunExperimentForm
+@model Variables
 
 <turbo-frame id="runexperimentform">
     <form class="p-4" action="/api/experiment" method="post">
-        @foreach (var variable in Model._variables)
+        @foreach (var variable in Model.Values)
         {
-            var id = $"SolidGroundVariable_{variable.Key.ToLower()}";
+            var id = $"SolidGroundVariable_{variable.Key}";
             <div class="mb-6">
                 <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
-                   @variable.Key
+                    @variable.Key
                 </label>
                 <textarea
                 id="@id"
@@ -20,8 +16,7 @@
                 rows="4"
                 placeholder="@variable.Value"
                 oninput="this.classList.toggle('text-gray-500', this.value === this.placeholder)"
-                    >@variable.Value
-                </textarea>
+                    >@variable.Value</textarea>
             </div>
         }
         <input type="hidden" name="ids" value="[1,2,3]">

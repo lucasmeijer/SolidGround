@@ -11,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Net.Http.Headers;
 using SolidGround;
-
+using Kvps = System.Collections.Generic.KeyValuePair<string,string>[];
+    
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -136,9 +137,8 @@ app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
     var jsonDoc = await JsonDocument.ParseAsync(req.Body);
     var root = jsonDoc.RootElement;
     
-    //File.WriteAllText("/Users/lucas/SolidGround/sample_ingress.json", JsonSerializer.Serialize(root));
-    
     var outputElement = root.GetRequired<JsonElement>("output");
+    var variablesElement = root.GetRequired<JsonElement>("variables");
     
     var input = await InputFor(root.GetRequired<JsonElement>("request"));
 
@@ -146,6 +146,7 @@ app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
     {
         Input = input,
         Components = OutputComponentsFromJsonElement(outputElement),
+        StringVariables = VariablesFromJsonElement(variablesElement),
         Status = ExecutionStatus.Completed
     };
     db.Add(output);
@@ -158,6 +159,35 @@ app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
     
     await db.SaveChangesAsync();
 });
+
+app.MapGet("/runexperimentform/{output_id}", async (int output_id, AppDbContext db, HttpClient httpClient) =>
+{
+    var output = await db.Outputs.FindAsync(output_id) ?? throw new BadHttpRequestException("Output " + output_id + " not found.");
+    await db.Entry(output).Collection(o=>o.StringVariables).LoadAsync();
+    var outputStringVariables = output.StringVariables;
+    
+    return await RunExperimentHelper(httpClient, outputStringVariables, db);
+});
+
+app.MapGet("/runexperimentform", async (HttpClient httpClient, AppDbContext db) => await RunExperimentHelper(httpClient,[], db));
+
+async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVariable> overrideVariables,
+    AppDbContext db)
+{
+    var result = await httpClient.GetAsync($"{await OriginalBasePathOfFirstInput(db)}/solidground");
+    result.EnsureSuccessStatusCode();
+    var jdoc = await JsonDocument.ParseAsync(await result.Content.ReadAsStreamAsync());
+
+    var d = jdoc
+        .RootElement
+        .EnumerateObject()
+        .ToDictionary(k => k.Name, v => v.Value.GetString() ?? throw new InvalidOperationException());
+
+    foreach (var overrideVariable in overrideVariables)
+        d[overrideVariable.Name] = overrideVariable.Value;
+    
+    return new ViewResult("_RunExperimentForm", new Variables(d.ToArray()));
+}
 
 app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpContext httpContext) =>
 {
@@ -193,6 +223,8 @@ app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpCo
 
     
     var sb = new StringBuilder();
+    var input = await LastInput(db);
+    
     foreach (var (inputId, output) in inputsToOutputs)
     {
         sb.AppendLine($"""
@@ -207,7 +239,7 @@ app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpCo
 
         var request = httpContext.Request;
         var outputEndPoint = $"{request.Scheme}://{request.Host.ToUriComponent()}/api/output/{output.Id}";
-        _ = Task.Run(() => ExecutionForInput(inputId, output, outputEndPoint, "https://localhost:7220/photos", variables));
+        _ = Task.Run(() => ExecutionForInput(inputId, output, outputEndPoint, $"{input.OriginalRequest_Host}{input.OriginalRequest_Route}", variables));
     }
     
     return Results.Content(sb.ToString(), "text/vnd.turbo-stream.html");
@@ -215,6 +247,7 @@ app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpCo
     Output OutputFor(int inputId) => new()
     {
         InputId = inputId,
+        StringVariables = [..variables.Select(kvp => new StringVariable { Name = kvp.Key[prefix.Length..], Value = kvp.Value})],
         Status = ExecutionStatus.Started,
         Components = []
     };
@@ -232,9 +265,8 @@ app.MapDelete("/api/input/{id}", async (int id, AppDbContext db) =>
 
 app.MapGet("/api/input/{id}", async (int id, AppDbContext db) =>
 {
-    var input = await db.Inputs.FindAsync(id) ?? throw new BadHttpRequestException("input not found");
-    await db.Entry(input).Collection(i=>i.Outputs).LoadAsync();
-    await db.Entry(input).Collection(i=>i.Files).LoadAsync();
+    var input = await db.CompleteInputs.FirstOrDefaultAsync(i => i.Id == id) ?? throw new BadHttpRequestException("input not found");
+    
     return new ViewResult("_Input", model: input);
 });
 
@@ -343,6 +375,20 @@ List<OutputComponent> OutputComponentsFromJsonElement(JsonElement jsonElement)
         .ToList();
 }
 
+List<StringVariable> VariablesFromJsonElement(JsonElement jsonElement)
+{
+    return jsonElement
+        .EnumerateObject()
+        .Where(kvp => kvp.Value.ValueKind == JsonValueKind.String)
+        .Select(kvp =>
+        {
+            var argValue = kvp.Value;
+            var value = argValue.GetString();
+            return new StringVariable() { Name = kvp.Name, Value = value };
+        })
+        .ToList();
+}
+
 async Task<Input> InputFor(JsonElement requestElement)
 {
     var bodyBase64 = requestElement.GetRequired<string>("body_base64");
@@ -356,7 +402,7 @@ async Task<Input> InputFor(JsonElement requestElement)
         OriginalRequest_ContentType = originalRequestContentType,
         OriginalRequest_Body = bodyBase64,
         OriginalRequest_Route = requestElement.GetRequired<string>("route"),
-        OriginalRequest_Host = requestElement.GetRequired<string>("host"),
+        OriginalRequest_Host = requestElement.GetRequired<string>("basepath"),
     };
 }
 
@@ -407,6 +453,17 @@ async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFo
     return (list, inputStrings1);
 }
 
+async Task<string> OriginalBasePathOfFirstInput(AppDbContext appDbContext)
+{
+    var input = await LastInput(appDbContext);
+    return input.OriginalRequest_Host;
+}
+
+async Task<Input> LastInput(AppDbContext appDbContext1)
+{
+    return await appDbContext1.Inputs.OrderByDescending(i => i.Id).FirstAsync() ?? throw new BadHttpRequestException("No inputs");
+}
+
 
 // record RestInput(string? Name, RestInputComponent[] Components);
 // record RestInputComponent(ComponentType Type, string Data);
@@ -421,3 +478,6 @@ public static class TurboFrameId
     public static string ForTagInsideInput(Input input, Tag tag) => $"input_{input.Id}_tag_{tag.Id}";
     public static string ForTagsInsideInput(Input input) => $"input_{input.Id}_tags";
 }
+
+
+public record Variables(KeyValuePair<string, string>[] Values);

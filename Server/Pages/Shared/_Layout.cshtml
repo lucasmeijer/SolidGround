@@ -35,14 +35,14 @@
                 element.textContent = formattedJson;
                 hljs.highlightElement(element);
             } catch (e) {
-                console.error('Invalid JSON:', e);
+                //this is okay, many things are not json
             }
         });
     }
 
     // For Turbo Frame loads
     document.addEventListener("turbo:frame-load", (event) => {
-        //formatJson(event.target);
+        formatJson(event.target);
     });
 </script>
 @await RenderSectionAsync("Scripts", required: false)

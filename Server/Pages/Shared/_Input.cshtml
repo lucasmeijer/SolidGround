@@ -3,10 +3,7 @@
 
 <turbo-frame id="@Model.TurboFrameId" >
     <div class="shadow-md rounded-lg my-4 p-2 bg-gray-200">
-        @foreach (var output in Model.Outputs.OrderByDescending(o =>
-                  {
-                      return o.Execution?.StartTime ?? DateTime.Now;
-                  }))
+        @foreach (var output in Model.Outputs)
         {
             @await Html.PartialAsync("_Output", output);
         }
@@ -27,8 +24,6 @@
                     Delete
                 </a>
             </div>
-
-          
         </details>
     </div>
 </turbo-frame>
