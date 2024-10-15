@@ -179,6 +179,10 @@ async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVar
         throw new ArgumentException("Input not found");
     var originalBasePathOfFirstInput = input.OriginalRequest_Host;
         
+    Console.WriteLine($"input.id: {input.Id}");
+    Console.WriteLine($"input.OriginalRequest_ContentType: {input.OriginalRequest_ContentType}");
+    Console.WriteLine($"input.OriginalRequest_Route: {input.OriginalRequest_Route}");
+    Console.WriteLine($"input.OriginalRequest_Body.Length: {input.OriginalRequest_Body.Length}");
     Console.WriteLine($"originalBasePathOfFirstInput: {originalBasePathOfFirstInput}");
     var requestUri = $"{originalBasePathOfFirstInput}/solidground";
     Console.WriteLine($"requestUri: {requestUri}");
@@ -481,7 +485,9 @@ async Task<string> OriginalBasePathOfFirstInput(AppDbContext appDbContext)
 
 async Task<Input> LastInput(AppDbContext db)
 {
-    return await db.Inputs.OrderByDescending(i => i.Id).FirstAsync() ?? throw new BadHttpRequestException("No inputs");
+    var firstAsync = await db.Inputs.OrderByDescending(i => i.Id).FirstAsync() ?? throw new BadHttpRequestException("No inputs");
+     
+    return firstAsync;
 }
 
 
