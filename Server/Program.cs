@@ -176,6 +176,7 @@ async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVar
 {
     var result = await httpClient.GetAsync($"{await OriginalBasePathOfFirstInput(db)}/solidground");
     result.EnsureSuccessStatusCode();
+    
     var jdoc = await JsonDocument.ParseAsync(await result.Content.ReadAsStreamAsync());
 
     var d = jdoc
@@ -347,7 +348,17 @@ async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, 
         
         httpClient.Timeout = TimeSpan.FromMinutes(10);
         var result = await httpClient.SendAsync(request);
-        result.EnsureSuccessStatusCode();
+        if (!result.IsSuccessStatusCode)
+        {
+            var body = await result.Content.ReadAsStringAsync();
+            output.Status = ExecutionStatus.Failed;
+            output.Components.Add(new()
+            {
+                Name = $"Http Error {result.StatusCode}",
+                Value = body
+            });
+            await dbContext.SaveChangesAsync();
+        }
     }
     catch (Exception ex)
     {
