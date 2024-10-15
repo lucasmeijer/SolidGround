@@ -239,6 +239,7 @@ app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpCo
     var sb = new StringBuilder();
     var input = await LastInput(db);
     
+
     foreach (var (inputId, output) in inputsToOutputs)
     {
         sb.AppendLine($"""
@@ -253,7 +254,15 @@ app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpCo
 
         var request = httpContext.Request;
         var outputEndPoint = $"{request.Scheme}://{request.Host.ToUriComponent()}/api/output/{output.Id}";
-        _ = Task.Run(() => ExecutionForInput(inputId, output, outputEndPoint, $"{input.OriginalRequest_Host}{input.OriginalRequest_Route}", variables));
+        var appEndPoint = $"{input.OriginalRequest_Host}{input.OriginalRequest_Route}";
+        
+                
+        
+        _ = Task.Run(() =>
+        {
+            
+            return ExecutionForInput(inputId, output, outputEndPoint, appEndPoint, variables);
+        });
     }
     
     return Results.Content(sb.ToString(), "text/vnd.turbo-stream.html");
@@ -322,7 +331,7 @@ app.MapRazorPages();
 app.Run();
 return;
 
-async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, string endPoint, Dictionary<string,string> variables)
+async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, string appEndPoint, Dictionary<string,string> variables)
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -336,13 +345,15 @@ async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, 
         Uri requestUri;
         try
         {
-            requestUri = new Uri(endPoint);
+            requestUri = new Uri(appEndPoint);
         }
         catch (UriFormatException ufe)
         {
-            throw new BadHttpRequestException($"Invalid end point: {endPoint}", ufe);
+            throw new BadHttpRequestException($"Invalid end point: {appEndPoint}", ufe);
         }
-
+        
+        Console.WriteLine($"POST to {appEndPoint}");
+        
         var request = new HttpRequestMessage
         {
             Method = HttpMethod.Post,
@@ -356,10 +367,14 @@ async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, 
                 },
             }
         };
+        
         foreach(var variable in variables)
             request.Headers.Add(variable.Key, Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
         
         httpClient.Timeout = TimeSpan.FromMinutes(10);
+        
+        Console.WriteLine($"REQUEST:::: {request.ToString()}");
+        
         var result = await httpClient.SendAsync(request);
         if (!result.IsSuccessStatusCode)
         {
