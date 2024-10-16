@@ -50,15 +50,9 @@
     }
 }
 
-@{
-    var buttonAttrs = "inline-block text-white font-semibold rounded-lg shadow-md px-2 h-16 focus:outline-none focus:ring-2 focus:ring-opacity-75 flex items-center justify-center";
-    var redAttrs = "bg-red-500 hover:bg-red-700 focus:ring-red-400";
-    var greenAttrs = "bg-green-500 hover:bg-green-700 focus:ring-green-400";
-}
-
 <turbo-frame id="@Model.TurboFrameId">
-    <div class="flex gap-2">
-        <details class="bg-white grow shadow-md rounded-lg group/output">
+    <div class="flex flex-row gap-2">
+        <details class="bg-gray-50 grow shadow-md rounded-lg group/output">
             <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg @ColorFor()">
                 <h3 class="font-semibold">@HowMuchTimeAgo(Model.Execution.StartTime)</h3>
                 <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -119,12 +113,12 @@
                         
                     </div>
                 </details>
-                <a href="/runexperimentform/@Model.Id" data-turbo-frame="runexperimentform" class="@buttonAttrs @greenAttrs">
+                <a href="/runexperimentform/@Model.Id" data-turbo-frame="runexperimentform" class="@Buttons.Attrs @Buttons.GreenAttrs">
                     Adopt variables for new experiment
                 </a>
             </div>
         </details>
-        <a href="/api/executions/@Model.ExecutionId" data-turbo-method="delete" class="@buttonAttrs @redAttrs">
+        <a href="/api/executions/@Model.ExecutionId" data-turbo-method="delete" class="@Buttons.Attrs @Buttons.RedAttrs">
             Delete
         </a>
     </div>

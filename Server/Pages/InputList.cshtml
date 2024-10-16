@@ -5,8 +5,10 @@
 @model SolidGround.Pages.InputList
 
 <turbo-frame id="@InputList.TurboFrameId">
+    <div class="flex-col flex gap-2">
     @foreach (var input in Model.Inputs)
     {
         @await Html.PartialAsync("_Input", input);
     }
+    </div>
 </turbo-frame>

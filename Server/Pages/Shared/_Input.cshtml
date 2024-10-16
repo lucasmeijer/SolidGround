@@ -2,28 +2,34 @@
 @model Input
 
 <turbo-frame id="@Model.TurboFrameId" >
-    <div class="shadow-md rounded-lg my-4 p-2 bg-gray-200">
-        @foreach (var output in Model.Outputs)
-        {
-            @await Html.PartialAsync("_Output", output);
-        }
-
-        <details class="bg-white shadow-md rounded-lg group/output my-4">
+    <div class="flex gap-2">
+        <details class="bg-white grow shadow-md rounded-lg group/output">
             <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg">
-                <h3 class="font-semibold">Inputs</h3>
+                <h3 class="font-semibold">@(Model.Name ?? "Naamloos")</h3>
                 <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                 </svg>
             </summary>
-            <div class="p-4">
+            <div class="p-4 flex-col flex gap-2">
+                <div class="flex gap-2">
                 @foreach (var c in @Model.Files)
                 {
-                    <img src="/images/@Model.Id/@c.Id"/>
+                    <div class="w-32 h-32 overflow-hidden">
+                        <a href="/images/@Model.Id/@c.Index" target="_blank">
+                            <img src="/images/@Model.Id/@c.Index" alt="Your image description" class="w-full h-full object-cover">
+                        </a>
+                    </div>
                 }
-                <a href="/api/input/@Model.Id" data-turbo-method="delete" class="inline-block my-4 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75">
-                    Delete
-                </a>
+                </div>
+            
+                @foreach (var output in Model.Outputs)
+                {
+                    @await Html.PartialAsync("_Output", output);
+                }
             </div>
         </details>
+        <a href="/api/input/@Model.Id" data-turbo-method="delete" class="@Buttons.Attrs @Buttons.RedAttrs">
+            Delete
+        </a>
     </div>
 </turbo-frame>

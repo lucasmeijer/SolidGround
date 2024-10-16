@@ -42,7 +42,9 @@ app.UseAuthorization();
 app.UseHealthChecks("/up");
 app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIndex, AppDbContext db, HttpContext httpContext) =>
 {
-    var inputFile = await db.InputFiles.Include(f => f.Input).FirstOrDefaultAsync(file => file.InputId == inputId && file.Index == imageIndex);
+    var inputFile = await db.InputFiles
+        .Include(f => f.Input)
+        .FirstOrDefaultAsync(file => file.InputId == inputId && file.Index == imageIndex);
     if (inputFile == null)
         return Results.NotFound();
     
@@ -133,8 +135,9 @@ app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
     
     var outputElement = root.GetRequired<JsonElement>("outputs");
     var variablesElement = root.GetRequired<JsonElement>("variables");
+    root.TryGetOptional("name", out string? name);
     
-    var input = await InputFor(root.GetRequired<JsonElement>("request"));
+    var input = await InputFor(root.GetRequired<JsonElement>("request"), name);
 
     var output = new Output
     {
@@ -397,7 +400,7 @@ List<StringVariable> VariablesFromJsonElement(JsonElement jsonElement)
         .ToList();
 }
 
-async Task<Input> InputFor(JsonElement requestElement)
+async Task<Input> InputFor(JsonElement requestElement, string? name)
 {
     var bodyBase64 = requestElement.GetRequired<string>("body_base64");
     var originalRequestContentType = requestElement.GetRequired<string>("content_type");
@@ -406,6 +409,7 @@ async Task<Input> InputFor(JsonElement requestElement)
     return new()
     {
         Files = inputFiles,
+        Name = name,
         Strings = inputStrings,
         OriginalRequest_ContentType = originalRequestContentType,
         OriginalRequest_Body = bodyBase64,
