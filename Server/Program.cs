@@ -1,18 +1,12 @@
-using System.Buffers.Text;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Razor;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Net.Http.Headers;
 using SolidGround;
-using Kvps = System.Collections.Generic.KeyValuePair<string,string>[];
-    
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -160,33 +154,20 @@ app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
     await db.SaveChangesAsync();
 });
 
-app.MapGet("/runexperimentform/{output_id}", async (int output_id, AppDbContext db, HttpClient httpClient) =>
+app.MapGet("/runexperimentform/{output_id}", async (int output_id, AppDbContext db, HttpClient httpClient, IConfiguration config) =>
 {
     var output = await db.Outputs.FindAsync(output_id) ?? throw new BadHttpRequestException("Output " + output_id + " not found.");
     await db.Entry(output).Collection(o=>o.StringVariables).LoadAsync();
     var outputStringVariables = output.StringVariables;
     
-    return await RunExperimentHelper(httpClient, outputStringVariables, db);
+    return await RunExperimentHelper(httpClient, outputStringVariables, config);
 });
 
-app.MapGet("/runexperimentform", async (HttpClient httpClient, AppDbContext db) => await RunExperimentHelper(httpClient,[], db));
+app.MapGet("/runexperimentform", async (HttpClient httpClient, IConfiguration config) => await RunExperimentHelper(httpClient,[], config));
 
-async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVariable> overrideVariables,
-    AppDbContext db)
+async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVariable> overrideVariables, IConfiguration config)
 {
-    var input = await LastInput(db);
-    if (input == null)
-        throw new ArgumentException("Input not found");
-    var originalBasePathOfFirstInput = input.OriginalRequest_Host;
-        
-    Console.WriteLine($"input.id: {input.Id}");
-    Console.WriteLine($"input.OriginalRequest_ContentType: {input.OriginalRequest_ContentType}");
-    Console.WriteLine($"input.OriginalRequest_Route: {input.OriginalRequest_Route}");
-    Console.WriteLine($"input.OriginalRequest_Body.Length: {input.OriginalRequest_Body.Length}");
-    Console.WriteLine($"originalBasePathOfFirstInput: {originalBasePathOfFirstInput}");
-    var requestUri = $"{originalBasePathOfFirstInput}/solidground";
-    Console.WriteLine($"requestUri: {requestUri}");
-    
+    var requestUri = $"{config.GetMandatory("SOLIDGROUND_TARGET_APP")}/solidground";
     var result = await httpClient.GetAsync(requestUri);
     result.EnsureSuccessStatusCode();
     
@@ -203,7 +184,7 @@ async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVar
     return new ViewResult("_RunExperimentForm", new Variables(d.ToArray()));
 }
 
-app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpContext httpContext) =>
+app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpContext httpContext, IConfiguration config) =>
 {
     var form = await httpContext.Request.ReadFormAsync();
 
@@ -250,19 +231,10 @@ app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpCo
                       </template>
                       </turbo-stream>
                       """);
-
-
-        var request = httpContext.Request;
-        var outputEndPoint = $"{request.Scheme}://{request.Host.ToUriComponent()}/api/output/{output.Id}";
-        var appEndPoint = $"{input.OriginalRequest_Host}{input.OriginalRequest_Route}";
         
-                
+        var appEndPoint = $"{config.GetMandatory("SOLIDGROUND_TARGET_APP")}{input.OriginalRequest_Route}";
         
-        _ = Task.Run(() =>
-        {
-            
-            return ExecutionForInput(inputId, output, outputEndPoint, appEndPoint, variables);
-        });
+        _ = Task.Run(() => ExecutionForInput(inputId, output, appEndPoint, variables));
     }
     
     return Results.Content(sb.ToString(), "text/vnd.turbo-stream.html");
@@ -331,19 +303,19 @@ app.MapRazorPages();
 app.Run();
 return;
 
-async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, string appEndPoint, Dictionary<string,string> variables)
+async Task ExecutionForInput(int inputId, Output output, string appEndPoint, Dictionary<string,string> variables)
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
-
+    
     dbContext.Attach(output);
     try
     {
         var input = dbContext.Inputs.Find(inputId) ?? throw new ArgumentException("Input not found");
 
         Uri requestUri;
-        appEndPoint = appEndPoint.Replace("http://", "https://");
+        
         try
         {
             requestUri = new Uri(appEndPoint);
@@ -353,8 +325,6 @@ async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, 
             throw new BadHttpRequestException($"Invalid end point: {appEndPoint}", ufe);
         }
         
-        Console.WriteLine($"POST to {appEndPoint}");
-        
         var request = new HttpRequestMessage
         {
             Method = HttpMethod.Post,
@@ -363,7 +333,7 @@ async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, 
             {
                 Headers =
                 {
-                    {"SolidGroundOutputEndPoint",outputEndPoint},
+                    {"SolidGroundOutputId",output.Id.ToString()},
                     {"Content-Type",input.OriginalRequest_ContentType}
                 },
             }
@@ -373,8 +343,6 @@ async Task ExecutionForInput(int inputId, Output output, string outputEndPoint, 
             request.Headers.Add(variable.Key, Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
         
         httpClient.Timeout = TimeSpan.FromMinutes(10);
-        
-        Console.WriteLine($"REQUEST:::: {request.ToString()}");
         
         var result = await httpClient.SendAsync(request);
         if (!result.IsSuccessStatusCode)
@@ -493,11 +461,6 @@ async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFo
     return (list, inputStrings1);
 }
 
-async Task<string> OriginalBasePathOfFirstInput(AppDbContext appDbContext)
-{
-    var input = await LastInput(appDbContext);
-    return input.OriginalRequest_Host;
-}
 
 async Task<Input> LastInput(AppDbContext db)
 {

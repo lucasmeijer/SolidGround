@@ -71,6 +71,9 @@ public static class Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
         };
     }
+    
+    public static string GetMandatory(this IConfiguration config, string keyname) => config[keyname] ?? throw new Exception($"No config found for {keyname}");
+    
     public static T GetRequired<T>(this JsonElement self, string propertyName)
     {
         if (!self.TryGetProperty(propertyName, out var jsonElement))

@@ -20,6 +20,7 @@ registry:
 env:
     clear:
       PERSISTENT_STORAGE: /persistent_storage
+      SOLIDGROUND_TARGET_APP: https://flashcards.lucasmeijer.com
 
 proxy:
   ssl: true
