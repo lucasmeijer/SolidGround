@@ -16,7 +16,7 @@ public record TurboStream(TurboFrame[] Elements) : IResult
         response.ContentType = "text/vnd.turbo-stream.html";
         foreach (var element in Elements)
         {
-            await response.WriteAsync($"<turbo-stream action=\"replace\" target=\"{element.TurboFrameId}\">");
+            await response.WriteAsync($"<turbo-stream action=\"update\" target=\"{element.TurboFrameId}\">");
             await response.WriteAsync("<template>");
             await response.WriteAsync(await element.RenderToStringAsync(httpContext));
             await response.WriteAsync("</template>");
@@ -27,13 +27,9 @@ public record TurboStream(TurboFrame[] Elements) : IResult
 
 public abstract record TurboFrame(string TurboFrameId) : IResult
 {
-    // public async Task ExecuteResultAsync(ActionContext actionContext)
-    // {
-    //     HttpContext httpContext = actionContext.HttpContext;
-    //     var html = await this.RenderToStringAsync(httpContext);
-    //     actionContext.HttpContext.Response.ContentType = "text/html";
-    //     await actionContext.HttpContext.Response.WriteAsync(html);
-    // }
+    public virtual string[] AdditionalAttributes => [];
+    public virtual string? DataTurboAction => null;
+
     public async Task ExecuteAsync(HttpContext httpContext)
     {
         httpContext.Response.ContentType = "text/html";
@@ -42,10 +38,10 @@ public abstract record TurboFrame(string TurboFrameId) : IResult
     
     public async Task<string> RenderToStringAsync(HttpContext httpContext)
     {
-        var httpContextRequestServices = httpContext.RequestServices;
+        var serviceProvider = httpContext.RequestServices;
         
-        var razorViewEngine = httpContextRequestServices.GetRequiredService<IRazorViewEngine>();
-        var tempDataProvider = httpContextRequestServices.GetRequiredService<ITempDataProvider>();
+        var razorViewEngine = serviceProvider.GetRequiredService<IRazorViewEngine>();
+        var tempDataProvider = serviceProvider.GetRequiredService<ITempDataProvider>();
         
         var actionContext = new ActionContext(httpContext, httpContext.GetRouteData(), new ActionDescriptor());
 
@@ -60,7 +56,7 @@ public abstract record TurboFrame(string TurboFrameId) : IResult
 
         var viewDictionary = new ViewDataDictionary(new EmptyModelMetadataProvider(), new())
         {
-            Model = this
+            Model = await BuildRazorModelAsync(serviceProvider.GetRequiredService<AppDbContext>()),
         };
 
         var tempData = new TempDataDictionary(httpContext, tempDataProvider);
@@ -74,16 +70,18 @@ public abstract record TurboFrame(string TurboFrameId) : IResult
             new HtmlHelperOptions()
         );
 
-        await sw.WriteAsync($"<turbo-frame id=\"{TurboFrameId}\">");
+        await sw.WriteAsync($"<turbo-frame id=\"{TurboFrameId}\" ");
+        if (DataTurboAction != null)
+            await sw.WriteAsync($"data-turbo-action=\"{DataTurboAction}\" ");
+        await sw.WriteAsync(AdditionalAttributes.SeparateWith(" "));
+        await sw.WriteLineAsync(">");
         await viewResult.View.RenderAsync(viewContext);
-        await sw.WriteAsync($"</turbo-frame>");
+        await sw.WriteLineAsync($"</turbo-frame>");
 
         return sw.ToString();
     }
-    
- 
-    
     protected virtual string ViewName => GetType().Name;
+    protected virtual Task<object> BuildRazorModelAsync(AppDbContext dbContext) => Task.FromResult<object>(this);
 }
 
 public static class HtmlExtensions

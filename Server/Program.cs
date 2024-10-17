@@ -112,14 +112,21 @@ app.MapPost("/api/output/{id}", async (int id, HttpRequest req, AppDbContext db)
     return Results.Ok();
 });
 
+
 app.MapPost("/api/search/tags", async (AppDbContext db, [FromForm] string tagData) =>
 {
     var json = JsonDocument.Parse(tagData).RootElement;
-    if (!json.TryGetProperty("new_tags", out var tagToAddElement))
+    if (!json.TryGetProperty("new_tags", out var newTags))
         throw new BadHttpRequestException("no new_tags found");
+
+    var searchTags = newTags.EnumerateArray().Select(t => FindTag(t, db)).ToArray();
+    var searchTagsIds = searchTags.Select(t=>t.Id).ToArray();
+    var filtered = db.Inputs.Include(i=>i.Tags).Where(i => searchTagsIds.All(searchTagId => i.Tags.Any(it=>it.Id == searchTagId)));
     
-    var tags = tagToAddElement.EnumerateArray().Select(t => FindTag(t, db));
-    return new TurboStream([await InputTags.ForSearchTags([..tags], db)]);
+    return new TurboStream([
+        InputTags.ForSearchTags([..searchTags]),
+        new InputList(await filtered.ToArrayAsync())
+        ]);
 }).DisableAntiforgery();
 
 Tag FindTag(JsonElement tagidElement, AppDbContext appDbContext)
@@ -155,7 +162,7 @@ app.MapPost("/api/input/{id}/tags", async (int id, HttpRequest req, AppDbContext
         input.Tags.Remove(find);
         await db.SaveChangesAsync();
     }
-    return (IResult) input.TagsViewData(await db.Tags.ToArrayAsync());
+    return (IResult) input.TagsViewData();
 }).DisableAntiforgery();
 
 app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
@@ -224,15 +231,12 @@ app.MapDelete("/api/input/{id}", async (int id, AppDbContext db) =>
         return Results.BadRequest($"Input {id} not found");
     db.Inputs.Remove(input);
     await db.SaveChangesAsync();
-    return Results.Content($"<turbo-stream action=\"remove\" target=\"input_{id}\"></turbo-stream>", "text/vnd.turbo-stream.html");
+    return Results.Content($"<turbo-stream action=\"remove\" target=\"{InputTurboFrame.TurboFrameIdFor(id)}\"></turbo-stream>", "text/vnd.turbo-stream.html");
 });
 
-app.MapGet("/api/input/{id}", async (int id, AppDbContext db) =>
-{
-    var input = await db.CompleteInputs.FirstOrDefaultAsync(i => i.Id == id) ?? throw new BadHttpRequestException("input not found");
-    
-    return new InputTurboFrame(input, await db.Tags.ToArrayAsync());
-});
+app.MapGet("/api/input/{id}", (int id) => new InputTurboFrame(id));
+app.MapGet("/api/input/{id}/details", (int id) => new InputDetailsTurboFrame(id));
+
 
 // app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
 // {

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace SolidGround;
@@ -13,19 +14,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Output> Outputs { get; set; }
     public DbSet<OutputComponent> OutputComponents { get; set; }
     public DbSet<Execution> Executions { get; set; }
-
-    public IIncludableQueryable<Input, List<InputString>> CompleteInputs => this.Inputs
-        .Include(i => i.Tags)
-        .Include(i => i.Outputs)
-        .ThenInclude(o => o.Execution)
-        .Include(i => i.Outputs)
-        .ThenInclude(o => o.Components)
-        .Include(i => i.Outputs)
-        .ThenInclude(o => o.StringVariables)
-        .Include(i => i.Files)
-        .Include(i => i.Strings);
-        
-        
+    
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ConfigureWarnings(warnings => 
+            warnings.Throw(RelationalEventId.MultipleCollectionIncludeWarning));
+    }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -127,9 +121,9 @@ public class Input
         ]
     };
 
-    public InputTags TagsViewData(Tag[] allTags)
+    public InputTags TagsViewData()
     {
-        return new(TurboFrameIdOfTags, Tags.ToArray(), allTags, $"/api/input/{Id}/tags");
+        return new(TurboFrameIdOfTags, Tags.ToArray(), $"/api/input/{Id}/tags");
     }
 }
 

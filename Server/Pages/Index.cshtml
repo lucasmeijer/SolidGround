@@ -31,10 +31,10 @@
             </button>
         </div>
         <span class="text-gray-700 font-semibold">Filter:</span>
-        @await Html.RenderTurboFrameAsync(InputTags.ForSearchTags([], Model.AllTags))
+        @await Html.RenderTurboFrameAsync(InputTags.ForSearchTags([]))
     </div>
 
-    @await Html.RenderTurboFrameAsync(new InputList(Model.Inputs,Model.AllTags))
+    @await Html.RenderTurboFrameAsync(new InputList(Model.Inputs))
 </div>
 
       

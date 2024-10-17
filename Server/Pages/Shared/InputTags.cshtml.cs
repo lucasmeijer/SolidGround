@@ -2,15 +2,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace SolidGround;
 
-public record InputTags(string TurboFrameId, Tag[] Tags, Tag[] AllTags, string Endpoint) : TurboFrame(TurboFrameId)
+public record InputTags(string TurboFrameId, Tag[] Tags, string Endpoint) : TurboFrame(TurboFrameId)
 {
-    public static async Task<InputTags> ForSearchTags(Tag[] tags, AppDbContext db)
+    public record Model(Tag[] Tags, Tag[] AllTags, string Endpoint);
+
+    protected override async Task<object> BuildRazorModelAsync(AppDbContext dbContext)
     {
-        return ForSearchTags(tags, await db.Tags.ToArrayAsync());
+        return new Model(Tags, await dbContext.Tags.ToArrayAsync(), Endpoint);
     }
 
-    public static InputTags ForSearchTags(Tag[] tags, Tag[] allTags)
+    public static InputTags ForSearchTags(Tag[] tags)
     {
-        return new("search_tags", tags, allTags, "/api/search/tags");
+        return new("search_tags", tags, "/api/search/tags");
     }
 }

@@ -1,8 +1,13 @@
 @model InputList
 
 <div class="flex-col flex gap-2">
-@foreach (var input in Model.Inputs)
-{
-    @(await Html.RenderTurboFrameAsync(new InputTurboFrame(input, Model.AllTags)))
-}
+
+    @if (Model.Inputs.Length == 0)
+    {
+        <div class="bg-white shadow-md rounded-lg">No inputs matching this filter.</div>    
+    }
+    @foreach (var input in Model.Inputs)
+    {
+        @(await Html.RenderTurboFrameAsync(new InputTurboFrame(input.Id)))
+    }
 </div>

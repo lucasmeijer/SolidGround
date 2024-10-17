@@ -1,0 +1,29 @@
+@model InputDetailsTurboFrame.Model
+
+<div class="p-4 flex-col flex gap-4">
+    <div class="flex gap-2">
+        @foreach (var c in @Model.Input.Files)
+        {
+            <div class="w-32 h-32 overflow-hidden">
+                <a href="/images/@Model.Input.Id/@c.Index" target="_blank">
+                    <img src="/images/@Model.Input.Id/@c.Index" alt="Your image description" class="w-full h-full object-cover">
+                </a>
+            </div>
+        }
+    </div>
+        
+    <div class="flex justify-between">
+        <div>
+            @await Html.RenderTurboFrameAsync(Model.Input.TagsViewData())
+        </div>
+        <a href="/api/input/@Model.Input.Id" data-turbo-method="delete" class="@Buttons.Attrs @Buttons.RedAttrs">
+            Delete Entire Input
+        </a>
+    </div>
+    
+    @foreach (var output in Model.Input.Outputs)
+    {
+        @await Html.RenderTurboFrameAsync(new OutputTurboFrame(output.Id));
+    }
+        
+</div>

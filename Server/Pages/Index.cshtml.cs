@@ -13,6 +13,6 @@ public class IndexModel(ILogger<IndexModel> logger, AppDbContext appDbContext) :
     public async Task OnGetAsync()
     {
         AllTags = await appDbContext.Tags.ToArrayAsync();
-        Inputs = await appDbContext.CompleteInputs.ToArrayAsync();
+        Inputs = await appDbContext.Inputs.ToArrayAsync();
     }
 }
