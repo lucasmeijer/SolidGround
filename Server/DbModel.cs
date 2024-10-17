@@ -1,11 +1,8 @@
-using System.Collections;
-using System.ComponentModel.DataAnnotations;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace SolidGround;
-
-using Microsoft.EntityFrameworkCore;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
@@ -18,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Execution> Executions { get; set; }
 
     public IIncludableQueryable<Input, List<InputString>> CompleteInputs => this.Inputs
+        .Include(i => i.Tags)
         .Include(i => i.Outputs)
         .ThenInclude(o => o.Execution)
         .Include(i => i.Outputs)
@@ -26,6 +24,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         .ThenInclude(o => o.StringVariables)
         .Include(i => i.Files)
         .Include(i => i.Strings);
+        
         
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -76,8 +75,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(oc => oc.OutputId)
             .OnDelete(DeleteBehavior.Cascade);
     }
+    
+    
 }
-
 
 public class Execution
 {
@@ -113,7 +113,8 @@ public class Input
     public string OriginalRequest_ContentType { get; set; }
     public string OriginalRequest_Body { get; set; }
     public string OriginalRequest_Host { get; set; }
-    public string? TurboFrameId => $"input_{Id}";
+    public string TurboFrameId => $"input_{Id}";
+    public string TurboFrameIdOfTags => $"input_{Id}_tags";
 
     public static Input Example => new()
     {
@@ -126,6 +127,10 @@ public class Input
         ]
     };
 
+    public InputTags TagsViewData(Tag[] allTags)
+    {
+        return new(TurboFrameIdOfTags, Tags.ToArray(), allTags, $"/api/input/{Id}/tags");
+    }
 }
 
 

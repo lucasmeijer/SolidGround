@@ -51,6 +51,11 @@ public static class Extensions
             throw new NotSupportedException($"Property of type {typeof(T).Name} is not yet supported");
         }
     }
+
+    public static string SeparateWith(this IEnumerable<string> values, string seperator)
+    {
+        return string.Join(seperator, values);
+    }
     
     public static T GetRequired<T>(this JsonElement self, string propertyName)
     {

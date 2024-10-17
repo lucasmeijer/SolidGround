@@ -1,18 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 
 namespace SolidGround.Pages;
 
-public class IndexModel : PageModel
+public class IndexModel(ILogger<IndexModel> logger, AppDbContext appDbContext) : PageModel
 {
-    private readonly ILogger<IndexModel> _logger;
-
-    public IndexModel(ILogger<IndexModel> logger)
+    private readonly ILogger<IndexModel> _logger = logger;
+    public Tag[] AllTags { get; set; }
+    public Input[] Inputs { get; set; }
+    
+    public async Task OnGetAsync()
     {
-        _logger = logger;
-    }
-
-    public void OnGet()
-    {
+        AllTags = await appDbContext.Tags.ToArrayAsync();
+        Inputs = await appDbContext.CompleteInputs.ToArrayAsync();
     }
 }

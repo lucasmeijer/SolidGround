@@ -16,10 +16,10 @@ var persistentStorage = builder.Configuration["PERSISTENT_STORAGE"] ?? ".";
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={persistentStorage}/solid_ground.db"));
 builder.Services.AddHttpClient();
 builder.Services.AddHealthChecks().AddCheck("Health", () => HealthCheckResult.Healthy("OK"));
-builder.Services.AddSingleton<ViewRenderService>();
 builder.Services.AddControllersWithViews();
+builder.Services.AddControllers();
 var app = builder.Build();
-
+app.MapControllers();
 // Apply any pending migrations
 using (var scope = app.Services.CreateScope())
 {
@@ -40,6 +40,8 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
 app.UseHealthChecks("/up");
+
+
 app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIndex, AppDbContext db, HttpContext httpContext) =>
 {
     var inputFile = await db.InputFiles
@@ -110,23 +112,51 @@ app.MapPost("/api/output/{id}", async (int id, HttpRequest req, AppDbContext db)
     return Results.Ok();
 });
 
-app.MapPost("/api/input/{id}/tags", async (int id, HttpRequest req, AppDbContext db, [FromBody] int tag) =>
+app.MapPost("/api/search/tags", async (AppDbContext db, [FromForm] string tagData) =>
 {
-    var input = db.Inputs.Find(id);
+    var json = JsonDocument.Parse(tagData).RootElement;
+    if (!json.TryGetProperty("new_tags", out var tagToAddElement))
+        throw new BadHttpRequestException("no new_tags found");
+    
+    var tags = tagToAddElement.EnumerateArray().Select(t => FindTag(t, db));
+    return new TurboStream([await InputTags.ForSearchTags([..tags], db)]);
+}).DisableAntiforgery();
+
+Tag FindTag(JsonElement tagidElement, AppDbContext appDbContext)
+{
+    if (tagidElement.ValueKind != JsonValueKind.Number)
+        throw new BadHttpRequestException("Tag not a number");
+
+    var tagid = tagidElement.GetInt32();
+    var t = appDbContext.Tags.Find(tagid);
+    if (t == null)
+        throw new BadHttpRequestException("Tag not found");
+    return t;
+}
+
+app.MapPost("/api/input/{id}/tags", async (int id, HttpRequest req, AppDbContext db, [FromForm] string tagData) =>
+{
+    var input = await db.Inputs.FindAsync(id);
     if (input == null)
         return Results.BadRequest($"Input {id} not found");
-    var t = db.Tags.Find(tag);
-    if (t == null)
-        return Results.BadRequest($"Tag {tag} not found");
-    input.Tags.Add(t);
-    await db.SaveChangesAsync();
+    await db.Entry(input).Collection(i => i.Tags).LoadAsync();
+
+    var json = JsonDocument.Parse(tagData).RootElement;
     
-    return Results.Content($"""
-                            <turbo-stream action="append" target="{TurboFrameId.ForTagsInsideInput(input)}">
-                                
-                            </turbo-stream>
-                            """, "text/vnd.turbo-stream.html");    
-});
+    if (json.TryGetProperty("add_tag", out var tagToAddElement))
+    {
+        input.Tags.Add(FindTag(tagToAddElement, db));
+        await db.SaveChangesAsync();
+    }
+
+    if (json.TryGetProperty("remove_tag", out var tagToRemoveElement))
+    {
+        var find = FindTag(tagToRemoveElement, db);
+        input.Tags.Remove(find);
+        await db.SaveChangesAsync();
+    }
+    return (IResult) input.TagsViewData(await db.Tags.ToArrayAsync());
+}).DisableAntiforgery();
 
 app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
 {
@@ -168,7 +198,7 @@ app.MapGet("/runexperimentform/{output_id}", async (int output_id, AppDbContext 
 
 app.MapGet("/runexperimentform", async (HttpClient httpClient, IConfiguration config) => await RunExperimentHelper(httpClient,[], config));
 
-async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVariable> overrideVariables, IConfiguration config)
+async Task<TurboFrame> RunExperimentHelper(HttpClient httpClient, List<StringVariable> overrideVariables, IConfiguration config)
 {
     var requestUri = $"{config.GetMandatory("SOLIDGROUND_TARGET_APP")}/solidground";
     var result = await httpClient.GetAsync(requestUri);
@@ -184,72 +214,8 @@ async Task<ViewResult> RunExperimentHelper(HttpClient httpClient, List<StringVar
     foreach (var overrideVariable in overrideVariables)
         d[overrideVariable.Name] = overrideVariable.Value;
     
-    return new ViewResult("_RunExperimentForm", new Variables(d.ToArray()));
+    return new RunExperimentForm(d.ToArray());
 }
-
-app.MapPost("/api/experiment", async (AppDbContext db, HttpClient client, HttpContext httpContext, IConfiguration config) =>
-{
-    var form = await httpContext.Request.ReadFormAsync();
-
-    if (!form.TryGetValue("ids", out var idValues))
-        return Results.BadRequest("no ids specified");
-
-    var inputIds = JsonDocument.Parse(idValues.ToString())
-        .RootElement
-        .EnumerateArray()
-        .Select(o => o.GetInt32())
-        .ToArray();
-
-    inputIds = (await db.Inputs.ToArrayAsync()).Select(i => i.Id).ToArray();
-
-    var prefix = "SolidGroundVariable_";
-    var variables = form
-        .Where(kvp => kvp.Key.StartsWith(prefix))
-        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
-    
-    var inputsToOutputs = inputIds.ToDictionary(id => id, OutputFor);
-    var execution = new Execution()
-    {
-        StartTime = DateTime.Now,
-        Outputs = [
-            ..inputsToOutputs.Values
-        ]
-    };
-    
-    db.Executions.Add(execution);
-    await db.SaveChangesAsync();
-
-    
-    var sb = new StringBuilder();
-    var input = await LastInput(db);
-    
-
-    foreach (var (inputId, output) in inputsToOutputs)
-    {
-        sb.AppendLine($"""
-                      <turbo-stream action="replace" target="input_{inputId}">
-                      <template>
-                      <turbo-frame id="input_{inputId}" src="/api/input/{inputId}">
-                      </turbo-frame>
-                      </template>
-                      </turbo-stream>
-                      """);
-        
-        var appEndPoint = $"{config.GetMandatory("SOLIDGROUND_TARGET_APP")}{input.OriginalRequest_Route}";
-        
-        _ = Task.Run(() => ExecutionForInput(inputId, output, appEndPoint, variables));
-    }
-    
-    return Results.Content(sb.ToString(), "text/vnd.turbo-stream.html");
-
-    Output OutputFor(int inputId) => new()
-    {
-        InputId = inputId,
-        StringVariables = [..variables.Select(kvp => new StringVariable { Name = kvp.Key[prefix.Length..], Value = kvp.Value})],
-        Status = ExecutionStatus.Started,
-        Components = []
-    };
-});
 
 app.MapDelete("/api/input/{id}", async (int id, AppDbContext db) =>
 {
@@ -265,7 +231,7 @@ app.MapGet("/api/input/{id}", async (int id, AppDbContext db) =>
 {
     var input = await db.CompleteInputs.FirstOrDefaultAsync(i => i.Id == id) ?? throw new BadHttpRequestException("input not found");
     
-    return new ViewResult("_Input", model: input);
+    return new InputTurboFrame(input, await db.Tags.ToArrayAsync());
 });
 
 // app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
@@ -303,74 +269,31 @@ app.UseStaticFiles();
 app.MapRazorPages();
 //    .WithStaticAssets();
 
+
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (db.Tags.FirstOrDefault(t => t.Name == "Hester") == null)
+    {
+        db.Tags.Add(new Tag { Name = "Hester" });
+        db.SaveChanges();
+    }
+    if (db.Tags.FirstOrDefault(t => t.Name == "Lucas") == null)
+    {
+        db.Tags.Add(new Tag { Name = "Lucas" });
+        db.SaveChanges();
+    }
+    if (db.Tags.FirstOrDefault(t => t.Name == "Gemeente") == null)
+    {
+        db.Tags.Add(new Tag { Name = "Gemeente" });
+        db.SaveChanges();
+    }
+});
+
 app.Run();
 return;
 
-async Task ExecutionForInput(int inputId, Output output, string appEndPoint, Dictionary<string,string> variables)
-{
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
-    
-    dbContext.Attach(output);
-    try
-    {
-        var input = dbContext.Inputs.Find(inputId) ?? throw new ArgumentException("Input not found");
-
-        Uri requestUri;
-        
-        try
-        {
-            requestUri = new Uri(appEndPoint);
-        }
-        catch (UriFormatException ufe)
-        {
-            throw new BadHttpRequestException($"Invalid end point: {appEndPoint}", ufe);
-        }
-        
-        var request = new HttpRequestMessage
-        {
-            Method = HttpMethod.Post,
-            RequestUri = requestUri,
-            Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
-            {
-                Headers =
-                {
-                    {"SolidGroundOutputId",output.Id.ToString()},
-                    {"Content-Type",input.OriginalRequest_ContentType}
-                },
-            }
-        };
-        
-        foreach(var variable in variables)
-            request.Headers.Add(variable.Key, Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
-        
-        httpClient.Timeout = TimeSpan.FromMinutes(10);
-        
-        var result = await httpClient.SendAsync(request);
-        if (!result.IsSuccessStatusCode)
-        {
-            var body = await result.Content.ReadAsStringAsync();
-            output.Status = ExecutionStatus.Failed;
-            output.Components.Add(new()
-            {
-                Name = $"Http Error {result.StatusCode}",
-                Value = body
-            });
-            await dbContext.SaveChangesAsync();
-        }
-    }
-    catch (Exception ex)
-    {
-        output.Status = ExecutionStatus.Failed;
-        output.Components.Add(new()
-        {
-            Name = "Error",
-            Value = ex.ToString()
-        });
-        await dbContext.SaveChangesAsync();
-    }
-}
 
 List<OutputComponent> OutputComponentsFromJsonElement(JsonElement jsonElement)
 {
@@ -465,28 +388,4 @@ async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFo
     return (list, inputStrings1);
 }
 
-
-async Task<Input> LastInput(AppDbContext db)
-{
-    var firstAsync = await db.Inputs.OrderByDescending(i => i.Id).FirstAsync() ?? throw new BadHttpRequestException("No inputs");
-     
-    return firstAsync;
-}
-
-
-// record RestInput(string? Name, RestInputComponent[] Components);
-// record RestInputComponent(ComponentType Type, string Data);
-
-record RestExecution(int[] InputIds, string Endpoint, string? Name);
-
 record RestPatchExecutionRequest(bool IsReference);
-
-
-public static class TurboFrameId
-{
-    public static string ForTagInsideInput(Input input, Tag tag) => $"input_{input.Id}_tag_{tag.Id}";
-    public static string ForTagsInsideInput(Input input) => $"input_{input.Id}_tags";
-}
-
-
-public record Variables(KeyValuePair<string, string>[] Values);
