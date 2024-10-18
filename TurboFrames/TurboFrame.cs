@@ -1,30 +1,17 @@
-using Microsoft.AspNetCore.Html;
+using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace SolidGround;
+namespace TurboFrames;
 
-public record TurboStream(TurboFrame[] Elements) : IResult
-{
-    public async Task ExecuteAsync(HttpContext httpContext)
-    {
-        var response = httpContext.Response;
-        response.ContentType = "text/vnd.turbo-stream.html";
-        foreach (var element in Elements)
-        {
-            await response.WriteAsync($"<turbo-stream action=\"update\" target=\"{element.TurboFrameId}\">");
-            await response.WriteAsync("<template>");
-            await response.WriteAsync(await element.RenderToStringAsync(httpContext));
-            await response.WriteAsync("</template>");
-            await response.WriteAsync("</turbo-stream>");
-        }
-    }
-}
-
+[UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public abstract record TurboFrame(string TurboFrameId) : IResult
 {
     public virtual string[] AdditionalAttributes => [];
@@ -36,7 +23,7 @@ public abstract record TurboFrame(string TurboFrameId) : IResult
         await httpContext.Response.WriteAsync(await RenderToStringAsync(httpContext));
     }
     
-    public async Task<string> RenderToStringAsync(HttpContext httpContext)
+    protected internal virtual async Task<string> RenderToStringAsync(HttpContext httpContext)
     {
         var serviceProvider = httpContext.RequestServices;
         
@@ -47,16 +34,18 @@ public abstract record TurboFrame(string TurboFrameId) : IResult
 
         await using var sw = new StringWriter();
 
-        var viewResult = razorViewEngine.FindView(actionContext, ViewName, isMainPage: false);
+        var turboFrameModel = await BuildModelAsync(serviceProvider);
+        
+        var viewResult = razorViewEngine.FindView(actionContext, turboFrameModel.ViewName, isMainPage: false);
 
         if (viewResult.View == null)
         {
-            throw new InvalidOperationException($"View '{ViewName}' not found.");
+            throw new InvalidOperationException($"View '{turboFrameModel.ViewName}' not found.");
         }
-
+        
         var viewDictionary = new ViewDataDictionary(new EmptyModelMetadataProvider(), new())
         {
-            Model = await BuildRazorModelAsync(serviceProvider.GetRequiredService<AppDbContext>()),
+            Model = turboFrameModel,
         };
 
         var tempData = new TempDataDictionary(httpContext, tempDataProvider);
@@ -67,29 +56,18 @@ public abstract record TurboFrame(string TurboFrameId) : IResult
             viewDictionary,
             tempData,
             sw,
-            new HtmlHelperOptions()
-        );
+            new HtmlHelperOptions());
 
         await sw.WriteAsync($"<turbo-frame id=\"{TurboFrameId}\" ");
         if (DataTurboAction != null)
             await sw.WriteAsync($"data-turbo-action=\"{DataTurboAction}\" ");
-        await sw.WriteAsync(AdditionalAttributes.SeparateWith(" "));
+        await sw.WriteAsync(string.Join(' ',AdditionalAttributes));
         await sw.WriteLineAsync(">");
         await viewResult.View.RenderAsync(viewContext);
         await sw.WriteLineAsync($"</turbo-frame>");
 
         return sw.ToString();
     }
-    protected virtual string ViewName => GetType().Name;
-    protected virtual Task<object> BuildRazorModelAsync(AppDbContext dbContext) => Task.FromResult<object>(this);
-}
-
-public static class HtmlExtensions
-{
-    public static async Task<IHtmlContent> RenderTurboFrameAsync(this IHtmlHelper helper, TurboFrame turboFrame)
-    {
-        var builder = new HtmlContentBuilder();
-        builder.AppendHtml(await turboFrame.RenderToStringAsync(helper.ViewContext.HttpContext));
-        return builder;
-    }
+    
+    protected abstract Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider);
 }

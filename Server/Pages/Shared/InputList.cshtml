@@ -1,4 +1,5 @@
-@model InputList
+@using TurboFrames
+@model InputList.Model
 
 <div class="flex-col flex gap-2">
 
@@ -8,6 +9,6 @@
     }
     @foreach (var input in Model.Inputs)
     {
-        @(await Html.RenderTurboFrameAsync(new InputTurboFrame(input.Id)))
+        @(await Html.RenderTurboFrameAsync<InputTurboFrame>(input.Id))
     }
 </div>

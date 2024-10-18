@@ -1,3 +1,4 @@
+@using TurboFrames
 @model InputTurboFrame.Model
 
 <details class="bg-white grow shadow-md rounded-lg group/output">
@@ -7,6 +8,5 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
         </svg>
     </summary>
-    <turbo-frame id="@InputDetailsTurboFrame.TurboFrameIdFor(Model.Input.Id)" src="/api/input/@Model.Input.Id/details" loading="lazy">
-    </turbo-frame>
+    @await Html.RenderTurboFrameAsync(new InputDetailsTurboFrame(Model.Input.Id).Lazy)
  </details>

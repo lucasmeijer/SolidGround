@@ -1,4 +1,5 @@
 ﻿@page
+@using TurboFrames
 @model IndexModel
 @{
     ViewData["Title"] = "Home page";
@@ -14,9 +15,7 @@
         </summary>
         
         <div class="p-4">
-            <turbo-frame id="@RunExperimentForm.TurboFrameId" src="/runexperimentform">
-                <div>Loading...</div>
-            </turbo-frame>
+            @await Html.RenderTurboFrameAsync(new RunExperimentTurboFrame().Lazy)
         </div>
     </details>
 
@@ -31,10 +30,10 @@
             </button>
         </div>
         <span class="text-gray-700 font-semibold">Filter:</span>
-        @await Html.RenderTurboFrameAsync(InputTags.ForSearchTags([]))
+        @await Html.RenderTurboFrameAsync(new SearchTagsTurboFrame([]))
     </div>
 
-    @await Html.RenderTurboFrameAsync(new InputList(Model.Inputs))
+    @await Html.RenderTurboFrameAsync(new InputList(Model.InputIds))
 </div>
 
       

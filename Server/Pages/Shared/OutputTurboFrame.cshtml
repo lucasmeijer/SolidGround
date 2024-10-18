@@ -108,7 +108,7 @@
                     }
                 </div>
             </details>
-            <a href="/runexperimentform/@Model.Output.Id" data-turbo-frame="runexperimentform" class="@Buttons.Attrs @Buttons.GreenAttrs">
+            <a href="@RunExperimentTurboFrame.RouteFor(Model.Output.Id)" data-turbo-frame="@RunExperimentTurboFrame.TurboFrameId" class="@Buttons.Attrs @Buttons.GreenAttrs">
                 Adopt variables for new experiment
             </a>
         </div>

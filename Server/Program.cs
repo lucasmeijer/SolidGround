@@ -3,9 +3,11 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Net.Http.Headers;
 using SolidGround;
+using TurboFrames;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +42,7 @@ app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
 app.UseHealthChecks("/up");
-
+app.MapTurboFramesInSameAssemblyAs(typeof(Program));
 
 app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIndex, AppDbContext db, HttpContext httpContext) =>
 {
@@ -106,12 +108,11 @@ app.MapPost("/api/output/{id}", async (int id, HttpRequest req, AppDbContext db)
     if (!jsonDoc.RootElement.TryGetProperty("outputs", out var outputElement))
         return Results.BadRequest("output element not found");
     
-    output.Components = OutputComponentsFromJsonElement(outputElement);
+    output.Components = InputController.OutputComponentsFromJsonElement(outputElement);
     output.Status = ExecutionStatus.Completed;
     await db.SaveChangesAsync();
     return Results.Ok();
 });
-
 
 app.MapPost("/api/search/tags", async (AppDbContext db, [FromForm] string tagData) =>
 {
@@ -121,10 +122,13 @@ app.MapPost("/api/search/tags", async (AppDbContext db, [FromForm] string tagDat
 
     var searchTags = newTags.EnumerateArray().Select(t => FindTag(t, db)).ToArray();
     var searchTagsIds = searchTags.Select(t=>t.Id).ToArray();
-    var filtered = db.Inputs.Include(i=>i.Tags).Where(i => searchTagsIds.All(searchTagId => i.Tags.Any(it=>it.Id == searchTagId)));
+    var filtered = db.Inputs
+        .Include(i => i.Tags)
+        .Where(i => searchTagsIds.All(searchTagId => i.Tags.Any(it => it.Id == searchTagId)))
+        .Select(i => i.Id);
     
     return new TurboStream([
-        InputTags.ForSearchTags([..searchTags]),
+        new SearchTagsTurboFrame([..searchTags]),
         new InputList(await filtered.ToArrayAsync())
         ]);
 }).DisableAntiforgery();
@@ -141,12 +145,13 @@ Tag FindTag(JsonElement tagidElement, AppDbContext appDbContext)
     return t;
 }
 
-app.MapPost("/api/input/{id}/tags", async (int id, HttpRequest req, AppDbContext db, [FromForm] string tagData) =>
+app.MapPost("/api/input/{inputId}/tags", async (int inputId, AppDbContext db, [FromForm] string tagData) =>
 {
-    var input = await db.Inputs.FindAsync(id);
+    var input = await db.Inputs
+        .Include(i=>i.Tags)
+        .FirstOrDefaultAsync(i=>i.Id == inputId);
     if (input == null)
-        return Results.BadRequest($"Input {id} not found");
-    await db.Entry(input).Collection(i => i.Tags).LoadAsync();
+        return Results.BadRequest($"Input {inputId} not found");
 
     var json = JsonDocument.Parse(tagData).RootElement;
     
@@ -162,67 +167,9 @@ app.MapPost("/api/input/{id}/tags", async (int id, HttpRequest req, AppDbContext
         input.Tags.Remove(find);
         await db.SaveChangesAsync();
     }
-    return (IResult) input.TagsViewData();
+    
+    return new InputTagsTurboFrame(inputId);
 }).DisableAntiforgery();
-
-app.MapPost("/api/input", async (HttpRequest req, AppDbContext db) =>
-{
-    var jsonDoc = await JsonDocument.ParseAsync(req.Body);
-    var root = jsonDoc.RootElement;
-    
-    var outputElement = root.GetRequired<JsonElement>("outputs");
-    var variablesElement = root.GetRequired<JsonElement>("variables");
-    root.TryGetOptional("name", out string? name);
-    
-    var input = await InputFor(root.GetRequired<JsonElement>("request"), name);
-
-    var output = new Output
-    {
-        Input = input,
-        Components = OutputComponentsFromJsonElement(outputElement),
-        StringVariables = VariablesFromJsonElement(variablesElement),
-        Status = ExecutionStatus.Completed
-    };
-    db.Add(output);
-    
-    db.Add(new Execution
-    {
-        Outputs = [output],
-        StartTime = DateTime.Now
-    });
-    
-    await db.SaveChangesAsync();
-});
-
-app.MapGet("/runexperimentform/{output_id}", async (int output_id, AppDbContext db, HttpClient httpClient, IConfiguration config) =>
-{
-    var output = await db.Outputs.FindAsync(output_id) ?? throw new BadHttpRequestException("Output " + output_id + " not found.");
-    await db.Entry(output).Collection(o=>o.StringVariables).LoadAsync();
-    var outputStringVariables = output.StringVariables;
-    
-    return await RunExperimentHelper(httpClient, outputStringVariables, config);
-});
-
-app.MapGet("/runexperimentform", async (HttpClient httpClient, IConfiguration config) => await RunExperimentHelper(httpClient,[], config));
-
-async Task<TurboFrame> RunExperimentHelper(HttpClient httpClient, List<StringVariable> overrideVariables, IConfiguration config)
-{
-    var requestUri = $"{config.GetMandatory("SOLIDGROUND_TARGET_APP")}/solidground";
-    var result = await httpClient.GetAsync(requestUri);
-    result.EnsureSuccessStatusCode();
-    
-    var jdoc = await JsonDocument.ParseAsync(await result.Content.ReadAsStreamAsync());
-
-    var d = jdoc
-        .RootElement
-        .EnumerateObject()
-        .ToDictionary(k => k.Name, v => v.Value.GetString() ?? throw new InvalidOperationException());
-
-    foreach (var overrideVariable in overrideVariables)
-        d[overrideVariable.Name] = overrideVariable.Value;
-    
-    return new RunExperimentForm(d.ToArray());
-}
 
 app.MapDelete("/api/input/{id}", async (int id, AppDbContext db) =>
 {
@@ -233,10 +180,6 @@ app.MapDelete("/api/input/{id}", async (int id, AppDbContext db) =>
     await db.SaveChangesAsync();
     return Results.Content($"<turbo-stream action=\"remove\" target=\"{InputTurboFrame.TurboFrameIdFor(id)}\"></turbo-stream>", "text/vnd.turbo-stream.html");
 });
-
-app.MapGet("/api/input/{id}", (int id) => new InputTurboFrame(id));
-app.MapGet("/api/input/{id}/details", (int id) => new InputDetailsTurboFrame(id));
-
 
 // app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
 // {
@@ -299,97 +242,5 @@ app.Run();
 return;
 
 
-List<OutputComponent> OutputComponentsFromJsonElement(JsonElement jsonElement)
-{
-    return jsonElement
-        .EnumerateObject()
-        .Where(kvp => kvp.Value.ValueKind == JsonValueKind.String)
-        .Select(kvp =>
-        {
-            var argValue = kvp.Value;
-            var value = argValue.GetString();
-            return new OutputComponent() { Name = kvp.Name, Value = value };
-        })
-        .ToList();
-}
-
-List<StringVariable> VariablesFromJsonElement(JsonElement jsonElement)
-{
-    return jsonElement
-        .EnumerateObject()
-        .Where(kvp => kvp.Value.ValueKind == JsonValueKind.String)
-        .Select(kvp =>
-        {
-            var argValue = kvp.Value;
-            var value = argValue.GetString();
-            return new StringVariable() { Name = kvp.Name, Value = value };
-        })
-        .ToList();
-}
-
-async Task<Input> InputFor(JsonElement requestElement, string? name)
-{
-    var bodyBase64 = requestElement.GetRequired<string>("body_base64");
-    var originalRequestContentType = requestElement.GetRequired<string>("content_type");
-    var (inputFiles, inputStrings) = await ParseFormIntoStringsAndFiles(originalRequestContentType, bodyBase64);
-
-    return new()
-    {
-        Files = inputFiles,
-        Name = name,
-        Strings = inputStrings,
-        OriginalRequest_ContentType = originalRequestContentType,
-        OriginalRequest_Body = bodyBase64,
-        OriginalRequest_Route = requestElement.GetRequired<string>("route"),
-        OriginalRequest_Host = requestElement.GetRequired<string>("basepath"),
-    };
-}
-
-async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFormIntoStringsAndFiles(string s, string bodyBase65)
-{
-    var list = new List<InputFile>();
-    var inputStrings1 = new List<InputString>();
-    
-    var boundary = HeaderUtilities.RemoveQuotes(MediaTypeHeaderValue.Parse(s).Boundary).Value;
-    if (boundary == null)
-        throw new ArgumentException("No boundary specified in content-type");
-
-    using var ms = new MemoryStream(Convert.FromBase64String(bodyBase65));
-    var reader = new MultipartReader(boundary, ms);
-
-    int fileCounter = 0;
-    int stringCounter = 0;
-    while (await reader.ReadNextSectionAsync() is { } section)
-    {
-        var contentDisposition = ContentDispositionHeaderValue.Parse(section.ContentDisposition);
-        
-        var name = contentDisposition.Name.Value ?? throw new ArgumentException("Missing name in content-type");
-        
-        if (contentDisposition.IsFileDisposition())
-        {
-            list.Add(new()
-            {
-                Index = fileCounter++,
-                Name = name,
-                MimeType = contentDisposition.DispositionType.Value ?? throw new ArgumentException($"element {name} has no disposition-type"),
-                Bytes = await section.Body.ToBytesAsync()
-            });
-            continue;
-        }
-        
-        if (contentDisposition.IsFormDisposition())
-        {
-            using var streamReader = new StreamReader(section.Body);
-            inputStrings1.Add(new()
-            {
-                Index = stringCounter++,
-                Name = name,
-                Value = await streamReader.ReadToEndAsync()
-            });
-        }
-    }
-
-    return (list, inputStrings1);
-}
 
 record RestPatchExecutionRequest(bool IsReference);

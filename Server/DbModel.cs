@@ -120,11 +120,6 @@ public class Input
             Output.Example
         ]
     };
-
-    public InputTags TagsViewData()
-    {
-        return new(TurboFrameIdOfTags, Tags.ToArray(), $"/api/input/{Id}/tags");
-    }
 }
 
 

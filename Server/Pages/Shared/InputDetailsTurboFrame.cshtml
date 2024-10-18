@@ -1,3 +1,4 @@
+@using TurboFrames
 @model InputDetailsTurboFrame.Model
 
 <div class="p-4 flex-col flex gap-4">
@@ -14,7 +15,7 @@
         
     <div class="flex justify-between">
         <div>
-            @await Html.RenderTurboFrameAsync(Model.Input.TagsViewData())
+            @await Html.RenderTurboFrameAsync(new InputTagsTurboFrame(Model.Input.Id))
         </div>
         <a href="/api/input/@Model.Input.Id" data-turbo-method="delete" class="@Buttons.Attrs @Buttons.RedAttrs">
             Delete Entire Input

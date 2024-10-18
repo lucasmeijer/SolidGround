@@ -1,6 +1,18 @@
+using Microsoft.EntityFrameworkCore;
+using TurboFrames;
+
 namespace SolidGround;
 
-public record InputList(Input[] Inputs) : TurboFrame("inputlist")
+public record InputList(int[] InputIds) : TurboFrame("inputlist")
 {
+    public record Model(Input[] Inputs) : TurboFrameModel;
+    
     public override string? DataTurboAction => "morph";
+
+    protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)
+    {
+        return new Model(await serviceProvider.GetRequiredService<AppDbContext>()
+            .Inputs.Where(i => InputIds.Contains(i.Id))
+            .ToArrayAsync());
+    }
 }

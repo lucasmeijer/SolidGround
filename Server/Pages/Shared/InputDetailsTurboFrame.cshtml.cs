@@ -1,13 +1,28 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
+using TurboFrames;
 
 namespace SolidGround;
 
-public record InputDetailsTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId))
+[Route("/api/input/{InputId}/details")]
+public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_details")
 {
-    public record Model(Input Input, Tag[] AllTags);
+    public record Model(Input Input) : TurboFrameModel;
 
-    protected override async Task<object> BuildRazorModelAsync(AppDbContext dbContext)
+    public LazyFrame Lazy
     {
+        get
+        {
+            LinkGenerator linkGenerator;
+            
+            
+            return new LazyFrame(TurboFrameId, $"/api/input/{InputId}/details");
+        }
+    }
+
+    protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)
+    {
+        var dbContext = serviceProvider.GetRequiredService<AppDbContext>();
         var input = await dbContext.Inputs
             .Include(i => i.Tags)
             .Include(i => i.Outputs)
@@ -16,8 +31,6 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(I
             .AsSplitQuery()
             .FirstOrDefaultAsync(i => i.Id == InputId) ?? throw new BadHttpRequestException("input not found");
 
-        return new Model(input, await dbContext.Tags.ToArrayAsync());
+        return new Model(input);
     }
-
-    public static string TurboFrameIdFor(int inputId) => $"input_{inputId}_details";
 }

@@ -1,14 +1,17 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
+using TurboFrames;
 
 namespace SolidGround;
 
+[Route("/output{OutputId}")]
 public record OutputTurboFrame(int OutputId) : TurboFrame($"output_{OutputId}")
 {
-    public record Model(Output Output);
+    public record Model(Output Output) : TurboFrameModel;
 
-    protected override async Task<object> BuildRazorModelAsync(AppDbContext dbContext)
+    protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)
     {
+        var dbContext = serviceProvider.GetRequiredService<AppDbContext>();
         return new Model(await dbContext.Outputs
                              .Include(o => o.Components)
                              .Include(o => o.Execution)
