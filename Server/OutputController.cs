@@ -1,25 +1,27 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using TurboFrames;
 
 namespace SolidGround;
 
 [ApiController]
-[Route("/api/output")]
+[Route("/api/output/{id:int}")]
 public class OutputController(AppDbContext db) : ControllerBase
 {
-    [HttpDelete("{id:int}")]
-    public async Task<IResult> OnDelete(int id)
+    [HttpDelete]
+    public async Task<IActionResult> OnDelete(int id)
     {
         var obj = await db.Outputs.FindAsync(id);
         if (obj == null)
-            return Results.BadRequest();
-    
+            return NotFound();
+        
         db.Outputs.Remove(obj);
         await db.SaveChangesAsync();
-        return Results.Content($"<turbo-stream action=\"remove\" target=\"output_{id}\"></turbo-stream>", "text/vnd.turbo-stream.html");    
+
+        return new TurboStream("remove", Target: OutputTurboFrame.TurboFrameIdFor(id));
     }
 
-    [HttpPost("{id:int}")]
+    [HttpPost]
     public async Task<IActionResult> OnPost(int id, HttpRequest request)
     {
         var jsonDoc = await JsonDocument.ParseAsync(request.Body);

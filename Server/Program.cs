@@ -85,35 +85,6 @@ app.MapDelete("/api/executions/{id}", async (int id, AppDbContext db) =>
 });
 
 
-app.MapDelete("/api/output/{id}", async (int id, AppDbContext db) =>
-{
-    var obj = db.Outputs.Find(id);
-    if (obj == null)
-        return Results.BadRequest();
-    
-    db.Outputs.Remove(obj);
-    await db.SaveChangesAsync();
-    return Results.Content($"<turbo-stream action=\"remove\" target=\"output_{id}\"></turbo-stream>", "text/vnd.turbo-stream.html");
-});
-
-
-app.MapPost("/api/output/{id}", async (int id, HttpRequest req, AppDbContext db) =>
-{
-    var jsonDoc = await JsonDocument.ParseAsync(req.Body);
-    
-    var output = db.Outputs.Find(id);
-    if (output == null)
-        return Results.BadRequest($"Output {id} not found");
-
-    if (!jsonDoc.RootElement.TryGetProperty("outputs", out var outputElement))
-        return Results.BadRequest("output element not found");
-    
-    output.Components = InputController.OutputComponentsFromJsonElement(outputElement);
-    output.Status = ExecutionStatus.Completed;
-    await db.SaveChangesAsync();
-    return Results.Ok();
-});
-
 app.MapPost("/api/search/tags", async (AppDbContext db, [FromForm] string tagData) =>
 {
     var json = JsonDocument.Parse(tagData).RootElement;
@@ -127,9 +98,9 @@ app.MapPost("/api/search/tags", async (AppDbContext db, [FromForm] string tagDat
         .Where(i => searchTagsIds.All(searchTagId => i.Tags.Any(it => it.Id == searchTagId)))
         .Select(i => i.Id);
     
-    return new TurboStream([
-        new SearchTagsTurboFrame([..searchTags]),
-        new InputList(await filtered.ToArrayAsync())
+    return new TurboStreams2([
+            new("update", TurboFrameContent: new SearchTagsTurboFrame([..searchTags])),
+            new("update", TurboFrameContent: new InputList(await filtered.ToArrayAsync()))
         ]);
 }).DisableAntiforgery();
 
@@ -171,15 +142,7 @@ app.MapPost("/api/input/{inputId}/tags", async (int inputId, AppDbContext db, [F
     return new InputTagsTurboFrame(inputId);
 }).DisableAntiforgery();
 
-app.MapDelete("/api/input/{id}", async (int id, AppDbContext db) =>
-{
-    var input = await db.Inputs.FindAsync(id);
-    if (input == null)
-        return Results.BadRequest($"Input {id} not found");
-    db.Inputs.Remove(input);
-    await db.SaveChangesAsync();
-    return Results.Content($"<turbo-stream action=\"remove\" target=\"{InputTurboFrame.TurboFrameIdFor(id)}\"></turbo-stream>", "text/vnd.turbo-stream.html");
-});
+
 
 // app.MapPost("/api/executions", async (RestExecution restExecution, AppDbContext db, HttpClient httpClient) =>
 // {

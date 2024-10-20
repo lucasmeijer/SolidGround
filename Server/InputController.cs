@@ -2,17 +2,49 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using TurboFrames;
 
 namespace SolidGround;
 
 [ApiController]
 [Route("/api/input")]
-public class InputController(HttpRequest req, AppDbContext db) : ControllerBase
+public class InputController(AppDbContext db) : ControllerBase
 {
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var input = await db.Inputs.FindAsync(id);
+        if (input == null)
+            return NotFound($"Input {id} not found");
+        db.Inputs.Remove(input);
+        await db.SaveChangesAsync();
+
+        return new TurboStream("remove", InputTurboFrame.TurboFrameIdFor(id));
+    }
+
+    public static string ModifyInputRouteFor(int inputId) => $"/api/input/{inputId}";
+    
+    [HttpPost("{id:int}")]
+    public async Task<IActionResult> PatchInput(int id)
+    {
+        var input = await db.Inputs.FindAsync(id);
+        if (input == null)
+            return NotFound($"Input {id} not found");
+        
+        var form = await Request.ReadFormAsync();
+        if (!form.TryGetValue("name", out var name))
+            return BadRequest();
+
+        input.Name = name.ToString();
+        await db.SaveChangesAsync();
+        
+        return new InputNameTurboFrame(id);
+    }
+    
     [HttpPost]
     public async Task<IResult> CreateInput()
     {
-        var jsonDoc = await JsonDocument.ParseAsync(req.Body);
+        var jsonDoc = await JsonDocument.ParseAsync(Request.Body);
         var root = jsonDoc.RootElement;
 
         var outputElement = root.GetRequired<JsonElement>("outputs");

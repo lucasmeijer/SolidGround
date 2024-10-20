@@ -1,12 +1,12 @@
-using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using TurboFrames;
 
 namespace SolidGround;
 
-[Route("/output{OutputId}")]
-public record OutputTurboFrame(int OutputId) : TurboFrame($"output_{OutputId}")
+public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(OutputId))
 {
+    public static string TurboFrameIdFor(int outputId) => $"output_{outputId}";
+
     public record Model(Output Output) : TurboFrameModel;
 
     protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)

@@ -6,8 +6,6 @@ namespace SolidGround;
 public record InputList(int[] InputIds) : TurboFrame("inputlist")
 {
     public record Model(Input[] Inputs) : TurboFrameModel;
-    
-    public override string? DataTurboAction => "morph";
 
     protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)
     {

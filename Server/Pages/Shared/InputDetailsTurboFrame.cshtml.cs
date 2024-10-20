@@ -9,16 +9,7 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}
 {
     public record Model(Input Input) : TurboFrameModel;
 
-    public LazyFrame Lazy
-    {
-        get
-        {
-            LinkGenerator linkGenerator;
-            
-            
-            return new LazyFrame(TurboFrameId, $"/api/input/{InputId}/details");
-        }
-    }
+    public LazyFrame Lazy => new(TurboFrameId, $"/api/input/{InputId}/details");
 
     protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)
     {

@@ -9,6 +9,6 @@
     }
     @foreach (var input in Model.Inputs)
     {
-        @(await Html.RenderTurboFrameAsync<InputTurboFrame>(input.Id))
+        @await Html.RenderTurboFrameAsync(new InputTurboFrame(input.Id))
     }
 </div>

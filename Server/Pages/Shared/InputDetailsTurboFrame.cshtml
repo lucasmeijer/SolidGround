@@ -24,6 +24,7 @@
     
     @foreach (var output in Model.Input.Outputs)
     {
+        var rs = Context.RequestServices;
         @await Html.RenderTurboFrameAsync(new OutputTurboFrame(output.Id));
     }
         
