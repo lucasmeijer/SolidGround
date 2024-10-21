@@ -14,7 +14,7 @@ public record InputTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId)
         return new Model(await db.Inputs.FindAsync(InputId) ?? throw new BadHttpRequestException("Input not found"));
     };
 
-    protected override string[] AdditionalAttributes => ["data-turbo-permanent"];
+    protected override string[] AdditionalAttributes => ["data-turbo-permanent",..base.AdditionalAttributes];
 
     public static string TurboFrameIdFor(int inputId) => $"input_{inputId}";
 }

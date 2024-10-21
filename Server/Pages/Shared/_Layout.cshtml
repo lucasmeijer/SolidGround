@@ -4,10 +4,19 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>@ViewData["Title"] - SolidGround</title>
-    <script type="importmap"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@@hotwired/turbo@7.3.0/dist/turbo.es2017-umd.js"></script>
+
     <link rel="stylesheet" href="lib/tailwindcss/tailwind.min.css">
     <link rel="stylesheet" href="css/site.css">
+
+
+    <!script type="importmap">
+        {
+          "imports": {
+            "@@hotwired/stimulus": "https://unpkg.com/@@hotwired/stimulus@3.2.2/dist/stimulus.js",
+            "@@hotwired/turbo": "https://unpkg.com/@@hotwired/turbo@8.0.12/dist/turbo.es2017-esm.js"
+        }
+    }
+    </!script>
     
     @* @if (Environment.GetEnvironmentVariable("__ASPNETCORE_BROWSER_TOOLS") is not null) *@
     @* { *@
@@ -24,7 +33,7 @@
 @*     </div> *@
 @* </footer> *@
 
-<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="js/site.js" asp-append-version="true" type="module"></script>
 
 <script>
     function formatJson(root = document) {

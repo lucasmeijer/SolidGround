@@ -1,4 +1,10 @@
-﻿// Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
+﻿import { Application } from "@hotwired/stimulus";
+import TagsController from "./tags.js";
+// noinspection ES6UnusedImports
+import * as Turbo from "@hotwired/turbo"
 
-// Write your JavaScript code.
+// Initialize Stimulus application
+const application = Application.start();
+
+// Register your controller
+application.register("tags", TagsController);
