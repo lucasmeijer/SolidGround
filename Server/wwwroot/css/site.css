@@ -17,15 +17,21 @@ html {
   min-height: 100%;
 }
 
-body {
-  margin-bottom: 60px;
+.json-highlight {
+    background-color: #282c34;
+    color: #abb2bf;
+    padding: 16px;
+    border-radius: 6px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 8px;
+    line-height: 1.5;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
-}
+.json-string { color: #98c379; }
+.json-number { color: #d19a66; }
+.json-boolean { color: #56b6c2; }
+.json-null { color: #c678dd; }
+.json-property { color: #e06c75; }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
-}
+/* Optional: Add subtle styling for brackets and braces */
+.json-highlight .bracket { color: #5c6370; }
