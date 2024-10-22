@@ -59,7 +59,7 @@ public record TurboStream(string Action, string? Target = null, string? RawConte
 
             if (TurboFrameContent != null)
             {
-                await response.WriteAsync(await TurboFrameContent.RenderToStringAsync(httpContext));
+                await response.WriteAsync(await TurboFrameContent.RenderToStringAsync(httpContext, Action!="update"));
             }
             await response.WriteAsync("</template>");
         }

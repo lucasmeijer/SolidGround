@@ -57,17 +57,6 @@ app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIn
     return Results.Empty;
 });
 
-app.MapPatch("/api/executions/{id}", async (int id,RestPatchExecutionRequest req, AppDbContext db) =>
-{
-    var execution = await db.Executions.FindAsync(id);
-    if (execution == null)
-        return Results.NotFound($"Execution with ID {id} not found.");
-    
-    execution.IsReference = req.IsReference;
-    await db.SaveChangesAsync();
-    return Results.Ok(execution);
-});
-
 app.MapDelete("/api/executions/{id}", async (int id, AppDbContext db) =>
 {
     var execution = await db.Executions.FindAsync(id) ?? throw new BadHttpRequestException("Execution with ID " + id + " not found.");
@@ -84,33 +73,50 @@ app.MapDelete("/api/executions/{id}", async (int id, AppDbContext db) =>
     return Results.Content(sb.ToString(), "text/vnd.turbo-stream.html");    
 });
 
-
-app.MapPost("/api/search/tags", async (AppDbContext db, [FromForm] string tagData) =>
+app.MapPost("/api/search", async (AppDbContext db, HttpRequest request) =>
 {
-    var json = JsonDocument.Parse(tagData).RootElement;
-    if (!json.TryGetProperty("new_tags", out var newTags))
-        throw new BadHttpRequestException("no new_tags found");
-
-    var searchTags = newTags.EnumerateArray().Select(t => FindTag(t, db)).ToArray();
-    var searchTagsIds = searchTags.Select(t=>t.Id).ToArray();
-    var filtered = db.Inputs
-        .Include(i => i.Tags)
-        .Where(i => searchTagsIds.All(searchTagId => i.Tags.Any(it => it.Id == searchTagId)))
-        .Select(i => i.Id);
+    var json = (await JsonDocument.ParseAsync(request.Body)).RootElement;
+    if (!json.TryGetProperty("tags", out var tagsElement))
+        throw new BadHttpRequestException("no tags found");
     
+    var tags = await Task.WhenAll(tagsElement.EnumerateArray().Select(async t => await FindTag(t, db)));
+    
+    if (!json.TryGetProperty("search", out var searchElement))
+        throw new BadHttpRequestException("no search element found");
+
+    if (!json.TryGetProperty("tags_changed", out var tagsChangedElement))
+        throw new BadHttpRequestException("no tags changed");
+    var tagsChanged = tagsChangedElement.GetBoolean();
+    
+    var searchString = searchElement.GetString()?.Trim();
+
+    var searchTagsIds = tags
+        .Select(t=>t.Id)
+        .ToArray();
+
+    var queryable = db.Inputs
+        .Include(i => i.Tags)
+        .Where(i => searchTagsIds.All(searchTagId => i.Tags.Any(it => it.Id == searchTagId)));
+
+    if (!string.IsNullOrEmpty(searchString))
+        queryable = queryable.Where(i => i.Name!.Contains(searchString));
+
     return new TurboStreams2([
-            new("update", TurboFrameContent: new SearchTagsTurboFrame([..searchTags])),
-            new("update", TurboFrameContent: new InputList(await filtered.ToArrayAsync()))
-        ]);
+        new("replace", TurboFrameContent: new InputList(await queryable.Select(t => t.Id).ToArrayAsync())),
+        ..tagsChanged ? 
+            [new("replace", TurboFrameContent: new FilterBarTurboFrame(tags))] 
+            : Array.Empty<TurboStream>()
+    ]);
+    
 }).DisableAntiforgery();
 
-Tag FindTag(JsonElement tagidElement, AppDbContext appDbContext)
+async Task<Tag> FindTag(JsonElement tagidElement, AppDbContext appDbContext)
 {
     if (tagidElement.ValueKind != JsonValueKind.Number)
         throw new BadHttpRequestException("Tag not a number");
 
     var tagid = tagidElement.GetInt32();
-    var t = appDbContext.Tags.Find(tagid);
+    var t = await appDbContext.Tags.FindAsync(tagid);
     if (t == null)
         throw new BadHttpRequestException("Tag not found");
     return t;
@@ -128,13 +134,13 @@ app.MapPost("/api/input/{inputId}/tags", async (int inputId, AppDbContext db, [F
     
     if (json.TryGetProperty("add_tag", out var tagToAddElement))
     {
-        input.Tags.Add(FindTag(tagToAddElement, db));
+        input.Tags.Add(await FindTag(tagToAddElement, db));
         await db.SaveChangesAsync();
     }
 
     if (json.TryGetProperty("remove_tag", out var tagToRemoveElement))
     {
-        var find = FindTag(tagToRemoveElement, db);
+        var find = await FindTag(tagToRemoveElement, db);
         input.Tags.Remove(find);
         await db.SaveChangesAsync();
     }
@@ -202,8 +208,3 @@ app.Lifetime.ApplicationStarted.Register(() =>
 });
 
 app.Run();
-return;
-
-
-
-record RestPatchExecutionRequest(bool IsReference);

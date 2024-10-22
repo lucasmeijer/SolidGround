@@ -9,7 +9,7 @@ public static class HtmlHelperExtensions
     public static async Task<IHtmlContent> RenderTurboFrameAsync(this IHtmlHelper helper, TurboFrame turboFrame)
     {
         var builder = new HtmlContentBuilder();
-        builder.AppendHtml(await turboFrame.RenderToStringAsync(helper.ViewContext.HttpContext));
+        builder.AppendHtml(await turboFrame.RenderToStringAsync(helper.ViewContext.HttpContext, true));
         return builder;
     }
 }

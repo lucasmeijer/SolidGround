@@ -8,15 +8,6 @@ public record TagsTurboFrameModel(Tag[] Tags, Tag[] AllTags, string Endpoint) : 
     public override string ViewName => "TagsTurboFrame";
 }
 
-public record SearchTagsTurboFrame(Tag[] Tags) : TurboFrame("search_tags")
-{
-    protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)
-    {
-        var dbContext = serviceProvider.GetRequiredService<AppDbContext>();
-        return new TagsTurboFrameModel(Tags, await dbContext.Tags.ToArrayAsync(), $"api/search/tags");
-    }
-}
-
 public record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_tags")
 {
     protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)

@@ -23,18 +23,22 @@ public abstract record TurboFrame(string TurboFrameId) : IResult, IActionResult
     public async Task ExecuteAsync(HttpContext httpContext)
     {
         httpContext.Response.ContentType = "text/html";
-        await httpContext.Response.WriteAsync(await RenderToStringAsync(httpContext));
+        await httpContext.Response.WriteAsync(await RenderToStringAsync(httpContext, true));
     }
 
-    protected internal virtual async Task<string> RenderToStringAsync(HttpContext httpContext)
+    protected internal virtual async Task<string> RenderToStringAsync(HttpContext httpContext, bool includeTurboFrame)
     {
         var turboFrameModel = await BuildModelAsync(httpContext.RequestServices);
         
+        var render = await Render(httpContext, turboFrameModel, turboFrameModel.ViewName);
+        if (!includeTurboFrame)
+            return render;
+        
         return $"""
-                 <turbo-frame id="{TurboFrameId}" {string.Join(' ',AdditionalAttributes)} >
-                 {await Render(httpContext, turboFrameModel, turboFrameModel.ViewName) }
-                 </turbo-frame>
-                 """;
+                <turbo-frame id="{TurboFrameId}" {string.Join(' ',AdditionalAttributes)} >
+                {render }
+                </turbo-frame>
+                """;
     }
 
     static async Task<string> Render(HttpContext httpContext, object razorModel, string viewName)
