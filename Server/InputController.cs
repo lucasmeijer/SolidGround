@@ -19,7 +19,7 @@ public class InputController(AppDbContext db) : ControllerBase
         db.Inputs.Remove(input);
         await db.SaveChangesAsync();
 
-        return new TurboStream("remove", InputTurboFrame2.TurboFrameIdFor(id));
+        return new TurboStream("remove", InputTurboFrame.TurboFrameIdFor(id));
     }
 
     public static string ModifyInputRouteFor(int inputId) => $"/api/input/{inputId}";
@@ -38,7 +38,7 @@ public class InputController(AppDbContext db) : ControllerBase
         input.Name = name.ToString();
         await db.SaveChangesAsync();
         
-        return new InputNameTurboFrame2(id);
+        return new InputNameTurboFrame(id);
     }
     
     [HttpPost]

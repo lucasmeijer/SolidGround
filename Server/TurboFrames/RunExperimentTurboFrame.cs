@@ -8,15 +8,15 @@ using TurboFrames;
 
 [Route(Route)]
 [Route($"{Route}/{{outputIdWhoseVariablesToUse}}")]
-public record RunExperimentTurboFrame2 : TurboFrame2
+public record RunExperimentTurboFrame : TurboFrame
 {
     const string Route = "/runexperiment";
     
     public int? OutputIdWhoseVariablesToUse { get; }
     
-    public RunExperimentTurboFrame2(int outputIdWhoseVariablesToUse) : base(TurboFrameId) => OutputIdWhoseVariablesToUse = outputIdWhoseVariablesToUse;
+    public RunExperimentTurboFrame(int outputIdWhoseVariablesToUse) : base(TurboFrameId) => OutputIdWhoseVariablesToUse = outputIdWhoseVariablesToUse;
 
-    public RunExperimentTurboFrame2() : base(TurboFrameId)
+    public RunExperimentTurboFrame() : base(TurboFrameId)
     {
     }
 
@@ -55,7 +55,7 @@ public record RunExperimentTurboFrame2 : TurboFrame2
 
     public new static string TurboFrameId => "run_experiment_form";
     
-    protected override async Task<Html> RenderAsync(IServiceProvider serviceProvider)
+    protected override async Task<Html> RenderContentsAsync(IServiceProvider serviceProvider)
     {
         var model = await BuildModel(serviceProvider.GetRequiredService<IConfiguration>(),
             serviceProvider.GetRequiredService<HttpClient>(),
@@ -71,7 +71,7 @@ public record RunExperimentTurboFrame2 : TurboFrame2
                name="{IdFor(variable)}"      
                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                rows="4"
-               placeholder="@variable.Value"
+               placeholder="{variable.Value}"
                oninput="this.classList.toggle('text-gray-500', this.value === this.placeholder)"
                    >{variable.Value}</textarea>
            </div>

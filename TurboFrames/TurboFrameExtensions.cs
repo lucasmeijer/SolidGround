@@ -12,7 +12,7 @@ public static class TurboFrameExtensions
     public static void MapTurboFramesInSameAssemblyAs(this WebApplication app, Type type)
     {
         var turboFrameTypes = type.Assembly.GetExportedTypes()
-            .Where(t => typeof(TurboFrame2).IsAssignableFrom(t) && !t.IsAbstract).ToArray();
+            .Where(t => typeof(TurboFrame).IsAssignableFrom(t) && !t.IsAbstract).ToArray();
 
         foreach (var turboFrameType in turboFrameTypes)
             foreach (var routeAttribute in turboFrameType.GetCustomAttributes<RouteAttribute>())

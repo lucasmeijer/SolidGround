@@ -69,16 +69,16 @@ public static class Extensions
         return htmls.Select(html => html.ToString()).SeparateWith("\n");
     }
 
-    public static async Task<string> RenderAsync(this IEnumerable<TurboFrame2> turboFrames, IServiceProvider serviceProvider)
+    public static async Task<string> RenderAsync(this IEnumerable<TurboFrame> turboFrames, IServiceProvider serviceProvider)
     {
-        var htmls = await Task.WhenAll(turboFrames.Select(async tf => await tf.RenderIncludingTurboFrame(serviceProvider)));
+        var htmls = await Task.WhenAll(turboFrames.Select(async tf => await tf.RenderAsync(serviceProvider)));
         return htmls.Render();
     }
     
     public static async Task<string> RenderAsync<TSource>(this IEnumerable<TSource> source,
-        Func<TSource, TurboFrame2> turboFrameFor, IServiceProvider serviceProvider)
+        Func<TSource, TurboFrame> turboFrameFor, IServiceProvider serviceProvider)
     {
-        var htmls = await Task.WhenAll(source.Select(async s => await turboFrameFor(s).RenderIncludingTurboFrame(serviceProvider)));
+        var htmls = await Task.WhenAll(source.Select(async s => await turboFrameFor(s).RenderAsync(serviceProvider)));
         return htmls.Render();
     }
 

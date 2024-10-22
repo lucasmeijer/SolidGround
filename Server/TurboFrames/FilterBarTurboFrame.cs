@@ -5,9 +5,9 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record FilterBarTurboFrame2(Tag[] Tags) : TurboFrame2("filter_bar")
+public record FilterBarTurboFrame(Tag[] Tags) : TurboFrame("filter_bar")
 {
-    protected override async Task<Html> RenderAsync(IServiceProvider serviceProvider)
+    protected override async Task<Html> RenderContentsAsync(IServiceProvider serviceProvider)
     {
         var db = serviceProvider.GetRequiredService<AppDbContext>();
         var allTags = await db.Tags.ToArrayAsync();

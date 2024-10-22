@@ -18,7 +18,7 @@ public class OutputController(AppDbContext db) : ControllerBase
         db.Outputs.Remove(obj);
         await db.SaveChangesAsync();
 
-        return new TurboStream("remove", Target: OutputTurboFrame2.TurboFrameIdFor(id));
+        return new TurboStream("remove", Target: OutputTurboFrame.TurboFrameIdFor(id));
     }
 
     [HttpPost]

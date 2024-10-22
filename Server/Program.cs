@@ -7,12 +7,10 @@ using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Net.Http.Headers;
 using SolidGround;
+using SolidGround.Pages;
 using TurboFrames;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddRazorPages();
 
 var persistentStorage = builder.Configuration["PERSISTENT_STORAGE"] ?? ".";
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={persistentStorage}/solid_ground.db"));
@@ -102,9 +100,9 @@ app.MapPost("/api/search", async (AppDbContext db, HttpRequest request) =>
         queryable = queryable.Where(i => i.Name!.Contains(searchString));
 
     return new TurboStreams2([
-        new("replace", TurboFrameContent: new InputList2(await queryable.Select(t => t.Id).ToArrayAsync())),
+        new("replace", TurboFrameContent: new InputListTurboFrame(await queryable.Select(t => t.Id).ToArrayAsync())),
         ..tagsChanged ? 
-            [new("replace", TurboFrameContent: new FilterBarTurboFrame2(tags))] 
+            [new("replace", TurboFrameContent: new FilterBarTurboFrame(tags))] 
             : Array.Empty<TurboStream>()
     ]);
     
@@ -182,9 +180,10 @@ app.MapPost("/api/input/{inputId}/tags", async (int inputId, AppDbContext db, [F
 
 //app.MapStaticAssets();
 app.UseStaticFiles();
-app.MapRazorPages();
+
 //    .WithStaticAssets();
 
+app.MapGet("/", () => new IndexPage());
 
 app.Lifetime.ApplicationStarted.Register(() =>
 {

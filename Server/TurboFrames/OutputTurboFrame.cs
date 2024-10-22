@@ -3,31 +3,12 @@ using SolidGround.Pages;
 using TurboFrames;
 
 namespace SolidGround;
-//
-// public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(OutputId))
-// {
-//     public static string TurboFrameIdFor(int outputId) => $"output_{outputId}";
-//
-//     public record Model(Output Output) : TurboFrameModel;
-//
-//     protected override async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)
-//     {
-//         var dbContext = serviceProvider.GetRequiredService<AppDbContext>();
-//         return new Model(await dbContext.Outputs
-//                              .Include(o => o.Components)
-//                              .Include(o => o.Execution)
-//                              .Include(o=>o.StringVariables)
-//                              .AsSplitQuery()
-//                              .FirstOrDefaultAsync(o => o.Id == OutputId)
-//                          ?? throw new BadHttpRequestException("No output found"));
-//     }
-// }
 
-public record OutputTurboFrame2(int OutputId) : TurboFrame2(TurboFrameIdFor(OutputId))
+public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(OutputId))
 {
     public static string TurboFrameIdFor(int outputId) => $"output_{outputId}";
     
-    protected override async Task<Html> RenderAsync(IServiceProvider serviceProvider)
+    protected override async Task<Html> RenderContentsAsync(IServiceProvider serviceProvider)
     {
         var dbContext = serviceProvider.GetRequiredService<AppDbContext>();
         var output = await dbContext.Outputs
@@ -105,7 +86,7 @@ public record OutputTurboFrame2(int OutputId) : TurboFrame2(TurboFrameIdFor(Outp
                                 {output.StringVariables.Render(RenderStringVariable)}
                             </div>
                         </details>
-                        <a href="{RunExperimentTurboFrame2.RouteFor(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame2.TurboFrameId}" class="{Buttons.Attrs} {Buttons.GreenAttrs}">
+                        <a href="{RunExperimentTurboFrame.RouteFor(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="{Buttons.Attrs} {Buttons.GreenAttrs}">
                             Adopt variables for new experiment
                         </a>
                     </div>
