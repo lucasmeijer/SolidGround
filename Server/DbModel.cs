@@ -84,7 +84,7 @@ public class Execution
 public class Tag
 {
     public int Id { get; set; }
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public List<Input> Inputs { get; set; } = [];
 }
 
@@ -102,11 +102,11 @@ public class Input
     public List<Tag> Tags { get; set; } = [];
     public List<InputString> Strings { get; set; } = [];
     public List<InputFile> Files { get; set; } = [];
-    public string OriginalRequest_Route { get; set; }
+    public string OriginalRequest_Route { get; set; } = null!;
     public List<Output> Outputs { get; set; } = [];
-    public string OriginalRequest_ContentType { get; set; }
-    public string OriginalRequest_Body { get; set; }
-    public string OriginalRequest_Host { get; set; }
+    public string OriginalRequest_ContentType { get; set; } = null!;
+    public string OriginalRequest_Body { get; set; } = null!;
+    public string OriginalRequest_Host { get; set; } = null!;
     public string TurboFrameId => $"input_{Id}";
     public string TurboFrameIdOfTags => $"input_{Id}_tags";
 
@@ -129,12 +129,12 @@ public class InputString
     public int Id { get; set; }
 
     public int InputId { get; set; }
-    public Input Input { get; set; }
+    public Input Input { get; set; } = null!;
 
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     
     public int Index { get; set; }
-    public string Value { get; set; }
+    public string Value { get; set; } = null!;
 }
 
 public class InputFile
@@ -143,13 +143,13 @@ public class InputFile
 
     // Foreign key to Input
     public int InputId { get; set; }
-    public Input Input { get; set; }
+    public Input Input { get; set; } = null!;
 
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     
     public int Index { get; set; }
-    public string MimeType { get; set; }
-    public byte[] Bytes { get; set; }
+    public string MimeType { get; set; } = null!;
+    public byte[] Bytes { get; set; } = [];
 }
 
 public class Output
@@ -157,10 +157,10 @@ public class Output
     public int Id { get; set; }
 
     public int ExecutionId { get; set; }
-    public Execution Execution { get; set; }
+    public Execution Execution { get; set; } = null!;
 
     public int InputId { get; set; }
-    public Input Input { get; set; }
+    public Input Input { get; set; }  = null!;
     
     public ExecutionStatus Status { get; set; }
     public List<OutputComponent> Components { get; set; } = [];
@@ -180,11 +180,11 @@ public class Output
 
 public class StringVariable
 {
-    public Output Output { get; set; }
+    public Output Output { get; set; } = null!;
     public int OutputId { get; set; }
     public int Id { get; set; }
-    public string Name { get; set; }
-    public string Value { get; set; }
+    public string Name { get; set; } = null!;
+    public string Value { get; set; } = null!;
 }
 
 public class OutputComponent
@@ -192,8 +192,8 @@ public class OutputComponent
     public int Id { get; set; }
 
     public int OutputId { get; set; }
-    public Output Output { get; set; }
+    public Output Output { get; set; } = null!;
     
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public string? Value { get; set; }
 }

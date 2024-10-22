@@ -6,7 +6,7 @@ namespace SolidGround.Pages;
 
 public class IndexModel(AppDbContext appDbContext) : PageModel
 {
-    public int[] InputIds { get; set; }
+    public int[] InputIds { get; set; } = [];
     
     public async Task OnGetAsync()
     {

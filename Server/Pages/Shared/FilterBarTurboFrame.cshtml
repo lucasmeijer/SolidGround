@@ -3,7 +3,8 @@
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @model FilterBarTurboFrame.Model
 
-<div data-controller="filterbar" data-filterbar-tags-value="@JsonSerializer.Serialize(Model.Tags.Select(i=>i.Id))" class="bg-white shadow-md rounded-lg group flex items-center p-4 gap-4">
+<div data-controller="filterbar" data-filterbar-tags-value="@JsonSerializer.Serialize(Model.Tags.Select(i=>i.Id))" 
+     class="bg-white shadow-md rounded-lg group flex items-center p-4 gap-4 h-16">
     <span class="text-gray-700 font-semibold">Search:</span>
     <div class="relative flex-grow">
         <input data-turbo-permanent data-filterbar-target="searchbar" data-action="input->filterbar#sendFiltersToServer:debounce(300)" id="searchInput" type="text" placeholder="Enter your search" class="w-full border border-gray-300 rounded-md px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -15,7 +16,7 @@
     </div>
     <span class="text-gray-700 font-semibold">Filter:</span>
 
-    <div class="flex-grow flex flex-wrap items-center gap-2">
+    <div class="flex items-center gap-2 flex-none">
         @foreach (var tag in Model.Tags)
         {
             string color = TagsFunctions.ColorFor(tag);
@@ -33,7 +34,7 @@
         }
 
         <select data-action="change->filterbar#addTagDropdownChanged" class="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-            <option value="">Select tag</option>
+            <option value="">Add tag</option>
             @foreach (var tag in Model.AllTags.Where(t=>Model.Tags.All(mt=>mt.Id != t.Id)))
             {
                 <option value="@tag.Id">@tag.Name</option>

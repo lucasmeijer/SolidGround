@@ -95,7 +95,7 @@ public class InputController(AppDbContext db) : ControllerBase
             .Select(kvp =>
             {
                 var argValue = kvp.Value;
-                var value = argValue.GetString();
+                var value = argValue.GetString() ?? "null";
                 return new StringVariable() { Name = kvp.Name, Value = value };
             })
             .ToList();
