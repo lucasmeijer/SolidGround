@@ -181,26 +181,38 @@ app.UseStaticFiles();
 //    .WithStaticAssets();
 
 app.MapGet("/", () => new IndexPage());
+app.MapGet("/tags", () => new TagsPage()).WithName("tags");
 
-app.Lifetime.ApplicationStarted.Register(() =>
+app.MapPost("/api/tags", async (HttpContext context, AppDbContext db) =>
 {
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (db.Tags.FirstOrDefault(t => t.Name == "Hester") == null)
-    {
-        db.Tags.Add(new Tag { Name = "Hester" });
-        db.SaveChanges();
-    }
-    if (db.Tags.FirstOrDefault(t => t.Name == "Lucas") == null)
-    {
-        db.Tags.Add(new Tag { Name = "Lucas" });
-        db.SaveChanges();
-    }
-    if (db.Tags.FirstOrDefault(t => t.Name == "Gemeente") == null)
-    {
-        db.Tags.Add(new Tag { Name = "Gemeente" });
-        db.SaveChanges();
-    }
+    var form = await context.Request.ReadFormAsync();
+    if (!form.TryGetValue("tag_name", out var tagNameValues))
+        return Results.BadRequest("no tag_name found");
+    var tagName = tagNameValues.ToString();
+
+    var existing = await db.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
+    if (existing != null)
+        return Results.BadRequest("tag already exists");
+    
+    db.Tags.Add(new Tag { Name = tagName });
+    await db.SaveChangesAsync();
+    
+    context.Response.Headers.Append("Turbo-Visit-Control","reload");
+    return Results.Redirect("/tags");
+});
+
+//I cannot figure out how to use .MapDelete() but redirect to a Get /tags.
+app.MapGet("/api/tags/{tagId}/delete", async (HttpContext context, AppDbContext db, int tagId) =>
+{
+    var existing = await db.Tags.FindAsync(tagId);
+    if (existing == null)
+        return Results.NotFound("tag not found");
+
+    db.Tags.Remove(existing);
+    await db.SaveChangesAsync();
+    
+    context.Response.Headers.Append("Turbo-Visit-Control","reload");
+    return Results.Redirect("/tags");
 });
 
 app.Run();
