@@ -32,7 +32,7 @@ public record TurboStreams2(TurboStream[] Elements) : IResult, IActionResult
     public Task ExecuteResultAsync(ActionContext context) => ExecuteAsync(context.HttpContext);
 }
 
-public record TurboStream(string Action, string? Target = null, string? RawContent = null, TurboFrame? TurboFrameContent = null) : IResult, IActionResult
+public record TurboStream(string Action, string? Target = null, string? RawContent = null, ITurboFrame? TurboFrameContent = null) : IResult, IActionResult
 {
     public async Task ExecuteAsync(HttpContext httpContext)
     {
@@ -59,7 +59,10 @@ public record TurboStream(string Action, string? Target = null, string? RawConte
 
             if (TurboFrameContent != null)
             {
-                await response.WriteAsync(await TurboFrameContent.RenderToStringAsync(httpContext, Action!="update"));
+                if (TurboFrameContent is TurboFrame turboFrame)
+                    await response.WriteAsync(await turboFrame.RenderToStringAsync(httpContext, Action!="update"));
+                if (TurboFrameContent is TurboFrame2 turboFrame2)
+                    await response.WriteAsync(await turboFrame2.RenderIncludingTurboFrame(httpContext.RequestServices));
             }
             await response.WriteAsync("</template>");
         }

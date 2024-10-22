@@ -1,119 +1,119 @@
-@model OutputTurboFrame.Model
-
-
-@functions {
-
-    string ColorFor()
-    {
-        return Model.Output.Status switch
-        {
-            ExecutionStatus.Started => "bg-blue-200",
-            ExecutionStatus.Failed => "bg-red-200",
-            _ => ""
-        };
-    }
-
-    static string HowMuchTimeAgo(DateTime dateTime)
-    {
-        var now = DateTime.Now;
-        var difference = now - dateTime;
-
-        if (difference.TotalSeconds < 60)
-            return "Just now";
-
-        if (difference.TotalMinutes < 60)
-        {
-            var minutes = (int)difference.TotalMinutes;
-            return $"{minutes} minute{(minutes == 1 ? "" : "s")} ago";
-        }
-
-        if (difference.TotalHours < 24)
-        {
-            var hours = (int)difference.TotalHours;
-            return $"{hours} hour{(hours == 1 ? "" : "s")} ago";
-        }
-
-        if (difference.TotalDays < 30)
-        {
-            var days = (int)difference.TotalDays;
-            return $"{days} day{(days == 1 ? "" : "s")} ago";
-        }
-
-        if (difference.TotalDays < 365)
-        {
-            var months = (int)(difference.TotalDays / 30);
-            return $"{months} month{(months == 1 ? "" : "s")} ago";
-        }
-
-        var years = (int)(difference.TotalDays / 365);
-        return $"{years} year{(years == 1 ? "" : "s")} ago";
-    }
-
-}
-
-
-
-<div class="flex flex-row gap-2 items-stretch">
-    <details class="bg-gray-50 flex-1 shadow-md rounded-lg group/output">
-        <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg @ColorFor()">
-            <h3 class="font-semibold">@HowMuchTimeAgo(Model.Output.Execution.StartTime)</h3>
-            <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
-        </summary>
-        <div class="p-2">
-            @{
-                var result = Model.Output.Components.FirstOrDefault(c => c.Name == "result");
-                if (result != null)
-                {
-                    <div class="py-2 text-xs">
-                        @JsonFormatter.FormatMaybeJson(result.Value)
-                    </div>
-                }
-            }
-            
-            <details class="my-4">    
-                <summary>Details</summary>
-                <div class="p-4">
-                    @foreach (var c in @Model.Output.Components.Where(c=>c.Name != "result"))
-                    {
-                        <details class="p-2 border-b last:border-b-0 text-sm group/component">
-                            <summary class="cursor-pointer flex justify-between items-center hover:bg-gray-50">
-                                <h3 class="font-semibold">@c.Name</h3>
-                                <svg class="w-5 h-5 transition-transform duration-200 transform rotate-0 group-open/component:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </summary>
-                            <div class="py-2 text-xs">
-                                @JsonFormatter.FormatMaybeJson(c.Value)
-                            </div>
-                        </details>
-                    }
-                    <br/>
-                    <br/>
-                    <br/>
-                    @foreach (var c in @Model.Output.StringVariables)
-                    {
-                        <details class="p-2 border-b last:border-b-0 text-sm group/component">
-                            <summary class="cursor-pointer flex justify-between items-center hover:bg-gray-50">
-                                <h3 class="font-semibold">@c.Name</h3>
-                                <svg class="w-5 h-5 transition-transform duration-200 transform rotate-0 group-open/component:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </summary>
-                            <div class="py-2 text-xs">
-                                @JsonFormatter.FormatMaybeJson(c.Value)
-                            </div>
-                        </details>
-                    }
-                </div>
-            </details>
-            <a href="@RunExperimentTurboFrame.RouteFor(Model.Output.Id)" data-turbo-frame="@RunExperimentTurboFrame.TurboFrameId" class="@Buttons.Attrs @Buttons.GreenAttrs">
-                Adopt variables for new experiment
-            </a>
-        </div>
-    </details>
-    <a href="/api/executions/@Model.Output.ExecutionId" data-turbo-method="delete" class="@Buttons.Attrs @Buttons.RedAttrs">
-        Delete
-    </a>
-</div>
+@* @model OutputTurboFrame.Model *@
+@* *@
+@* *@
+@* @functions { *@
+@* *@
+@*     string ColorFor() *@
+@*     { *@
+@*         return Model.Output.Status switch *@
+@*         { *@
+@*             ExecutionStatus.Started => "bg-blue-200", *@
+@*             ExecutionStatus.Failed => "bg-red-200", *@
+@*             _ => "" *@
+@*         }; *@
+@*     } *@
+@* *@
+@*     static string HowMuchTimeAgo(DateTime dateTime) *@
+@*     { *@
+@*         var now = DateTime.Now; *@
+@*         var difference = now - dateTime; *@
+@* *@
+@*         if (difference.TotalSeconds < 60) *@
+@*             return "Just now"; *@
+@* *@
+@*         if (difference.TotalMinutes < 60) *@
+@*         { *@
+@*             var minutes = (int)difference.TotalMinutes; *@
+@*             return $"{minutes} minute{(minutes == 1 ? "" : "s")} ago"; *@
+@*         } *@
+@* *@
+@*         if (difference.TotalHours < 24) *@
+@*         { *@
+@*             var hours = (int)difference.TotalHours; *@
+@*             return $"{hours} hour{(hours == 1 ? "" : "s")} ago"; *@
+@*         } *@
+@* *@
+@*         if (difference.TotalDays < 30) *@
+@*         { *@
+@*             var days = (int)difference.TotalDays; *@
+@*             return $"{days} day{(days == 1 ? "" : "s")} ago"; *@
+@*         } *@
+@* *@
+@*         if (difference.TotalDays < 365) *@
+@*         { *@
+@*             var months = (int)(difference.TotalDays / 30); *@
+@*             return $"{months} month{(months == 1 ? "" : "s")} ago"; *@
+@*         } *@
+@* *@
+@*         var years = (int)(difference.TotalDays / 365); *@
+@*         return $"{years} year{(years == 1 ? "" : "s")} ago"; *@
+@*     } *@
+@* *@
+@* } *@
+@* *@
+@* *@
+@* *@
+@* <div class="flex flex-row gap-2 items-stretch"> *@
+@*     <details class="bg-gray-50 flex-1 shadow-md rounded-lg group/output"> *@
+@*         <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg @ColorFor()"> *@
+@*             <h3 class="font-semibold">@HowMuchTimeAgo(Model.Output.Execution.StartTime)</h3> *@
+@*             <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"> *@
+@*                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path> *@
+@*             </svg> *@
+@*         </summary> *@
+@*         <div class="p-2"> *@
+@*             @{ *@
+@*                 var result = Model.Output.Components.FirstOrDefault(c => c.Name == "result"); *@
+@*                 if (result != null) *@
+@*                 { *@
+@*                     <div class="py-2 text-xs"> *@
+@*                         @JsonFormatter.FormatMaybeJson(result.Value) *@
+@*                     </div> *@
+@*                 } *@
+@*             } *@
+@*              *@
+@*             <details class="my-4">     *@
+@*                 <summary>Details</summary> *@
+@*                 <div class="p-4"> *@
+@*                     @foreach (var c in @Model.Output.Components.Where(c=>c.Name != "result")) *@
+@*                     { *@
+@*                         <details class="p-2 border-b last:border-b-0 text-sm group/component"> *@
+@*                             <summary class="cursor-pointer flex justify-between items-center hover:bg-gray-50"> *@
+@*                                 <h3 class="font-semibold">@c.Name</h3> *@
+@*                                 <svg class="w-5 h-5 transition-transform duration-200 transform rotate-0 group-open/component:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"> *@
+@*                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path> *@
+@*                                 </svg> *@
+@*                             </summary> *@
+@*                             <div class="py-2 text-xs"> *@
+@*                                 @JsonFormatter.FormatMaybeJson(c.Value) *@
+@*                             </div> *@
+@*                         </details> *@
+@*                     } *@
+@*                     <br/> *@
+@*                     <br/> *@
+@*                     <br/> *@
+@*                     @foreach (var c in @Model.Output.StringVariables) *@
+@*                     { *@
+@*                         <details class="p-2 border-b last:border-b-0 text-sm group/component"> *@
+@*                             <summary class="cursor-pointer flex justify-between items-center hover:bg-gray-50"> *@
+@*                                 <h3 class="font-semibold">@c.Name</h3> *@
+@*                                 <svg class="w-5 h-5 transition-transform duration-200 transform rotate-0 group-open/component:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"> *@
+@*                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path> *@
+@*                                 </svg> *@
+@*                             </summary> *@
+@*                             <div class="py-2 text-xs"> *@
+@*                                 @JsonFormatter.FormatMaybeJson(c.Value) *@
+@*                             </div> *@
+@*                         </details> *@
+@*                     } *@
+@*                 </div> *@
+@*             </details> *@
+@*             <a href="@RunExperimentTurboFrame.RouteFor(Model.Output.Id)" data-turbo-frame="@RunExperimentTurboFrame.TurboFrameId" class="@Buttons.Attrs @Buttons.GreenAttrs"> *@
+@*                 Adopt variables for new experiment *@
+@*             </a> *@
+@*         </div> *@
+@*     </details> *@
+@*     <a href="/api/executions/@Model.Output.ExecutionId" data-turbo-method="delete" class="@Buttons.Attrs @Buttons.RedAttrs"> *@
+@*         Delete *@
+@*     </a> *@
+@* </div> *@

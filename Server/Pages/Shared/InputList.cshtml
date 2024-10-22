@@ -1,14 +1,14 @@
-@using TurboFrames
-@model InputList.Model
-
-<div class="flex-col flex gap-2">
-
-    @if (Model.Inputs.Length == 0)
-    {
-        <div class="bg-white shadow-md rounded-lg p-4">No inputs matching this filter.</div>    
-    }
-    @foreach (var input in Model.Inputs)
-    {
-        @await Html.RenderTurboFrameAsync(new InputTurboFrame(input.Id))
-    }
-</div>
+@* @using TurboFrames *@
+@* @model InputList.Model *@
+@* *@
+@* <div class="flex-col flex gap-2"> *@
+@* *@
+@*     @if (Model.Inputs.Length == 0) *@
+@*     { *@
+@*         <div class="bg-white shadow-md rounded-lg p-4">No inputs matching this filter.</div>     *@
+@*     } *@
+@*     @foreach (var input in Model.Inputs) *@
+@*     { *@
+@*         @await Html.RenderTurboFrameAsync(new InputTurboFrame(input.Id)) *@
+@*     } *@
+@* </div> *@

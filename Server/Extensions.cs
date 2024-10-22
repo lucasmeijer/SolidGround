@@ -1,8 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.Json;
+using JetBrains.Annotations;
+using Microsoft.AspNetCore.Html;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using TurboFrames;
 
 namespace SolidGround;
 
@@ -14,7 +19,7 @@ public static class Extensions
         await stream.CopyToAsync(temp);
         return temp.ToArray();
     }
-
+    
     public static string GetMandatory(this IConfiguration config, string keyname) => config[keyname] ?? throw new Exception($"No config found for {keyname}");
     
     public static bool TryGetOptional<T>(this JsonElement self, string propertyName, out T? value)
@@ -56,6 +61,31 @@ public static class Extensions
     {
         return string.Join(seperator, values);
     }
+
+    public static async Task<string> RenderAsync<TSource>(this IEnumerable<TSource> source,
+        Func<TSource, Task<Html>> xform)
+    {
+        var htmls = await Task.WhenAll(source.Select(xform));
+        return htmls.Select(html => html.ToString()).SeparateWith("\n");
+    }
+
+    public static async Task<string> RenderAsync(this IEnumerable<TurboFrame2> turboFrames, IServiceProvider serviceProvider)
+    {
+        var htmls = await Task.WhenAll(turboFrames.Select(async tf => await tf.RenderIncludingTurboFrame(serviceProvider)));
+        return htmls.Render();
+    }
+    
+    public static async Task<string> RenderAsync<TSource>(this IEnumerable<TSource> source,
+        Func<TSource, TurboFrame2> turboFrameFor, IServiceProvider serviceProvider)
+    {
+        var htmls = await Task.WhenAll(source.Select(async s => await turboFrameFor(s).RenderIncludingTurboFrame(serviceProvider)));
+        return htmls.Render();
+    }
+
+    public static string Render(this IEnumerable<Html> source) => source.Select(s => s.ToString()).SeparateWith("\n");
+    
+    public static string Render<TSource>(this IEnumerable<TSource> source, Func<TSource, Html> xform) => source.Select(xform).Render();
+    
     
     public static T GetRequired<T>(this JsonElement self, string propertyName)
     {
@@ -64,5 +94,17 @@ public static class Extensions
         if (value == null)
             throw new ArgumentException($"Property {propertyName} was found but was null");
         return value;    
+    }
+    
+    public static string Color(this Tag tag)
+    {
+        //bool hasTag = tag.Id % 2 == 1;
+        return (tag.Id % 3) switch
+        {
+            0 => "red",
+            1 => "green",
+            2 => "blue",
+            _ => "gray" // Default case
+        };
     }
 }

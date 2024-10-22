@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using TurboFrames;
 
@@ -8,13 +9,13 @@ public record LazyFrame(string TurboFrameId, string Src) : TurboFrame(TurboFrame
         throw new NotImplementedException();
     }
 
-    protected internal override Task<string> RenderToStringAsync(HttpContext httpContext, bool includeTurboFrame)
+    public override Task<Html> RenderToStringAsync(HttpContext httpContext, bool includeTurboFrame)
     {
         if (!includeTurboFrame)
             throw new NotSupportedException("Cannot use lazy without including turboframe");
         
-        return Task.FromResult($"""
+        return Task.FromResult(new Html($"""
                                 <turbo-frame id="{TurboFrameId}" src="{Src}" loading="lazy"></turbo-frame>    
-                                """);
+                                """));
     }
 }

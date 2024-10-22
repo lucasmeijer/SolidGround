@@ -15,8 +15,33 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace TurboFrames;
 
+public interface ITurboFrame { string TurboFrameId { get; }}
+public abstract record TurboFrame2(string TurboFrameId) : ITurboFrame, IResult, IActionResult
+{
+    public async Task ExecuteAsync(HttpContext httpContext)
+    {
+        var response = httpContext.Response;
+        response.ContentType = "text/html";
+        await response.WriteAsync(await RenderIncludingTurboFrame(httpContext.RequestServices));
+    }
+
+    public async Task<Html> RenderIncludingTurboFrame(IServiceProvider serviceProvider) => new($"""
+         <turbo-frame id={TurboFrameId}>
+         {await RenderAsync(serviceProvider)}
+         </turbo-frame>
+         """);
+
+    protected abstract Task<Html> RenderAsync(IServiceProvider serviceProvider);
+
+    public Html RenderLazy() => new($"""<turbo-frame id="{TurboFrameId}" src="{LazySrc}" loading="lazy"></turbo-frame>""");
+
+    protected virtual string LazySrc => throw new NotImplementedException();
+    
+    public Task ExecuteResultAsync(ActionContext context) => ExecuteAsync(context.HttpContext);
+}
+
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
-public abstract record TurboFrame(string TurboFrameId) : IResult, IActionResult
+public abstract record TurboFrame(string TurboFrameId) : ITurboFrame, IResult, IActionResult
 {
     protected virtual string[] AdditionalAttributes => [];
 
@@ -26,7 +51,7 @@ public abstract record TurboFrame(string TurboFrameId) : IResult, IActionResult
         await httpContext.Response.WriteAsync(await RenderToStringAsync(httpContext, true));
     }
 
-    protected internal virtual async Task<string> RenderToStringAsync(HttpContext httpContext, bool includeTurboFrame)
+    public virtual async Task<Html> RenderToStringAsync(HttpContext httpContext, bool includeTurboFrame)
     {
         var turboFrameModel = await BuildModelAsync(httpContext.RequestServices);
         
@@ -34,14 +59,14 @@ public abstract record TurboFrame(string TurboFrameId) : IResult, IActionResult
         if (!includeTurboFrame)
             return render;
         
-        return $"""
+        return new($"""
                 <turbo-frame id="{TurboFrameId}" {string.Join(' ',AdditionalAttributes)} >
-                {render }
+                {render}
                 </turbo-frame>
-                """;
+                """);
     }
 
-    static async Task<string> Render(HttpContext httpContext, object razorModel, string viewName)
+    static async Task<Html> Render(HttpContext httpContext, object razorModel, string viewName)
     {
         await using var sw = new StringWriter();
         var actionContext = new ActionContext(httpContext, httpContext.GetRouteData(), new ActionDescriptor());
@@ -62,7 +87,7 @@ public abstract record TurboFrame(string TurboFrameId) : IResult, IActionResult
             sw,
             new HtmlHelperOptions());
         await viewContext.View.RenderAsync(viewContext);
-        return sw.ToString();
+        return new(sw.ToString());
     }
 
     protected virtual async Task<TurboFrameModel> BuildModelAsync(IServiceProvider serviceProvider)

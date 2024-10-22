@@ -15,12 +15,12 @@
         </summary>
         
         <div class="p-4">
-            @await Html.RenderTurboFrameAsync(new RunExperimentTurboFrame().Lazy)
+            @(Html.Raw(new RunExperimentTurboFrame2().RenderLazy()))
         </div>
     </details>
     
-    @await Html.RenderTurboFrameAsync(new FilterBarTurboFrame([]))
-    @await Html.RenderTurboFrameAsync(new InputList(Model.InputIds))
+    @await Html.RenderTurboFrameAsync(new FilterBarTurboFrame2([]))
+    @await Html.RenderTurboFrameAsync(new InputList2(Model.InputIds))
 </div>
 
       

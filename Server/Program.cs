@@ -102,9 +102,9 @@ app.MapPost("/api/search", async (AppDbContext db, HttpRequest request) =>
         queryable = queryable.Where(i => i.Name!.Contains(searchString));
 
     return new TurboStreams2([
-        new("replace", TurboFrameContent: new InputList(await queryable.Select(t => t.Id).ToArrayAsync())),
+        new("replace", TurboFrameContent: new InputList2(await queryable.Select(t => t.Id).ToArrayAsync())),
         ..tagsChanged ? 
-            [new("replace", TurboFrameContent: new FilterBarTurboFrame(tags))] 
+            [new("replace", TurboFrameContent: new FilterBarTurboFrame2(tags))] 
             : Array.Empty<TurboStream>()
     ]);
     
