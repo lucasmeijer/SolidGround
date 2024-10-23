@@ -28,9 +28,14 @@ public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(Output
                         </svg>
                     </summary>
                     <div class="p-2">
-                        {ResultHtmlsFor(output).Render()}
+                        <div class="flex gap-2">
+                            {ResultHtmlsFor(output).Render()}
+                            <a href="{RunExperimentTurboFrame.RouteFor(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="text-sm bg-green-200 h-16 p-2 rounded-lg">
+                                Adopt variables for new experiment
+                            </a>
+                        </div>
                         <details class="my-4">    
-                            <summary>Details</summary>
+                            <summary class="text-sm">Details</summary>
                             <div class="p-4">
                                 {output.Components.Where(c => c.Name != "result").Render(RenderComponent)}
                                 <br/>
@@ -39,9 +44,6 @@ public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(Output
                                 {output.StringVariables.Render(RenderStringVariable)}
                             </div>
                         </details>
-                        <a href="{RunExperimentTurboFrame.RouteFor(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="{Buttons.Attrs} {Buttons.GreenAttrs}">
-                            Adopt variables for new experiment
-                        </a>
                     </div>
                 </details>
                 <a href="/api/executions/{output.ExecutionId}" data-turbo-method="delete" class="{Buttons.Attrs} {Buttons.RedAttrs}">
@@ -57,7 +59,7 @@ public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(Output
         return result == null 
             ? [] 
             : [new($"""
-                    <div class="py-2 text-xs">
+                    <div class="text-xs">
                         {JsonFormatter.FormatMaybeJson(result.Value)}
                     </div>
                     """)];

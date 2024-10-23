@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,10 +35,13 @@ public static class TurboFrameExtensions
                                          .Value
                                      ?? throw new ArgumentException(
                                          $"RouteValue named {route_kvp.Key} did not have a matching parameter in any constructor of {turboFrameType.Name}");
-                    return Convert.ChangeType(route_kvp.Value, targetType) ??
-                           throw new ArgumentException("null values not supported");
+                    return Convert.ChangeType(route_kvp.Value, targetType) ?? throw new ArgumentException("null values not supported");
                 }).ToArray();
             return ActivatorUtilities.CreateInstance(context.RequestServices, turboFrameType, routeValues);
         });
+        
+       
     }
 }
+
+public class NotFoundException : Exception; 

@@ -11,7 +11,7 @@ public record InputNameEditTurboFrame(int InputId) : TurboFrame(InputNameTurboFr
     {
         var input = await serviceProvider.GetRequiredService<AppDbContext>().Inputs.FindAsync(InputId) ?? throw new BadHttpRequestException("input not found");
         return new($"""
-                    <form action="{InputController.ModifyInputRouteFor(InputId)}" method="post">
+                    <form action="{InputEndPoints.ModifyInputRouteFor(InputId)}" method="post">
                         <input type="text" name="name" value="{input.Name ?? "Naamloos"}" />
                         <button type="submit">Save</button>
                     </form>

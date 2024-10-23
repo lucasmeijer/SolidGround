@@ -23,7 +23,16 @@ public abstract record PageFragment : IResult, IActionResult
     {
         var response = httpContext.Response;
         response.ContentType = ResponseContentType;
-        await response.WriteAsync(await RenderAsync(httpContext.RequestServices));
+        try
+        {
+            var html = await RenderAsync(httpContext.RequestServices);
+            response.ContentType = ResponseContentType;
+            await response.WriteAsync(html);    
+        }
+        catch (NotFoundException)
+        {
+            response.StatusCode = StatusCodes.Status404NotFound;
+        }
     }
 
     public abstract Task<Html> RenderAsync(IServiceProvider serviceProvider);
