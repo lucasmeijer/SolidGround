@@ -43,31 +43,6 @@ app.UseAuthorization();
 app.UseHealthChecks("/up");
 app.MapTurboFramesInSameAssemblyAs(typeof(Program));
 
-app.MapGet("/images/{inputId:int}/{imageIndex}", async (int inputId, int imageIndex, AppDbContext db, HttpContext httpContext) =>
-{
-    var inputFile = await db.InputFiles
-        .Include(f => f.Input)
-        .FirstOrDefaultAsync(file => file.InputId == inputId && file.Index == imageIndex);
-    if (inputFile == null)
-        return Results.NotFound();
-    
-    httpContext.Response.ContentType = inputFile.MimeType;
-    await httpContext.Response.Body.WriteAsync(inputFile.Bytes);
-    return Results.Empty;
-});
-
-app.MapDelete("/api/executions/{id}", async (int id, AppDbContext db) =>
-{
-    var execution = await db.Executions.FindAsync(id) ?? throw new BadHttpRequestException("Execution with ID " + id + " not found.");
-    await db.Entry(execution).Collection(e => e.Outputs).LoadAsync();
-    
-    db.Executions.Remove(execution);
-    await db.SaveChangesAsync();
-
-    return new TurboStreamCollection([
-        ..execution.Outputs.Select(o => new TurboStream("remove", OutputTurboFrame.TurboFrameIdFor(o.Id)))
-    ]);
-});
 
 
 //app.MapStaticAssets();
@@ -80,9 +55,10 @@ app.MapGet("/tags", () => new TagsPage()).WithName("tags");
 
 app.MapTagsEndPoints();
 app.MapSearchEndPoints();
-app.MapOutputEndPoints();
 app.MapInputEndPoints();
 app.MapExperimentEndPoints();
+app.MapImagesEndPoints();
+app.MapExecutionsEndPoints();
 
 app.Run();
 

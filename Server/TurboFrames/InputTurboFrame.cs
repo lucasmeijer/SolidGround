@@ -6,6 +6,8 @@ public record InputTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId)
 {
     public static string TurboFrameIdFor(int inputId) => $"input_{inputId}";
 
+    protected override string[] TurboFrameAttributes => ["data-turbo-permanent",..base.TurboFrameAttributes];
+    
     protected override async Task<Html> RenderContentsAsync(IServiceProvider serviceProvider)
     {
         var input = await serviceProvider.GetRequiredService<AppDbContext>().Inputs.FindAsync(InputId);

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using TurboFrames;
@@ -6,9 +7,20 @@ namespace SolidGround;
 
 static class ExperimentEndPoints
 {
+    [SuppressMessage("ReSharper", "InconsistentNaming")] // ReSharper disable IdentifierTypo
+    public static class Routes
+    {
+        public static readonly RouteTemplate api_experiment = RouteTemplate.Create("/api/experiment");
+        public static readonly RouteTemplate api_experiment_newform = RouteTemplate.Create("/api/experiment/newform");
+        public static readonly RouteTemplate api_experiment_newform_id = RouteTemplate.Create("/api/experiment/newform/{id:int}");
+    }
+    
     public static void MapExperimentEndPoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("api/experiment", async (AppDbContext db, IConfiguration config, IServiceProvider serviceProvider, HttpRequest request) =>
+        app.MapGet(Routes.api_experiment_newform, () => new RunExperimentTurboFrame());
+        app.MapGet(Routes.api_experiment_newform_id, (int id) => new RunExperimentTurboFrame(id));
+        
+        app.MapPost(Routes.api_experiment, async (AppDbContext db, IConfiguration config, IServiceProvider serviceProvider, HttpRequest request) =>
         {
             var form = await request.ReadFormAsync();
             if (!form.TryGetValue("ids", out var idValues))

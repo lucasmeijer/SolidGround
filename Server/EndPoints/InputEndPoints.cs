@@ -13,6 +13,7 @@ namespace SolidGround;
 
 static class InputEndPoints
 {
+    [SuppressMessage("ReSharper", "InconsistentNaming")] // ReSharper disable IdentifierTypo
     public static class Routes
     {
         public static readonly RouteTemplate api_input = RouteTemplate.Create("/api/input");

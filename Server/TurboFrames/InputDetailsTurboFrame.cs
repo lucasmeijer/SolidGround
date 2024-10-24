@@ -39,11 +39,15 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}
          </div>
          """);
 
-    static Html RenderInputFile(InputFile inputFile, Input input) => new($"""
-                                                                          <div class="w-32 h-32 overflow-hidden">
-                                                                              <a href="/images/{input.Id}/{inputFile.Index}" target="_blank">
-                                                                                  <img src="/images/{input.Id}/{inputFile.Index}" alt="Your image description" class="w-full h-full object-cover">
-                                                                              </a>
-                                                                          </div>
-                                                                          """);
+    static Html RenderInputFile(InputFile inputFile, Input input)
+    {
+        var url = ImagesEndPoints.Routes.images_inputid_imageindex.For(input.Id, inputFile.Index);
+        return new($"""
+                    <div class="w-32 h-32 overflow-hidden">
+                        <a href="{url}" target="_blank">
+                            <img src="{url}" alt="Your image description" class="w-full h-full object-cover">
+                        </a>
+                    </div>
+                    """);
+    }
 }

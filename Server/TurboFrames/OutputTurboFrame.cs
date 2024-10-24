@@ -30,7 +30,7 @@ public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(Output
                     <div class="p-2">
                         <div class="flex gap-2">
                             {ResultHtmlsFor(output).Render()}
-                            <a href="{RunExperimentTurboFrame.RouteFor(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="text-sm bg-green-200 h-16 p-2 rounded-lg">
+                            <a href="{ExperimentEndPoints.Routes.api_experiment_newform_id.For(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="text-sm bg-green-200 h-16 p-2 rounded-lg">
                                 Adopt variables for new experiment
                             </a>
                         </div>
@@ -46,7 +46,7 @@ public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(Output
                         </details>
                     </div>
                 </details>
-                <a href="/api/executions/{output.ExecutionId}" data-turbo-method="delete" class="{Buttons.Attrs} {Buttons.RedAttrs}">
+                <a href="{ExecutionsEndPoints.Routes.api_executions_id.For(output.ExecutionId)}" data-turbo-method="delete" class="{Buttons.Attrs} {Buttons.RedAttrs}">
                     Delete
                 </a>
             </div>
