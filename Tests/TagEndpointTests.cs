@@ -35,11 +35,11 @@ public class TagEndPointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
     
-    [Fact]
-    public async Task DeleteTagThroughPostWithUnderscoreMethod_Returns_NoContent()
-    {
-        await PostNewTag_Returns_Created();
-        var response = await Client.PostAsync("/api/tags/1", new FormUrlEncodedContent([new("_method","delete")]));
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
+    // [Fact]
+    // public async Task DeleteTagThroughPostWithUnderscoreMethod_Returns_NoContent()
+    // {
+    //     await PostNewTag_Returns_Created();
+    //     var response = await Client.PostAsync("/api/tags/1", new FormUrlEncodedContent([new("_method","delete")]));
+    //     Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    // }
 }

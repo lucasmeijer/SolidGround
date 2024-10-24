@@ -43,7 +43,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpMethodOverride(new() { FormFieldName = "_method"});
+//app.UseHttpMethodOverride(new() { FormFieldName = "_method"});
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();
