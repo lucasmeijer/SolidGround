@@ -1,20 +1,26 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class FormToJsonController extends Controller {
-    static values = {
-        url: String
-    }
+
     static targets = ["errorMessage"]
 
-    async submit(event) {
+    connect() {
+        this.element.addEventListener("turbo:submit-start", this.handleSubmit.bind(this))
+    }
+
+    disconnect() {
+        this.element.removeEventListener("turbo:submit-start", this.handleSubmit.bind(this))
+    }
+
+    handleSubmit(event) {
+        // Prevent the default Turbo submission
         event.preventDefault()
 
-        // Collect form data
+        // Collect form data and transform to JSON
         const formData = new FormData(this.element)
         const data = {}
 
         for (const [key, value] of formData.entries()) {
-            // Handle multiple select inputs
             if (data[key]) {
                 if (Array.isArray(data[key])) {
                     data[key].push(value)
@@ -26,7 +32,7 @@ export default class FormToJsonController extends Controller {
             }
         }
 
-        // Simple validation example: check required fields
+        // Validate required fields
         const requiredFields = this.element.querySelectorAll('[required]')
         for (const field of requiredFields) {
             if (!formData.get(field.name)) {
@@ -37,30 +43,9 @@ export default class FormToJsonController extends Controller {
 
         // Clear previous error messages
         this.errorMessageTarget.textContent = ''
-
-        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-
-        try {
-            const response = await fetch(this.urlValue, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'text/vnd.turbo-stream.html',
-                    ...(token && { 'X-CSRF-Token': token })
-                },
-                body: JSON.stringify(data)
-            })
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`)
-            }
-
-            const html = await response.text()
-            Turbo.renderStreamMessage(html)
-            this.element.reset() // Reset the form
-        } catch (error) {
-            console.error('Fetch error:', error)
-            this.errorMessageTarget.textContent = 'An error occurred while submitting the form.'
-        }
+        
+        // Use Turbo's fetch request
+        event.detail.formSubmission.fetchRequest.headers["Content-Type"] = "application/json"
+        event.detail.formSubmission.fetchRequest.body = JSON.stringify(data)
     }
 }

@@ -29,8 +29,7 @@ public record TagsPage() : SolidGroundPage("Tags")
                     
                         <form
                         data-controller="formtojson"
-                        data-action="submit->formtojson#submit"
-                        data-formtojson-url-value="{TagEndPoints.Routes.api_tags}" 
+                        action="{TagEndPoints.Routes.api_tags}" 
                         method="post"
                         class="flex items-center space-x-4 max-w-md mx-auto p-4"
                         >

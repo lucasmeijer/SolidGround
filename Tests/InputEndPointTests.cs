@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Xml.Linq;
 using SolidGround;
 using Xunit;
 
@@ -100,6 +101,10 @@ public class InputEndPointTests : IntegrationTestBase
         
         var response = await Client.DeleteAsync(tagOnInput);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var readAsStringAsync = await response.Content.ReadAsStringAsync();
+        var doc = XDocument.Parse(readAsStringAsync);
+        Assert.Equal("input_1_tags", doc.Descendants("turbo-frame").Single().Attribute("id")?.Value);
     }
     
     [Fact]

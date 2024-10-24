@@ -43,7 +43,7 @@ public abstract record PageFragment : IResult, IActionResult
 public abstract record TurboFrame(string TurboFrameId) : PageFragment
 {
     public sealed override async Task<Html> RenderAsync(IServiceProvider serviceProvider) => new($"""
-              <turbo-frame id={TurboFrameId} {string.Join(" ",TurboFrameAttributes)}>
+              <turbo-frame id="{TurboFrameId}" {string.Join(" ",TurboFrameAttributes)}>
               {await RenderContentsAsync(serviceProvider)}
               </turbo-frame>
               """);

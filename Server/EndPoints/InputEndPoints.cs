@@ -124,7 +124,7 @@ static class InputEndPoints
             if (removed == 0)
                 return Results.NotFound($"tag {tagid} was not attached to input {id}");
             await db.SaveChangesAsync();
-            return Results.Ok();
+            return new InputTagsTurboFrame(id);
         });
     } 
 
