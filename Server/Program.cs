@@ -51,7 +51,7 @@ app.UseStaticFiles();
 //    .WithStaticAssets();
 
 app.MapGet("/", () => new IndexPage());
-app.MapGet("/tags", () => new TagsPage()).WithName("tags");
+
 
 app.MapTagsEndPoints();
 app.MapSearchEndPoints();
