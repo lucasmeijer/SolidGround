@@ -23,7 +23,7 @@ static class TagEndPoints
     {
         builder.MapGet(Routes.tags, () => new TagsPage());
         
-        builder.MapDelete(Routes.api_tags_id, async (int id, AppDbContext db, HttpContext context) =>
+        builder.MapDelete(Routes.api_tags_id, async (int id, AppDbContext db) =>
         {
             var existing = await db.Tags.FindAsync(id);
             if (existing == null)
@@ -31,13 +31,12 @@ static class TagEndPoints
 
             db.Tags.Remove(existing);
             await db.SaveChangesAsync();
-
-            context.Response.StatusCode = StatusCodes.Status204NoContent;
+            
             return TurboStream.Refresh();
         });
 
         builder.MapPost(Routes.api_tags,
-            async ([FromForm] CreateTagDto createTagDto, AppDbContext db, HttpContext httpContext) =>
+            async (CreateTagDto createTagDto, AppDbContext db, HttpContext httpContext) =>
             {
                 var existing = await db.Tags.FirstOrDefaultAsync(t => t.Name == createTagDto.Name);
                 if (existing != null)

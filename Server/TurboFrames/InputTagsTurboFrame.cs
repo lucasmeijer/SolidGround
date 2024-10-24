@@ -30,14 +30,15 @@ public record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_ta
             return new($"""
                         <span class="inline-flex items-center px-6 h-12 rounded-full text-sm font-medium bg-{color}-100 text-{color}-800">
                             {tag.Name}
-                            <form method="post" action="{Endpoint}" class="inline-flex items-center ml-1.5">
-                                <input type="hidden" name="tagData" value='{tagData}'/>
+                            <form method="post" data-controller="formtojson" data-action="submit->formtojson#submit" data-formtojson-url-value="{Endpoint}" class="inline-flex items-center ml-1.5">
                                 <button type="submit" class="text-{color}-400 hover:text-{color}-600 focus:outline-none">
                                   <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                                       <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                                   </svg>
                                 </button>
+                                <div data-formtojson-target="errorMessage" class="error-message"></div>
                             </form>
+                            
                         </span>
                         """);
         }
@@ -88,7 +89,7 @@ public record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_ta
                          """);
     };
 
-    string Endpoint => $"api/input/{InputId}/tags";
+    string Endpoint => InputEndPoints.Routes.api_input_id_tags.For(InputId);
 
     static JsonNode? NewTagsFor(IEnumerable<int> tag_ids) => JsonSerializer.SerializeToNode(tag_ids);
 }

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Xml.Linq;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,27 +13,29 @@ public class TagEndPointTests : IntegrationTestBase
     [Fact]
     public async Task PostNewTag_Returns_Created()
     {
-        var formEncodedContent = new FormUrlEncodedContent([new("name", "harry")]);
-        var response = await Client.PostAsync("/api/tags", formEncodedContent);
+        var response = await Client.PostAsJsonAsync("/api/tags", new TagEndPoints.CreateTagDto() { Name = "harry"});
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
     
     [Fact]
     public async Task PostDuplicateTag_Returns_Conflict()
     {
-        var formEncodedContent = new FormUrlEncodedContent([new("name", "harry")]);
-        var response1 = await Client.PostAsync("/api/tags", formEncodedContent);
+        var createTagDto = new TagEndPoints.CreateTagDto() { Name = "harry"};
+        var response1 = await Client.PostAsJsonAsync("/api/tags", createTagDto);
         Assert.Equal(HttpStatusCode.Created, response1.StatusCode);
-        var response2 = await Client.PostAsync("/api/tags", formEncodedContent);
+        var response2 = await Client.PostAsJsonAsync("/api/tags", createTagDto);
         Assert.Equal(HttpStatusCode.Conflict, response2.StatusCode);
     }
     
     [Fact]
-    public async Task DeleteTag_Returns_NoContent()
+    public async Task DeleteTag_Returns_Ok()
     {
         await PostNewTag_Returns_Created();
         var response = await Client.DeleteAsync("/api/tags/1");
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        
+        var doc = XDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("refresh", doc.Descendants("turbo-stream").Single().Attribute("action")?.Value);
     }
     
     // [Fact]

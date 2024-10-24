@@ -14,7 +14,7 @@ public record TagsPage() : SolidGroundPage("Tags")
         Html RenderExistingTag(Tag t) => new($"""
                   <span class="inline-flex items-center px-6 h-12 rounded-full text-sm font-medium bg-{t.Color()}-100 text-{t.Color()}-800">
                     {t.Name} ({withCounts[Array.IndexOf(tags,t)]})
-                    <a href="{TagEndPoints.Routes.api_tags_id.For(t.Id)}" data-turbo-confirm="Are you really really sure?" class="text-{t.Color()}-400 hover:text-@color-600 focus:outline-none">
+                    <a href="{TagEndPoints.Routes.api_tags_id.For(t.Id)}" data-turbo-method="delete" data-turbo-confirm="Are you really really sure?" class="text-{t.Color()}-400 hover:text-@color-600 focus:outline-none">
                         <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                         </svg>
@@ -28,12 +28,14 @@ public record TagsPage() : SolidGroundPage("Tags")
                         {tags.Render(RenderExistingTag)}  
                     
                         <form
-                        data-turbo-frame="_top" action="{TagEndPoints.Routes.api_tags}" 
+                        data-controller="formtojson"
+                        data-action="submit->formtojson#submit"
+                        data-formtojson-url-value="{TagEndPoints.Routes.api_tags}" 
                         method="post"
                         class="flex items-center space-x-4 max-w-md mx-auto p-4"
                         >
                       <input
-                        name="{nameof(TagEndPoints.CreateTagDto.Name)}"
+                        name="{JsonPropertyHelper.JsonNameFor((TagEndPoints.CreateTagDto o) => o.Name)}"
                         type="text"
                         placeholder="Type new tag name"
                         class="flex-grow px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -44,6 +46,7 @@ public record TagsPage() : SolidGroundPage("Tags")
                       >
                         Add as new tag
                       </button>
+                      <div data-formtojson-target="errorMessage" class="error-message"></div>
                     </form>
                     </div>
                     """);

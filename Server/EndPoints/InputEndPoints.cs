@@ -21,6 +21,7 @@ static class InputEndPoints
         public static readonly RouteTemplate api_input_id_name = RouteTemplate.Create("/api/input/{id:int}/name");
         public static readonly RouteTemplate api_input_id_name_edit = RouteTemplate.Create("/api/input/{id:int}/name");
         public static readonly RouteTemplate api_input_id_tags = RouteTemplate.Create("/api/input/{id:int}/tags");
+        public static readonly RouteTemplate api_input_id_tags_tagid = RouteTemplate.Create("/api/input/{id:int}/tags/{tagid:int}");
         public static readonly RouteTemplate api_input_id_details = RouteTemplate.Create("/api/input/{id:int}/details");
     }
 
@@ -91,46 +92,41 @@ static class InputEndPoints
             return new InputNameTurboFrame(id);
         }).DisableAntiforgery();
 
-        app.MapPost(Routes.api_input_id_tags, async (AppDbContext db, int id, [FromForm] string tagData) =>
+        app.MapPost(Routes.api_input_id_tags, async (AppDbContext db, int id, AddTagToInputDto dto, HttpContext httpContext) =>
+        {
+            var input = await db.Inputs
+                .Include(i => i.Tags)
+                .FirstOrDefaultAsync(i => i.Id == id);
+
+            if (input == null)
+                return Results.NotFound($"Input {id} not found");
+
+            var tag = await db.Tags.FindAsync(dto.TagId);
+            if (tag == null)
+                return Results.NotFound($"Tag {dto.TagId} not found");
+
+            input.Tags.Add(tag);
+            await db.SaveChangesAsync();
+            
+            httpContext.Response.Headers.Location = Routes.api_input_id_tags_tagid.For(id, dto.TagId);
+            httpContext.Response.StatusCode = StatusCodes.Status201Created;
+            return new InputTagsTurboFrame(id);
+        }).DisableAntiforgery();
+
+        app.MapDelete(Routes.api_input_id_tags_tagid, async (int id, int tagid, AppDbContext db, HttpContext httpContext) =>
         {
             var input = await db.Inputs
                 .Include(i => i.Tags)
                 .FirstOrDefaultAsync(i => i.Id == id);
             if (input == null)
-                return Results.BadRequest($"Input {id} not found");
-
-            var json = JsonDocument.Parse(tagData).RootElement;
-
-            if (json.TryGetProperty("add_tag", out var tagToAddElement))
-            {
-                input.Tags.Add(await TagHelper.FindTag(tagToAddElement, db));
-                await db.SaveChangesAsync();
-            }
-
-            if (json.TryGetProperty("remove_tag", out var tagToRemoveElement))
-            {
-                var find = await TagHelper.FindTag(tagToRemoveElement, db);
-                input.Tags.Remove(find);
-                await db.SaveChangesAsync();
-            }
-
-            return new InputTagsTurboFrame(id);
-        }).DisableAntiforgery();
+                return Results.NotFound($"input {id} not found");
+            int removed = input.Tags.RemoveAll(t => t.Id == tagid);
+            if (removed == 0)
+                return Results.NotFound($"tag {tagid} was not attached to input {id}");
+            await db.SaveChangesAsync();
+            return Results.Ok();
+        });
     } 
-    
-    public static List<OutputComponent> OutputComponentsFromJsonElement(JsonElement jsonElement)
-    {
-        return jsonElement
-            .EnumerateObject()
-            .Where(kvp => kvp.Value.ValueKind == JsonValueKind.String)
-            .Select(kvp =>
-            {
-                var argValue = kvp.Value;
-                var value = argValue.GetString();
-                return new OutputComponent() { Name = kvp.Name, Value = value };
-            })
-            .ToList();
-    }
 
     public record InputDto
     {
@@ -141,6 +137,12 @@ static class InputEndPoints
         public required OutputDto Output { get; init; }
     }
 
+    public record AddTagToInputDto
+    {
+        [JsonPropertyName("tagid")]
+        public required int TagId { get; init; }
+    }
+    
     public record NameUpdateDto
     {
         [JsonPropertyName("name")]
