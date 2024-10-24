@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace TurboFrames;
 
-public record TurboStream(string Action, string? Target = null, string? RawContent = null, TurboFrame? TurboFrameContent = null) : IResult, IActionResult
+public abstract record TurboStreamBase : IResult, IActionResult
 {
     public async Task ExecuteAsync(HttpContext httpContext)
     {
@@ -11,7 +11,20 @@ public record TurboStream(string Action, string? Target = null, string? RawConte
         await WriteAsync(httpContext);
     }
 
-    internal async Task WriteAsync(HttpContext httpContext)
+    public abstract Task WriteAsync(HttpContext httpContext);
+    public Task ExecuteResultAsync(ActionContext context) => ExecuteAsync(context.HttpContext);
+}
+
+public record TurboStream(string Action, string? Target = null, string? RawContent = null, TurboFrame? TurboFrameContent = null) : TurboStreamBase
+{
+    record TurboStreamWithPayload(string payload) : TurboStreamBase
+    {
+        public override Task WriteAsync(HttpContext httpContext) => httpContext.Response.WriteAsync(payload);
+    }
+
+    public static TurboStreamBase Refresh() => new TurboStreamWithPayload($"""<turbo-stream action="refresh"></turbo-stream>""");
+
+    public override async Task WriteAsync(HttpContext httpContext)
     {
         var response = httpContext.Response;
         var target = Target ?? TurboFrameContent?.TurboFrameId ?? throw new NotSupportedException("Either Target or TurboFrameId must be set."); 
@@ -37,5 +50,4 @@ public record TurboStream(string Action, string? Target = null, string? RawConte
     }
 
 
-    public Task ExecuteResultAsync(ActionContext context) => ExecuteAsync(context.HttpContext);
 }

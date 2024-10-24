@@ -5,8 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SolidGround;
 using Xunit;
+using Xunit.Abstractions;
 
-public class InputTests(WebApplicationFactory<Program>  factory) : IntegrationTestBase(factory)
+public class InputTests : IntegrationTestBase
 {
     [Fact]
     public async Task GetNonExistingInput_Returns_404()

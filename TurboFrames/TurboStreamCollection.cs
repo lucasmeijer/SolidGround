@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace TurboFrames;
 
-public record TurboStreamCollection(TurboStream[] Elements) : IResult, IActionResult
+public record TurboStreamCollection(TurboStreamBase[] Elements) : IResult, IActionResult
 {
     public async Task ExecuteAsync(HttpContext httpContext)
     {

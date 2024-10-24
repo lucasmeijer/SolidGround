@@ -12,7 +12,14 @@ using TurboFrames;
 var builder = WebApplication.CreateBuilder(args);
 
 var persistentStorage = builder.Configuration["PERSISTENT_STORAGE"] ?? ".";
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite($"Data Source={persistentStorage}/solid_ground.db"));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+    {
+        options.UseSqlite($"Data Source={persistentStorage}/solid_ground.db");
+    });
+}
+
 builder.Services.AddHttpClient();
 builder.Services.AddHealthChecks().AddCheck("Health", () => HealthCheckResult.Healthy("OK"));
 builder.Services.AddControllersWithViews();
@@ -21,12 +28,11 @@ builder.Services.AddControllers();
 var app = builder.Build();
 app.MapControllers();
 
-{
+if (!app.Environment.IsEnvironment("Testing")) {
     using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
     var dbContext = services.GetRequiredService<AppDbContext>();
-    if (dbContext.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory")
-        dbContext.Database.Migrate();
+    dbContext.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.
@@ -37,6 +43,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseHttpMethodOverride(new() { FormFieldName = "_method"});
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseAuthorization();

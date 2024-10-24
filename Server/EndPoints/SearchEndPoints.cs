@@ -37,7 +37,7 @@ static class SearchEndPoints
                 queryable = queryable.Where(i => i.Name!.Contains(searchString));
 
             return new TurboStreamCollection([
-                new("replace", TurboFrameContent: new InputListTurboFrame(await queryable.Select(t => t.Id).ToArrayAsync())),
+                new TurboStream("replace", TurboFrameContent: new InputListTurboFrame(await queryable.Select(t => t.Id).ToArrayAsync())),
                 ..tagsChanged ? 
                     [new("replace", TurboFrameContent: new FilterBarTurboFrame(tags))] 
                     : Array.Empty<TurboStream>()

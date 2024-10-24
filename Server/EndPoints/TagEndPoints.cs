@@ -1,6 +1,9 @@
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SolidGround;
 using SolidGround.Pages;
+using TurboFrames;
 
 static class TagEndPoints
 {
@@ -8,13 +11,19 @@ static class TagEndPoints
     {
         public static readonly RouteTemplate tags = RouteTemplate.Create("/tags");
         public static readonly RouteTemplate api_tags = RouteTemplate.Create("/api/tags");
-        public static readonly RouteTemplate api_tags_id_delete = RouteTemplate.Create("/api/tags/{id:int}/delete");
+        public static readonly RouteTemplate api_tags_id = RouteTemplate.Create("/api/tags/{id:int}");
     }
+
+    public class CreateTagDto
+    {
+         [JsonPropertyName("name")] public required string Name { get; init; }
+    }
+    
     public static void MapTagsEndPoints(this IEndpointRouteBuilder builder)
     {
         builder.MapGet(Routes.tags, () => new TagsPage());
         
-        builder.MapGet(Routes.api_tags_id_delete, async (int id, AppDbContext db, HttpContext context) =>
+        builder.MapDelete(Routes.api_tags_id, async (int id, AppDbContext db, HttpContext context) =>
         {
             var existing = await db.Tags.FindAsync(id);
             if (existing == null)
@@ -22,27 +31,23 @@ static class TagEndPoints
 
             db.Tags.Remove(existing);
             await db.SaveChangesAsync();
-    
-            context.Response.Headers.Append("Turbo-Visit-Control","reload");
-            return Results.Redirect(Routes.tags);
+
+            context.Response.StatusCode = StatusCodes.Status204NoContent;
+            return TurboStream.Refresh();
         });
 
-        builder.MapPost(Routes.api_tags, async (AppDbContext db, HttpContext context) =>
-        {
-            var form = await context.Request.ReadFormAsync();
-            if (!form.TryGetValue("tag_name", out var tagNameValues))
-                return Results.BadRequest("no tag_name found");
-            var tagName = tagNameValues.ToString();
+        builder.MapPost(Routes.api_tags,
+            async ([FromForm] CreateTagDto createTagDto, AppDbContext db, HttpContext httpContext) =>
+            {
+                var existing = await db.Tags.FirstOrDefaultAsync(t => t.Name == createTagDto.Name);
+                if (existing != null)
+                    return Results.Conflict();
 
-            var existing = await db.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
-            if (existing != null)
-                return Results.BadRequest("tag already exists");
-    
-            db.Tags.Add(new Tag { Name = tagName });
-            await db.SaveChangesAsync();
-    
-            context.Response.Headers.Append("Turbo-Visit-Control","reload");
-            return Results.Redirect(Routes.tags);
-        });
+                db.Tags.Add(new Tag { Name = createTagDto.Name });
+                await db.SaveChangesAsync();
+
+                httpContext.Response.StatusCode = StatusCodes.Status201Created;
+                return TurboStream.Refresh();
+            }).DisableAntiforgery();
     }
 }
