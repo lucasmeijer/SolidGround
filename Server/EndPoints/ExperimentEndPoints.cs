@@ -46,7 +46,7 @@ static class ExperimentEndPoints
                 sb.AppendLine($"""
                                <turbo-stream action="replace" target="input_{inputId}">
                                <template>
-                               <turbo-frame id="input_{inputId}" src="/api/input/{inputId}">
+                               <turbo-frame id="input_{inputId}" src="{InputEndPoints.Routes.api_input_id.For(inputId)}">
                                </turbo-frame>
                                </template>
                                </turbo-stream>

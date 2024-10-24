@@ -1,13 +1,70 @@
 using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using SolidGround;
 using Xunit;
 
-public class InputTests(CustomWebApplicationFactory<Program> factory) : IntegrationTestBase(factory)
+public class InputTests(WebApplicationFactory<Program>  factory) : IntegrationTestBase(factory)
 {
     [Fact]
     public async Task GetNonExistingInput_Returns_404()
     {
-        await using var context = CreateDbContext();
-        var response = await _client.GetAsync("/api/input/3");
+        var response = await Client.GetAsync("/api/input/3");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    [Fact]
+    public async Task PostNewInput_BadRequest_Returns_BadRequest()
+    {
+        var response = await Client.PostAsJsonAsync("/api/input", new {});
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task PostNewInput_Returns_Created()
+    {
+        var response = await Client.PostAsJsonAsync("/api/input", SimpleDto);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("/api/input/1", response.Headers.Location?.OriginalString);
+    }
+    
+    [Fact]
+    public async Task UpdateName_Updates_Name()
+    {
+        var createResponse = await Client.PostAsJsonAsync("/api/input", SimpleDto);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var createdId = int.Parse(createResponse.Headers.Location!.ToString().Last().ToString());
+        Assert.Equal(1, createdId);
+
+        var input = await DbContext.Inputs.FindAsync(createdId);
+        Assert.NotNull(input);
+        Assert.Equal(null, input.Name);
+
+        Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/input/{createdId}/name", new InputEndPoints.NameUpdateDto()
+        {
+            Name = "hallo"
+        })).StatusCode);
+
+        await DbContext.Entry(input).ReloadAsync();
+        Assert.Equal("hallo", input.Name);
+    }
+
+    static InputEndPoints.InputDto SimpleDto => new()
+    {
+        Output = new()
+        {
+            OutputComponents = [],
+            StringVariables = []
+        },
+        Request = new()
+        {
+            BasePath = "asd",
+            BodyBase64 = "asd",
+            ContentType = "text/html",
+            Route = "/api/hello"
+        }
+    };
 }

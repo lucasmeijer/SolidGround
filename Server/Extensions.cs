@@ -91,9 +91,9 @@ public static class Extensions
     public static T GetRequired<T>(this JsonElement self, string propertyName)
     {
         if (!self.TryGetOptional<T>(propertyName, out var value))
-            throw new ArgumentException("Property not found", propertyName);
+            throw new BadHttpRequestException($"Property {propertyName} not found");
         if (value == null)
-            throw new ArgumentException($"Property {propertyName} was found but was null");
+            throw new BadHttpRequestException($"Property {propertyName} was found but was null");
         return value;    
     }
     

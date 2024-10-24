@@ -5,7 +5,6 @@ using TurboFrames;
 
 namespace SolidGround;
 
-[Route("/api/input/{InputId}/details")]
 public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_details")
 {
     protected override async Task<Html> RenderContentsAsync(IServiceProvider serviceProvider)
@@ -19,8 +18,8 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}
             .FirstOrDefaultAsync(i => i.Id == InputId) ?? throw new BadHttpRequestException("input not found");
         return await Render(input, serviceProvider);
     }
-    
-    protected override string LazySrc => $"/api/input/{InputId}/details";
+
+    protected override string LazySrc => InputEndPoints.Routes.api_input_id_details.For(InputId);
     
     static async Task<Html> Render(Input input, IServiceProvider serviceProvider) => new($"""
          <div class="p-4 flex-col flex gap-4">
@@ -32,7 +31,7 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}
                  <div>
                     {await new InputTagsTurboFrame(input.Id).RenderAsync(serviceProvider)}                  
                  </div>
-                 <a href="/api/input/{input.Id}" data-turbo-method="delete" class="{Buttons.Attrs} {Buttons.RedAttrs}">
+                 <a href="{InputEndPoints.Routes.api_input_id.For(input.Id)}" data-turbo-method="delete" class="{Buttons.Attrs} {Buttons.RedAttrs}">
                      Delete Entire Input
                  </a>
              </div>

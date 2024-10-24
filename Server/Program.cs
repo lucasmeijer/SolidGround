@@ -1,6 +1,7 @@
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SolidGround;
@@ -16,6 +17,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddHealthChecks().AddCheck("Health", () => HealthCheckResult.Healthy("OK"));
 builder.Services.AddControllersWithViews();
 builder.Services.AddControllers();
+
 var app = builder.Build();
 app.MapControllers();
 

@@ -3,7 +3,6 @@ using TurboFrames;
 
 namespace SolidGround;
 
-[Route("/input/{InputId:int}/name")]
 public record InputNameTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId))
 {
     public static string TurboFrameIdFor(int InputId) => $"input_{InputId}_name";
@@ -14,8 +13,8 @@ public record InputNameTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(Inpu
         
         return new($"""
                     <h3 class="font-semibold">
-                        <a href="{InputNameEditTurboFrame.RouteForEditFor(InputId)}" data-turbo-frame="{TurboFrameIdFor(InputId)}">
-                            {input.Name ?? "Naamloos"}
+                        <a href="{InputEndPoints.Routes.api_input_id_name_edit.For(InputId)}" data-turbo-frame="{TurboFrameIdFor(InputId)}">
+                            {(input.Name ?? "Naamloos")}
                         </a>
                     </h3>
                     """);

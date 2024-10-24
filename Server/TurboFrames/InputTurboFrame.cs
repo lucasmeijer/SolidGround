@@ -1,9 +1,7 @@
-using Microsoft.AspNetCore.Components;
 using TurboFrames;
 
 namespace SolidGround;
 
-[Route("/api/input/{InputId}")]
 public record InputTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId))
 {
     public static string TurboFrameIdFor(int inputId) => $"input_{inputId}";
