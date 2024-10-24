@@ -6,7 +6,7 @@ using SolidGround;
 using TurboFrames;
 
 
-public record RunExperimentTurboFrame : TurboFrame<HttpClient,AppDbContext, IConfiguration>
+public record RunExperimentTurboFrame : TurboFrame
 {
     int? OutputIdWhoseVariablesToUse { get; }
     
@@ -50,45 +50,44 @@ public record RunExperimentTurboFrame : TurboFrame<HttpClient,AppDbContext, ICon
     }
 
     public new static string TurboFrameId => "run_experiment_form";
-    
-    
-    protected override async Task<Html> RenderContentsAsync(HttpClient httpClient, AppDbContext appDbContext, IConfiguration config)
-    {
-        try
-        {
-            return new($"""                    
-                        <form class="p-4" action="{ExperimentEndPoints.Routes.api_experiment.For()}" method="post">
-                             {(await GetVariablesFromServiceUnderTest(config, httpClient, appDbContext)).Render(RenderVariable)} 
-                            <input type="hidden" name="ids" value="[1,2,3]">
-                            <input type="hidden" name="name" value="Lucas!">
-                            <button type="submit" class="px-4 py-2 bg-green-200 hover:bg-green-700 rounded">
-                                Run Experiment
-                            </button>
-                        </form>
-                        """);
-        }
-        catch (HttpRequestException e)
-        {
-            return new($"Unable to retrieve SolidGround variables from service under test: {e.Message}");
-        }
-    }
 
-    static Html RenderVariable(KeyValuePair<string, string> variable) =>
-        new($"""
-             <div class="mb-6">
-                 <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
-                     {variable.Key}
-                 </label>
-                 <textarea
-                 id="{IdFor(variable)}"
-                 name="{IdFor(variable)}"      
-                 class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                 rows="4"
-                 placeholder="{variable.Value}"
-                 oninput="this.classList.toggle('text-gray-500', this.value === this.placeholder)"
-                     >{variable.Value}</textarea>
-             </div>
-             """);
+    protected override Delegate RenderFunc =>
+        async (HttpClient httpClient, AppDbContext appDbContext, IConfiguration config) =>
+        {
+            try
+            {
+                return new Html($"""                    
+                                 <form class="p-4" action="{ExperimentEndPoints.Routes.api_experiment.For()}" method="post">
+                                      {(await GetVariablesFromServiceUnderTest(config, httpClient, appDbContext)).Render(RenderVariable)} 
+                                     <input type="hidden" name="ids" value="[1,2,3]">
+                                     <input type="hidden" name="name" value="Lucas!">
+                                     <button type="submit" class="px-4 py-2 bg-green-200 hover:bg-green-700 rounded">
+                                         Run Experiment
+                                     </button>
+                                 </form>
+                                 """);
+            }
+            catch (HttpRequestException e)
+            {
+                return new($"Unable to retrieve SolidGround variables from service under test: {e.Message}");
+            }
+        };
+
+    static Html RenderVariable(KeyValuePair<string, string> variable) => new($"""
+          <div class="mb-6">
+              <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
+                  {variable.Key}
+              </label>
+              <textarea
+              id="{IdFor(variable)}"
+              name="{IdFor(variable)}"      
+              class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              rows="4"
+              placeholder="{variable.Value}"
+              oninput="this.classList.toggle('text-gray-500', this.value === this.placeholder)"
+                  >{variable.Value}</textarea>
+          </div>
+          """);
 
     static string IdFor(KeyValuePair<string, string> variable) => $"SolidGroundVariable_{variable.Key}";
 }

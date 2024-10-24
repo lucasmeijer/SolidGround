@@ -8,13 +8,13 @@ public record InputTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId)
 
     protected override string[] TurboFrameAttributes => ["data-turbo-permanent",..base.TurboFrameAttributes];
     
-    protected override async Task<Html> RenderContentsAsync(IServiceProvider serviceProvider)
+    protected override Delegate RenderFunc => async (IServiceProvider serviceProvider, AppDbContext db) =>
     {
-        var input = await serviceProvider.GetRequiredService<AppDbContext>().Inputs.FindAsync(InputId);
+        var input = await db.Inputs.FindAsync(InputId);
         if (input == null)
             throw new NotFoundException();
                 
-        return new($"""
+        return new Html($"""
                     <details class="bg-white grow shadow-md rounded-lg group/output">
                        <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg">
                            {await new InputNameTurboFrame(InputId).RenderAsync(serviceProvider)}
@@ -25,5 +25,5 @@ public record InputTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId)
                         {new InputDetailsTurboFrame(InputId).RenderLazy()}
                        </details>
                     """);
-    }
+    };
 }

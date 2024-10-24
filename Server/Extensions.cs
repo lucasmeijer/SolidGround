@@ -63,23 +63,11 @@ public static class Extensions
         return string.Join(seperator, values);
     }
 
-    public static async Task<string> RenderAsync<TSource>(this IEnumerable<TSource> source,
-        Func<TSource, Task<Html>> xform)
-    {
-        var htmls = await Task.WhenAll(source.Select(xform));
-        return htmls.Select(html => html.ToString()).SeparateWith("\n");
-    }
-
+    public static Task<object> InvokeInjected(this IServiceProvider serviceProvider, Delegate d) => throw null!;
+    
     public static async Task<string> RenderAsync(this IEnumerable<TurboFrame> turboFrames, IServiceProvider serviceProvider)
     {
         var htmls = await Task.WhenAll(turboFrames.Select(async tf => await tf.RenderAsync(serviceProvider)));
-        return htmls.Render();
-    }
-    
-    public static async Task<string> RenderAsync<TSource>(this IEnumerable<TSource> source,
-        Func<TSource, TurboFrame> turboFrameFor, IServiceProvider serviceProvider)
-    {
-        var htmls = await Task.WhenAll(source.Select(async s => await turboFrameFor(s).RenderAsync(serviceProvider)));
         return htmls.Render();
     }
 
