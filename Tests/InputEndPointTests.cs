@@ -50,7 +50,7 @@ public class InputEndPointTests : IntegrationTestBase
         Assert.Equal("hallo", input.Name);
     }
 
-    static InputEndPoints.InputDto SimpleDto => new()
+    static InputDto SimpleDto => new()
     {
         Output = new()
         {

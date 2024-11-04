@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurboFrames", "TurboFrames\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{2824CA3F-9CDF-40B7-A6EA-6F90463AC690}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SolidGroundClient", "SolidGroundClient\SolidGroundClient.csproj", "{F03B3474-6386-4991-9A8F-E090F97C54A8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{2824CA3F-9CDF-40B7-A6EA-6F90463AC690}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2824CA3F-9CDF-40B7-A6EA-6F90463AC690}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2824CA3F-9CDF-40B7-A6EA-6F90463AC690}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F03B3474-6386-4991-9A8F-E090F97C54A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F03B3474-6386-4991-9A8F-E090F97C54A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F03B3474-6386-4991-9A8F-E090F97C54A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F03B3474-6386-4991-9A8F-E090F97C54A8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
