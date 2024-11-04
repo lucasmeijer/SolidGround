@@ -45,6 +45,13 @@ public record StringVariableDto
     public required string Value { get; init; }
 }
 
+public record AvailableVariablesDto
+{
+    [JsonPropertyName("string_variables")]
+    public required StringVariableDto[] StringVariables { get; init; }
+}
+    
+
 public record OutputDto
 {
     [JsonPropertyName("string_variables")]

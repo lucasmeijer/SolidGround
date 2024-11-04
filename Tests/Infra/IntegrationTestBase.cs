@@ -29,7 +29,7 @@ public abstract class IntegrationTestBase : IDisposable
                 });
             });
         });
-        
+        var baseAddress = Factory.Server.BaseAddress;
         Client = Factory.CreateClient();
         Scope = Factory.Services.CreateScope();
         DbContext = Scope.ServiceProvider.GetRequiredService<AppDbContext>();

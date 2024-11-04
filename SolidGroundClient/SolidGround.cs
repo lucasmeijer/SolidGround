@@ -6,8 +6,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SolidGround;
 
 namespace SolidGroundClient;
 
@@ -138,14 +140,22 @@ public class SolidGroundSession(
             return;
         }
 
-        //this is the normal production flow where we emit a complete execution + input + output
-        await httpClient.PostAsJsonAsync($"{_serviceBaseUrl}/api/input", new
+        try
         {
-            request = _capturedRequest ?? throw new ArgumentException("Captured request is null"),
-            outputs = _outputs,
-            variables = _variables,
-            name = _name
-        });
+            //this is the normal production flow where we emit a complete execution + input + output
+            var response = await httpClient.PostAsJsonAsync($"{_serviceBaseUrl}/api/input", new
+            {
+                request = _capturedRequest ?? throw new ArgumentException("Captured request is null"),
+                outputs = _outputs,
+                variables = _variables,
+                name = _name
+            });
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("Oops");
+        }
     }
 
     public void AddName(string name) => _name = name;
@@ -159,9 +169,13 @@ public static class SolidGroundExtensions
 {
     public static void AddSolidGround<T>(this IServiceCollection serviceCollection) where T : SolidGroundVariables
     {
+        serviceCollection.AddHttpClient();
         serviceCollection.AddHttpContextAccessor();
         serviceCollection.AddScoped<SolidGroundVariables, T>();
-        serviceCollection.AddScoped<T>(sp => sp.GetRequiredService<SolidGroundVariables>() as T ?? throw new InvalidOperationException());
+        serviceCollection.AddScoped<T>(sp =>
+        {
+            return sp.GetRequiredService<SolidGroundVariables>() as T ?? throw new InvalidOperationException();
+        });
         
         serviceCollection.AddScoped<SolidGroundSession>(sp => 
         {
@@ -171,13 +185,20 @@ public static class SolidGroundExtensions
         });
     }
 
-    public static void MapSolidGroundEndpoint(this WebApplication app)
+    public static void MapSolidGroundEndpoint(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/solidground", (SolidGroundVariables variables) => 
-            variables.Variables
-            .ToDictionary(
-                v => v.Name,
-                v => v.ValueAsString
-            ));
+        app.MapGet(EndPointRoute, (SolidGroundVariables variables) => new AvailableVariablesDto
+        {
+            StringVariables =
+            [
+                ..variables.Variables.Select(v => new StringVariableDto
+                {
+                    Name = v.Name,
+                    Value = v.ValueAsString
+                })
+            ]
+        });
     }
+
+    public static string EndPointRoute => "/solidground";
 }
