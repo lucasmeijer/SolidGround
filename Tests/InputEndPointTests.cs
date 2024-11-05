@@ -1,11 +1,39 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Xml.Linq;
+using Microsoft.EntityFrameworkCore;
 using SolidGround;
 using Xunit;
 
 public class InputEndPointTests : IntegrationTestBase
 {
+    [Fact]
+    public async Task VerifyInMemoryDatabaseSharing()
+    {
+        // Arrange
+        var databaseName = "TestDb";
+        var optionsBuilder1 = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: databaseName);
+
+        var optionsBuilder2 = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName: databaseName);
+        
+        await using var context2 = new AppDbContext(optionsBuilder2.Options);
+            
+        // Act
+        // Write with one context
+        var context1 = new AppDbContext(optionsBuilder1.Options);
+        context1.Inputs.Add(new Input()
+            {
+                OriginalRequest_Host = "asd",
+                OriginalRequest_Body = "asd", OriginalRequest_Route = "", Outputs = [], Strings = [], Tags= []
+            });
+        await context1.SaveChangesAsync();
+        
+        var count = await context2.Inputs.CountAsync();
+        Assert.Equal(1, count);
+    }
+    
     [Fact]
     public async Task GetNonExistingInput_Returns_404()
     {

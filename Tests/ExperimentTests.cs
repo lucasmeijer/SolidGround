@@ -50,7 +50,7 @@ public class ExperimentTests() : IntegrationTestBase()
         public SolidGroundVariable<string> Prompt = new("Prompt", "Tell me a joke about a");
     }
 
-    [Fact(Skip = "wip")]
+    [Fact]
     public async Task SolidGroundEndPointReturnsVariables()
     {
         var webAppFactory = SetupTestWebApplicationFactory();
@@ -64,27 +64,42 @@ public class ExperimentTests() : IntegrationTestBase()
     [Fact]
     public async Task CapturedSessionGetsUploaded()
     {
-        var webAppFactory = SetupTestWebApplicationFactory(endpointBuilder =>
+        var solidGroundConsumingApp = SetupTestWebApplicationFactory(endpointBuilder =>
         {
-            endpointBuilder.MapGet("/joke", async (string subject, SolidGroundSession session) =>
+            endpointBuilder.MapGet("/joke", async (string subject, SolidGroundSession session, TestVariables testVariables) =>
             {
                 await session.CaptureRequestAsync();
-                return "Hiii";
+
+                var joke =  testVariables.Prompt.Value + " " + subject;
+                session.AddResult(joke);
+                return joke;
             });
         });
+        var httpClient = solidGroundConsumingApp.CreateClient();
         
-        //var client = webAppFactory.CreateDefaultClient(new Uri("https://localhost:9876"));
-        
-        var response = await Client.GetAsync("/joke?subject=horse");
+        var response = await httpClient.GetAsync("/joke?subject=horse");
         response.EnsureSuccessStatusCode();
-        Assert.Equal("Hiii", await response.Content.ReadAsStringAsync());
+        Assert.Equal("Tell me a joke about a horse", await response.Content.ReadAsStringAsync());
+        
+        await solidGroundConsumingApp.Services.GetRequiredService<SolidGroundBackgroundService>().FlushAsync();
         
         var execution = await DbContext.Executions
             .Include(e=>e.Outputs)
             .ThenInclude(o => o.Input)
+            .Include(e=>e.Outputs)
+            .ThenInclude(o => o.Components)
+            .Include(e=>e.Outputs)
+            .ThenInclude(o => o.StringVariables)
             .SingleAsync();
 
-        Assert.Equal(1, execution.Id);
+        var output = execution.Outputs.Single();
+        var component = output.Components.Single();
+        Assert.Equal("result", component.Name);
+        Assert.Equal("Tell me a joke about a horse", component.Value);
+
+        var stringVariable = output.StringVariables.Single();
+        Assert.Equal("Prompt", stringVariable.Name);
+        Assert.Equal("Tell me a joke about a", stringVariable.Value);
     }
    
     

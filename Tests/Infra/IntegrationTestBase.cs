@@ -1,21 +1,20 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SolidGround;
-using Xunit.Sdk;
 
 public class ServerUnderTest_NetworkServer : IAsyncDisposable
 {
     readonly WebApplication _webApplication;
     readonly IServiceScope _scope;
+    public IServiceProvider ServiceProvider { get; }
     public HttpClient Client { get; }
     public AppDbContext DbContext { get; }
-
+    
     public ServerUnderTest_NetworkServer()
     {
         string databaseName = Guid.NewGuid().ToString();
@@ -24,19 +23,21 @@ public class ServerUnderTest_NetworkServer : IAsyncDisposable
         {
             dboptions.UseInMemoryDatabase(databaseName: databaseName);
         });
-        {
-            var server = _webApplication.Services.GetRequiredService<IServer>();
-            var addressesFeature = server.Features.Get<IServerAddressesFeature>() ?? throw new Exception();
-            addressesFeature.Addresses.Add("http://127.0.0.1:0");
-        }
+
+        ServiceProvider = _webApplication.Services;
+        
+        var addressesFeatureAddresses = ServiceProvider
+            .GetRequiredService<IServer>()
+            .Features
+            .GetRequiredFeature<IServerAddressesFeature>()
+            .Addresses;
+        
+        addressesFeatureAddresses.Add("http://127.0.0.1:0");
         _webApplication.Start();
         
-        var server2 = _webApplication.Services.GetRequiredService<IServer>();
-        var addressesFeature2 = server2.Features.Get<IServerAddressesFeature>() ?? throw new Exception();
-        var address = addressesFeature2.Addresses.First();
-        Client = new HttpClient() { BaseAddress = new Uri(address) };
+        Client = new HttpClient() { BaseAddress = new Uri(addressesFeatureAddresses.First()) };
         
-        _scope = _webApplication.Services.CreateScope();
+        _scope = ServiceProvider.CreateScope();
         DbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
     }
     
@@ -51,19 +52,12 @@ public class ServerUnderTest_NetworkServer : IAsyncDisposable
 
 public abstract class IntegrationTestBase : IAsyncDisposable
 {
-    protected IntegrationTestBase()
-    {
-        ServerUnderTest = new();
-        Client = ServerUnderTest.Client;
-        DbContext = ServerUnderTest.DbContext;
-    }
+    ServerUnderTest_NetworkServer ServerUnderTest { get; } = new();
 
-    ServerUnderTest_NetworkServer ServerUnderTest { get; }
+    protected HttpClient Client => ServerUnderTest.Client;
 
-    protected HttpClient Client {get; }
-
-    protected AppDbContext DbContext { get; }
-    
+    protected AppDbContext DbContext => ServerUnderTest.DbContext;
+    public IServiceProvider ServiceProvider => ServerUnderTest.ServiceProvider;
     public ValueTask DisposeAsync() => ServerUnderTest.DisposeAsync();
 }
 //

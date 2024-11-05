@@ -18,7 +18,7 @@ public record RequestDto
     public required string BodyBase64 { get; init; }
         
     [JsonPropertyName("content_type")]
-    public required string ContentType { get; init; }
+    public required string? ContentType { get; init; }
         
     [JsonPropertyName("route")]
     public required string Route { get; init; }

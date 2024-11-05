@@ -106,7 +106,7 @@ public class Input
     public List<InputFile> Files { get; set; } = [];
     public string OriginalRequest_Route { get; set; } = null!;
     public List<Output> Outputs { get; set; } = [];
-    public string OriginalRequest_ContentType { get; set; } = null!;
+    public string? OriginalRequest_ContentType { get; set; } = null!;
     public string OriginalRequest_Body { get; set; } = null!;
     public string OriginalRequest_Host { get; set; } = null!;
     public string TurboFrameId => $"input_{Id}";

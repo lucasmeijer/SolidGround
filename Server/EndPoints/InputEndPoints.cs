@@ -147,14 +147,15 @@ static class InputEndPoints
 
         List<InputFile>? inputFiles = [];
         List<InputString> ? inputStrings =[];
-        try
-        {
-            (inputFiles, inputStrings) = await ParseFormIntoStringsAndFiles(originalRequestContentType, bodyBase64);
-        }
-        catch (ArgumentException)
-        {
-            //apparently we're not a form
-        }
+        await Task.CompletedTask;
+        // try
+        // {
+        //     (inputFiles, inputStrings) = await ParseFormIntoStringsAndFiles(originalRequestContentType, bodyBase64);
+        // }
+        // catch (ArgumentException)
+        // {
+        //     //apparently we're not a form
+        // }
 
         return new()
         {
@@ -168,17 +169,17 @@ static class InputEndPoints
         };
     }
     
-    static async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFormIntoStringsAndFiles(string s,
-        string bodyBase65)
+    static async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFormIntoStringsAndFiles(string contentType,
+        string bodyBase64)
     {
         var list = new List<InputFile>();
         var inputStrings1 = new List<InputString>();
 
-        var boundary = HeaderUtilities.RemoveQuotes(MediaTypeHeaderValue.Parse(s).Boundary).Value;
+        var boundary = HeaderUtilities.RemoveQuotes(MediaTypeHeaderValue.Parse(contentType).Boundary).Value;
         if (boundary == null)
             throw new ArgumentException("No boundary specified in content-type");
 
-        using var ms = new MemoryStream(Convert.FromBase64String(bodyBase65));
+        using var ms = new MemoryStream(Convert.FromBase64String(bodyBase64));
         var reader = new MultipartReader(boundary, ms);
 
         int fileCounter = 0;

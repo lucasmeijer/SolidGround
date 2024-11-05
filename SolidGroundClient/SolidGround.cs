@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SolidGround;
 
 namespace SolidGroundClient;
@@ -78,24 +80,31 @@ public abstract class SolidGroundVariables
         }
     }
 }
+
+
 public class SolidGroundSession(
-    HttpClient httpClient,
     HttpContext httpContext,
     IConfiguration config,
-    SolidGroundVariables variables)
+    SolidGroundVariables variables,
+    SolidGroundBackgroundService solidGroundBackgroundService)
 {
     HttpRequest Request => httpContext.Request;
 
-    string? _serviceBaseUrl = config["SOLIDGROUND_BASE_URL"];
+    string? _serviceBaseUrl = config["SOLIDGROUND_BASE_URL"]?.TrimEnd("/");
     
     string? _outputId = httpContext.Request.Headers.TryGetValue("SolidGroundOutputId", out var outputIdValues) ? outputIdValues.ToString() : null;
-    JsonObject? _capturedRequest;
-    JsonObject _outputs = new();
-    JsonObject _variables = new();
+    RequestDto _capturedRequest;
+    // JsonObject _outputs = new();
+    // JsonObject _variables = new();
+
+    List<OutputComponentDto> _outputComponents = [];
     string? _name = null;
-    
+    StringVariableDto[] _stringVariableDtos;
+
     public async Task CaptureRequestAsync()
     {
+        if (_serviceBaseUrl == null)
+            return;
         Request.EnableBuffering();
         using var memoryStream = new MemoryStream();
         var pos = Request.Body.Position;
@@ -105,63 +114,59 @@ public class SolidGroundSession(
 
         _capturedRequest = new()
         {
-            ["body_base64"] = Convert.ToBase64String(memoryStream.ToArray()),
-            ["content_type"] = Request.ContentType,
-            ["basepath"] = Request.Scheme + "://" + Request.Host,
-            ["route"] = Request.Path.Value,
+            BodyBase64 = Convert.ToBase64String(memoryStream.ToArray()),
+            ContentType = Request.ContentType,
+            BasePath = Request.Scheme + "://" + Request.Host,
+            Route = Request.Path.Value ?? throw new ArgumentException("no request path"),
         };
-
+        
         foreach (var variable in variables.Variables)
         {
             if (!httpContext.Request.Headers.TryGetValue($"SolidGroundVariable_{variable.Name}", out var value))
                 continue;
             variable.SetValue(Encoding.UTF8.GetString(Convert.FromBase64String(value.Single()?.Trim() ?? throw new InvalidOperationException())));
-            _variables[variable.Name] = variable.ValueAsString;
         }
+
+        _stringVariableDtos = variables.Variables
+            .Select(v => new StringVariableDto() { Name = v.Name, Value = v.ValueAsString })
+            .ToArray();
         
-        if (_serviceBaseUrl != null)
-            httpContext.Response.OnCompleted(SendPayload);
+        httpContext.Response.OnCompleted(SendPayload);
     }
 
     async Task SendPayload()
     {
         if (_outputId != null)
         {
-            var jsonObject = new JsonObject()
-            {
-                ["outputs"] = _outputs,
-                ["variables"] = _variables,
-            };
-
-            //This is a rerun being executed by solidground. In this scenario we only have to upload the output under the requested id.
-            var serialize = JsonSerializer.Serialize(jsonObject);
-
-            await httpClient.PostAsync($"{_serviceBaseUrl}/api/output/{_outputId}", new StringContent(serialize, Encoding.UTF8, "application/json"));
+            // var jsonObject = new JsonObject()
+            // {
+            //     ["outputs"] = _outputs,
+            //     ["variables"] = _variables,
+            // };
+            //
+            // //This is a rerun being executed by solidground. In this scenario we only have to upload the output under the requested id.
+            // var serialize = JsonSerializer.Serialize(jsonObject);
+            //
+            // await httpClient.PostAsync($"{_serviceBaseUrl}/api/output/{_outputId}", new StringContent(serialize, Encoding.UTF8, "application/json"));
             return;
         }
 
-        try
+        //this is the normal production flow where we emit a complete execution + input + output
+        await solidGroundBackgroundService.EnqueueHttpPost($"{_serviceBaseUrl}/api/input", new InputDto()
         {
-            //this is the normal production flow where we emit a complete execution + input + output
-            var response = await httpClient.PostAsJsonAsync($"{_serviceBaseUrl}/api/input", new
+            Request = _capturedRequest,
+            Output = new()
             {
-                request = _capturedRequest ?? throw new ArgumentException("Captured request is null"),
-                outputs = _outputs,
-                variables = _variables,
-                name = _name
-            });
-            response.EnsureSuccessStatusCode();
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine("Oops");
-        }
+                OutputComponents = [.._outputComponents],
+                StringVariables = _stringVariableDtos
+            }
+        });
     }
 
     public void AddName(string name) => _name = name;
     public void AddResult(string value) => AddArtifact("result", value);
     public void AddResultJson(object value) => AddArtifactJson("result", value);
-    public void AddArtifact(string name, string value) => _outputs[name] = value;
+    public void AddArtifact(string name, string value) => _outputComponents.Add(new() { Name = name, Value = value });
     public void AddArtifactJson(string name, object value) => AddArtifact(name,JsonSerializer.Serialize(value));
 }
 
@@ -181,8 +186,14 @@ public static class SolidGroundExtensions
         {
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
             var httpContext = httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is null");
-            return new(sp.GetRequiredService<HttpClient>(), httpContext, sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<SolidGroundVariables>());
+            return new(httpContext, sp.GetRequiredService<IConfiguration>(), 
+                sp.GetRequiredService<SolidGroundVariables>(),
+                    sp.GetRequiredService<SolidGroundBackgroundService>()
+                );
         });
+
+        serviceCollection.AddSingleton<SolidGroundBackgroundService>();
+        serviceCollection.AddHostedService<SolidGroundBackgroundService>(sp => sp.GetRequiredService<SolidGroundBackgroundService>());
     }
 
     public static void MapSolidGroundEndpoint(this IEndpointRouteBuilder app)
