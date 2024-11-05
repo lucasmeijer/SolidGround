@@ -6,6 +6,7 @@ WORKDIR /source
 # copy csproj and restore as distinct layers
 COPY Server/Server.csproj ./Server/
 COPY TurboFrames/TurboFrames.csproj ./TurboFrames/
+COPY SolidGroundClient/SolidGroundClient.csproj ./SolidGroundClient/
 RUN dotnet restore -a arm64 Server/Server.csproj
 
 # copy everything else and build app
