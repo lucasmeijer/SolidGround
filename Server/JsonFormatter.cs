@@ -16,10 +16,17 @@ public static class JsonFormatter
         }
         catch (JsonException)
         {
-            return new ($"<pre class=\"json-highlight whitespace-pre-wrap break-all\"><code>{maybeJson}</code></pre>");
+            return new ($"<pre class=\"json-highlight whitespace-pre-wrap break-all\"><code>{EscapeTags(maybeJson)}</code></pre>");
         }
     }
 
+    static string EscapeTags(string content)
+    {
+        return content
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;");
+    }
+    
     static HtmlString FormatJsonToHtml(JsonDocument jsonDocument)
     {
         var stringBuilder = new StringBuilder();
