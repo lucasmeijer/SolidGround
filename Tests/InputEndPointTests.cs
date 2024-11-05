@@ -95,11 +95,16 @@ public class InputEndPointTests : IntegrationTestBase
     [Fact]
     public async Task DeleteTagFromInput_Returns_Ok()
     {
-        var input = (await Client.PostAsJsonAsync("/api/input", SimpleDto)).Headers.Location;
-        var tag = (await Client.PostAsJsonAsync("/api/tags", new TagEndPoints.CreateTagDto() { Name = "mytag"})).Headers.Location;
-        var tagOnInput = (await Client.PostAsJsonAsync($"{input}/tags", new InputEndPoints.AddTagToInputDto() { TagId = 1 })).Headers.Location;
+        var httpClient = Client;
         
-        var response = await Client.DeleteAsync(tagOnInput);
+        var asJsonAsync = await httpClient.PostAsJsonAsync("/api/input", SimpleDto);
+        var input = asJsonAsync.Headers.Location;
+        var httpResponseMessage = await httpClient.PostAsJsonAsync("/api/tags", new TagEndPoints.CreateTagDto() { Name = "mytag"});
+        var tag = httpResponseMessage.Headers.Location;
+        var postAsJsonAsync = await httpClient.PostAsJsonAsync($"{input}/tags", new InputEndPoints.AddTagToInputDto() { TagId = 1 });
+        var tagOnInput = postAsJsonAsync.Headers.Location;
+        
+        var response = await httpClient.DeleteAsync(tagOnInput);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var readAsStringAsync = await response.Content.ReadAsStringAsync();

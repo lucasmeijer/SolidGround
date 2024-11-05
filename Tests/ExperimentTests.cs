@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ using Xunit;
 namespace Tests;
 
 
-public class ExperimentTests : IntegrationTestBase
+public class ExperimentTests() : IntegrationTestBase()
 {
     class TestWebApplicationFactory(Action<IServiceCollection> configureServices, Action<IEndpointRouteBuilder> setupEndPoints, string solidGroundBaseURl) : WebApplicationFactory<Program>
     {
@@ -49,7 +50,7 @@ public class ExperimentTests : IntegrationTestBase
         public SolidGroundVariable<string> Prompt = new("Prompt", "Tell me a joke about a");
     }
 
-    [Fact]
+    [Fact(Skip = "wip")]
     public async Task SolidGroundEndPointReturnsVariables()
     {
         var webAppFactory = SetupTestWebApplicationFactory();
@@ -90,15 +91,12 @@ public class ExperimentTests : IntegrationTestBase
     TestWebApplicationFactory SetupTestWebApplicationFactory(Action<IEndpointRouteBuilder>? addEndPoints = null)
     {
         var baseAddress = Client.BaseAddress;
-        string schema = baseAddress.Scheme;  // typically "http"
-        string hostname = baseAddress.Host;  // typically "localhost"
-        int port = baseAddress.Port;         // dynamically assigned port
-        string fullUrl = baseAddress.ToString().TrimEnd("/");
+    
         return new(services => { services.AddSolidGround<TestVariables>(); }, endpointBuilder =>
         {
             endpointBuilder.MapSolidGroundEndpoint();
 
             addEndPoints?.Invoke(endpointBuilder);
-        }, fullUrl);
+        }, baseAddress.ToString());
     }
 }

@@ -50,7 +50,6 @@ static class InputEndPoints
                 StringVariables = [..variablesElement],
                 Status = ExecutionStatus.Completed
             };
-            db.Add(output);
 
             db.Add(new Execution
             {
@@ -58,7 +57,7 @@ static class InputEndPoints
                 StartTime = DateTime.Now
             });
 
-            await db.SaveChangesAsync();
+            int written = await db.SaveChangesAsync();
 
             return TypedResults.Created(Routes.api_input_id.For(input.Id));
             
