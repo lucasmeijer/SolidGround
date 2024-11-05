@@ -69,6 +69,7 @@ public partial class Program
         app.MapTagsEndPoints();
         app.MapSearchEndPoints();
         app.MapInputEndPoints();
+        app.MapOutputEndPoints();
         app.MapExperimentEndPoints();
         app.MapImagesEndPoints();
         app.MapExecutionsEndPoints();

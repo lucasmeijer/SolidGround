@@ -31,25 +31,7 @@ static class InputEndPoints
         {
             var input = await InputFor(inputDto);
 
-            var outputComponents = inputDto.Output.OutputComponents.Select(c => new OutputComponent()
-            {
-                Name = c.Name,
-                Value = c.Value
-            });
-            
-            var variablesElement = inputDto.Output.StringVariables.Select(c => new StringVariable()
-            {
-                Name = c.Name,
-                Value = c.Value
-            });
-            
-            var output = new Output
-            {
-                Input = input,
-                Components = [..outputComponents],
-                StringVariables = [..variablesElement],
-                Status = ExecutionStatus.Completed
-            };
+            var output = OutputFor(inputDto.Output, input);
 
             db.Add(new Execution
             {
@@ -125,6 +107,33 @@ static class InputEndPoints
             await db.SaveChangesAsync();
             return new InputTagsTurboFrame(id);
         });
+    }
+
+    public static Output OutputFor(OutputDto outputDto, Input? input)
+    {
+        var outputComponents = outputDto.OutputComponents.Select(c => new OutputComponent()
+        {
+            Name = c.Name,
+            Value = c.Value
+        });
+            
+        var variablesElement = outputDto.StringVariables.Select(c => new StringVariable()
+        {
+            Name = c.Name,
+            Value = c.Value
+        });
+            
+        var output = new Output
+        {
+            Components = [..outputComponents],
+            StringVariables = [..variablesElement],
+            Status = ExecutionStatus.Completed
+        };
+        
+        if (input != null)
+            output.Input = input;
+        
+        return output;
     }
 
     public record AddTagToInputDto

@@ -60,3 +60,21 @@ public record OutputDto
     [JsonPropertyName("output_components")]
     public required OutputComponentDto[] OutputComponents { get; init; }
 }
+
+public record RunExecutionDto
+{
+    [JsonPropertyName("inputs")]
+    public required int[] Inputs { get; init; }
+    
+    [JsonPropertyName("string_variables")]
+    public required StringVariableDto[] StringVariables { get; init; }
+
+    [JsonPropertyName("endpoint")]
+    public string EndPoint { get; init; }
+}
+
+public record ExecutionStatusDto
+{
+    [JsonPropertyName("finished")]
+    public bool Finished { get; init; }
+}

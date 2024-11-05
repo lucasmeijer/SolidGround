@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.Json;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Html;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Microsoft.Extensions.Configuration;
 using TurboFrames;
 
@@ -22,6 +24,12 @@ public static class Extensions
     }
     
     public static string GetMandatory(this IConfiguration config, string keyname) => config[keyname] ?? throw new Exception($"No config found for {keyname}");
+
+    public static void Add(this HttpContentHeaders self, IEnumerable<KeyValuePair<string, string>> values)
+    {
+        foreach(var kvp in values)
+            self.Add(kvp.Key, kvp.Value);
+    }
     
     public static bool TryGetOptional<T>(this JsonElement self, string propertyName, out T? value)
     {

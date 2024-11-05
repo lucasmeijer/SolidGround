@@ -1,64 +1,27 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using SolidGround;
+using Xunit;
 
-public class ServerUnderTest_NetworkServer : IAsyncDisposable
+public abstract class IntegrationTestBase : IAsyncLifetime
 {
-    readonly WebApplication _webApplication;
-    readonly IServiceScope _scope;
-    public IServiceProvider ServiceProvider { get; }
-    public HttpClient Client { get; }
-    public AppDbContext DbContext { get; }
+    WebApplicationUnderTest<AppDbContext> WebApplicationUnderTest { get; set; }
+    protected HttpClient Client => WebApplicationUnderTest.HttpClient;
+    protected AppDbContext DbContext => WebApplicationUnderTest.DbContext;
     
-    public ServerUnderTest_NetworkServer()
+    public async Task InitializeAsync()
     {
         string databaseName = Guid.NewGuid().ToString();
-        
-        _webApplication = Program.CreateWebApplication([], (config, dboptions) =>
+        var webApplication = Program.CreateWebApplication([], (config, dboptions) =>
         {
             dboptions.UseInMemoryDatabase(databaseName: databaseName);
         });
-
-        ServiceProvider = _webApplication.Services;
-        
-        var addressesFeatureAddresses = ServiceProvider
-            .GetRequiredService<IServer>()
-            .Features
-            .GetRequiredFeature<IServerAddressesFeature>()
-            .Addresses;
-        
-        addressesFeatureAddresses.Add("http://127.0.0.1:0");
-        _webApplication.Start();
-        
-        Client = new HttpClient() { BaseAddress = new Uri(addressesFeatureAddresses.First()) };
-        
-        _scope = ServiceProvider.CreateScope();
-        DbContext = _scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        WebApplicationUnderTest = await WebApplicationUnderTest<AppDbContext>.StartAsync(webApplication);
     }
-    
-    public async ValueTask DisposeAsync()
+
+    async Task IAsyncLifetime.DisposeAsync()
     {
-        await DbContext.DisposeAsync();
-        Client.Dispose();
-        _scope.Dispose();
-        await _webApplication.DisposeAsync();
+        await WebApplicationUnderTest.DisposeAsync();
     }
-}
-
-public abstract class IntegrationTestBase : IAsyncDisposable
-{
-    ServerUnderTest_NetworkServer ServerUnderTest { get; } = new();
-
-    protected HttpClient Client => ServerUnderTest.Client;
-
-    protected AppDbContext DbContext => ServerUnderTest.DbContext;
-    public IServiceProvider ServiceProvider => ServerUnderTest.ServiceProvider;
-    public ValueTask DisposeAsync() => ServerUnderTest.DisposeAsync();
 }
 //
 // public abstract class IntegrationTestBase2 : IDisposable

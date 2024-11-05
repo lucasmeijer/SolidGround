@@ -199,3 +199,8 @@ public class OutputComponent
     public string Name { get; set; } = null!;
     public string? Value { get; set; }
 }
+
+public static class Extensions2
+{
+    
+}

@@ -93,44 +93,48 @@ public class SolidGroundSession(
     string? _serviceBaseUrl = config["SOLIDGROUND_BASE_URL"]?.TrimEnd("/");
     
     string? _outputId = httpContext.Request.Headers.TryGetValue("SolidGroundOutputId", out var outputIdValues) ? outputIdValues.ToString() : null;
-    RequestDto _capturedRequest;
-    // JsonObject _outputs = new();
-    // JsonObject _variables = new();
-
+    RequestDto? _capturedRequest;
+ 
     List<OutputComponentDto> _outputComponents = [];
-    string? _name = null;
     StringVariableDto[] _stringVariableDtos;
 
+    public static readonly string HeaderVariablePrefix = "SolidGroundVariable_";
+    
     public async Task CaptureRequestAsync()
     {
         if (_serviceBaseUrl == null)
             return;
-        Request.EnableBuffering();
-        using var memoryStream = new MemoryStream();
+
+        await Task.CompletedTask;
+
         var pos = Request.Body.Position;
         Request.Body.Position = 0;
-        await Request.Body.CopyToAsync(memoryStream);
+        var ms = new MemoryStream();
+        await Request.Body.CopyToAsync(ms);
         Request.Body.Position = pos;
 
         _capturedRequest = new()
         {
-            BodyBase64 = Convert.ToBase64String(memoryStream.ToArray()),
+            BodyBase64 = Convert.ToBase64String(ms.ToArray()),
             ContentType = Request.ContentType,
             BasePath = Request.Scheme + "://" + Request.Host,
             Route = Request.Path.Value ?? throw new ArgumentException("no request path"),
         };
-        
-        foreach (var variable in variables.Variables)
+
+        foreach (var v in variables.Variables)
         {
-            if (!httpContext.Request.Headers.TryGetValue($"SolidGroundVariable_{variable.Name}", out var value))
-                continue;
-            variable.SetValue(Encoding.UTF8.GetString(Convert.FromBase64String(value.Single()?.Trim() ?? throw new InvalidOperationException())));
+            if (httpContext.Request.Headers.TryGetValue($"{HeaderVariablePrefix}{v.Name}", out var overridenValue))
+                v.SetValue(Encoding.UTF8.GetString(Convert.FromBase64String(overridenValue.Single()?.Trim() ?? throw new InvalidOperationException())));
         }
 
         _stringVariableDtos = variables.Variables
-            .Select(v => new StringVariableDto() { Name = v.Name, Value = v.ValueAsString })
+            .Select(v => new StringVariableDto()
+            {
+                Name = v.Name,
+                Value = v.ValueAsString
+            })
             .ToArray();
-        
+
         httpContext.Response.OnCompleted(SendPayload);
     }
 
@@ -138,16 +142,13 @@ public class SolidGroundSession(
     {
         if (_outputId != null)
         {
-            // var jsonObject = new JsonObject()
-            // {
-            //     ["outputs"] = _outputs,
-            //     ["variables"] = _variables,
-            // };
-            //
-            // //This is a rerun being executed by solidground. In this scenario we only have to upload the output under the requested id.
-            // var serialize = JsonSerializer.Serialize(jsonObject);
-            //
-            // await httpClient.PostAsync($"{_serviceBaseUrl}/api/output/{_outputId}", new StringContent(serialize, Encoding.UTF8, "application/json"));
+            var outputDto = new OutputDto()
+            {
+                OutputComponents = [.._outputComponents],
+                StringVariables = _stringVariableDtos
+            };
+            
+            await solidGroundBackgroundService.Enqueue(new SendRequest() { Method = HttpMethod.Patch, Url = $"{_serviceBaseUrl}/api/outputs/{_outputId}", Payload = outputDto});
             return;
         }
 
@@ -163,7 +164,6 @@ public class SolidGroundSession(
         });
     }
 
-    public void AddName(string name) => _name = name;
     public void AddResult(string value) => AddArtifact("result", value);
     public void AddResultJson(object value) => AddArtifactJson("result", value);
     public void AddArtifact(string name, string value) => _outputComponents.Add(new() { Name = name, Value = value });
@@ -196,8 +196,17 @@ public static class SolidGroundExtensions
         serviceCollection.AddHostedService<SolidGroundBackgroundService>(sp => sp.GetRequiredService<SolidGroundBackgroundService>());
     }
 
-    public static void MapSolidGroundEndpoint(this IEndpointRouteBuilder app)
+    public static void MapSolidGroundEndpoint(this WebApplication app)
     {
+        //we need to use a custom middleware to enable buffering on the request, before the model binder starts reading from it
+        //otherwise we can no longer recover that data. we should probably make this opt-in down the line to not pay this price
+        //for every endpoint.
+        app.Use(async (context, next) =>
+        {
+            context.Request.EnableBuffering();
+            await next();
+        });
+        
         app.MapGet(EndPointRoute, (SolidGroundVariables variables) => new AvailableVariablesDto
         {
             StringVariables =
@@ -211,5 +220,54 @@ public static class SolidGroundExtensions
         });
     }
 
-    public static string EndPointRoute => "/solidground";
+    public static string EndPointRoute => "solidground";
 }
+
+public class CaptureRequestBodyFilter : IEndpointFilter
+{
+    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var httpContext = context.HttpContext;
+        httpContext.Request.EnableBuffering();
+
+        using var memoryStream = new MemoryStream();
+        await httpContext.Request.Body.CopyToAsync(memoryStream);
+        var rawBody = memoryStream.ToArray();
+        httpContext.Items["RawRequestBody"] = rawBody;
+        httpContext.Request.Body.Position = 0;
+        return await next(context);
+    }
+}
+
+// public class CaptureRawBodyFilter : IBinderTypeProviderFilter
+// {
+//     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+//     {
+//         var httpContext = context.HttpContext;
+//         
+//         // Store original body stream
+//         var originalBody = httpContext.Request.Body;
+//         
+//         try
+//         {
+//             // Read the body stream
+//             using var memoryStream = new MemoryStream();
+//             await originalBody.CopyToAsync(memoryStream);
+//             var rawBody = memoryStream.ToArray();
+//             
+//             // Store the raw body
+//             httpContext.Items["RawRequestBody"] = rawBody;
+//             
+//             // Create new stream from raw body for model binding
+//             var newBodyStream = new MemoryStream(rawBody);
+//             httpContext.Request.Body = newBodyStream;
+//             
+//             return await next(context);
+//         }
+//         finally
+//         {
+//             // Restore the original stream
+//             httpContext.Request.Body = originalBody;
+//         }
+//     }
+// }
