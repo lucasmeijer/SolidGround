@@ -16,7 +16,7 @@ public static class JsonFormatter
         }
         catch (JsonException)
         {
-            return new ($"<pre class=\"json-highlight whitespace-pre-wrap break-all\">{maybeJson}</pre>");
+            return new ($"<pre class=\"json-highlight whitespace-pre-wrap break-all\"><code>{maybeJson}</code></pre>");
         }
     }
 
