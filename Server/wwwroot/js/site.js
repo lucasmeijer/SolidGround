@@ -6,6 +6,7 @@ import FilterBar from "./filterbar.js";
 import CursorController from "./cursor_controller.js";
 import FormToJsonController from "./formtojson_controller.js";
 import AutoSubmitSelectController from "./autosubmit_controller.js";
+import RunExperimentController from "./runexperiment_controller.js";
 
 // Initialize Stimulus application
 const application = Application.start();
@@ -15,6 +16,7 @@ application.register("tags", TagsController);
 application.register("filterbar", FilterBar);
 application.register("formtojson", FormToJsonController);
 application.register("autosubmit", AutoSubmitSelectController);
+application.register("runexperiment", RunExperimentController);
 //application.register("cursor", CursorController);
 
 document.addEventListener("turbo:submit-start", (event) => {

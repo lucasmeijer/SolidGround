@@ -22,9 +22,9 @@ public record RunExperimentTurboFrame : TurboFrame
         ? ExperimentEndPoints.Routes.api_experiment_newform
         : ExperimentEndPoints.Routes.api_experiment_newform_id.For(OutputIdWhoseVariablesToUse.Value);
 
-    async Task<StringVariableDto[]> GetVariablesFromServiceUnderTest(IConfiguration config, HttpClient httpClient, AppDbContext dbContext)
+    async Task<StringVariableDto[]> GetVariablesFromServiceUnderTest(IConfiguration config, HttpClient httpClient)
     {
-        var requestUri = $"{config.GetMandatory("SOLIDGROUND_TARGET_APP")}/solidground";
+        var requestUri = $"{TargetAppBaseAddress(config)}/solidground";
         var availableVariablesDto = await httpClient.GetFromJsonAsync<AvailableVariablesDto>(requestUri) ?? throw new Exception("No available variables found");
         
         //
@@ -51,23 +51,34 @@ public record RunExperimentTurboFrame : TurboFrame
         return availableVariablesDto.StringVariables;
     }
 
+    static string TargetAppBaseAddress(IConfiguration config)
+    {
+        return config.GetMandatory("SOLIDGROUND_TARGET_APP");
+    }
+
     public new static string TurboFrameId => "run_experiment_form";
 
     protected override Delegate RenderFunc =>
-        async (HttpClient httpClient, AppDbContext appDbContext, IConfiguration config) =>
+        async (HttpClient httpClient, IConfiguration config) =>
         {
             try
             {
                 return new Html($"""                    
-                                 <form class="p-4" action="{ExperimentEndPoints.Routes.api_experiment.For()}" method="post">
-                                      {(await GetVariablesFromServiceUnderTest(config, httpClient, appDbContext)).Render(RenderVariable)} 
-                                     <input type="hidden" name="ids" value="[1,2,3]">
-                                     <input type="hidden" name="name" value="Lucas!">
-                                     <button type="submit" class="px-4 py-2 bg-green-200 hover:bg-green-700 rounded">
-                                         Run Experiment
-                                     </button>
-                                 </form>
-                                 """);
+                                  <form 
+                                     data-controller="runexperiment"
+                                     class="p-4" action="{ExecutionsEndPoints.Routes.api_executions.For()}" method="post">
+                                     
+                                       {(await GetVariablesFromServiceUnderTest(config, httpClient)).Render(RenderVariable)} 
+                                      
+                                      <input type="hidden" name="endpoint" value="{TargetAppBaseAddress(config)}/photos"/>
+                                      <button type="submit" class="px-4 py-2 bg-green-200 hover:bg-green-700 rounded">
+                                          Run Experiment
+                                      </button>
+                                      <div data-formtojson-target="errorMessage" class="error-message"></div>
+                                  </form>
+                                  
+                                  
+                                  """);
             }
             catch (HttpRequestException e)
             {
