@@ -22,31 +22,33 @@ public record RunExperimentTurboFrame : TurboFrame
         ? ExperimentEndPoints.Routes.api_experiment_newform
         : ExperimentEndPoints.Routes.api_experiment_newform_id.For(OutputIdWhoseVariablesToUse.Value);
 
-    async Task<KeyValuePair<string, string>[]> GetVariablesFromServiceUnderTest(IConfiguration config, HttpClient httpClient, AppDbContext dbContext)
+    async Task<StringVariableDto[]> GetVariablesFromServiceUnderTest(IConfiguration config, HttpClient httpClient, AppDbContext dbContext)
     {
         var requestUri = $"{config.GetMandatory("SOLIDGROUND_TARGET_APP")}/solidground";
-        var result = await httpClient.GetAsync(requestUri);
-        result.EnsureSuccessStatusCode();
+        var availableVariablesDto = await httpClient.GetFromJsonAsync<AvailableVariablesDto>(requestUri) ?? throw new Exception("No available variables found");
+        
+        //
+        // var jdoc = await JsonDocument.ParseAsync(await result.Content.ReadAsStreamAsync());
+        //
+        // var d = jdoc
+        //     .RootElement
+        //     .EnumerateObject()
+        //     .ToDictionary(k => k.Name, v => v.Value.GetString() ?? throw new InvalidOperationException());
+        //
+        //
+        
+        // if (OutputIdWhoseVariablesToUse != null)
+        // {
+        //     var output = await dbContext.Outputs.FindAsync(OutputIdWhoseVariablesToUse) ??
+        //                  throw new BadHttpRequestException("Output " + OutputIdWhoseVariablesToUse + " not found.");
+        //     await dbContext.Entry(output).Collection(o => o.StringVariables).LoadAsync();
+        //     var outputStringVariables = output.StringVariables;
+        //
+        //     foreach (var overrideVariable in outputStringVariables)
+        //         d[overrideVariable.Name] = overrideVariable.Value;
+        // }
 
-        var jdoc = await JsonDocument.ParseAsync(await result.Content.ReadAsStreamAsync());
-
-        var d = jdoc
-            .RootElement
-            .EnumerateObject()
-            .ToDictionary(k => k.Name, v => v.Value.GetString() ?? throw new InvalidOperationException());
-
-        if (OutputIdWhoseVariablesToUse != null)
-        {
-            var output = await dbContext.Outputs.FindAsync(OutputIdWhoseVariablesToUse) ??
-                         throw new BadHttpRequestException("Output " + OutputIdWhoseVariablesToUse + " not found.");
-            await dbContext.Entry(output).Collection(o => o.StringVariables).LoadAsync();
-            var outputStringVariables = output.StringVariables;
-
-            foreach (var overrideVariable in outputStringVariables)
-                d[overrideVariable.Name] = overrideVariable.Value;
-        }
-
-        return d.ToArray();
+        return availableVariablesDto.StringVariables;
     }
 
     public new static string TurboFrameId => "run_experiment_form";
@@ -73,14 +75,14 @@ public record RunExperimentTurboFrame : TurboFrame
             }
         };
 
-    static Html RenderVariable(KeyValuePair<string, string> variable) => new($"""
+    static Html RenderVariable(StringVariableDto variable) => new($"""
           <div class="mb-6">
               <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
-                  {variable.Key}
+                  {variable.Name}
               </label>
               <textarea
-              id="{IdFor(variable)}"
-              name="{IdFor(variable)}"      
+              id="{IdFor(variable.Name)}"
+              name="{IdFor(variable.Name)}"      
               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               rows="4"
               placeholder="{variable.Value}"
@@ -89,5 +91,5 @@ public record RunExperimentTurboFrame : TurboFrame
           </div>
           """);
 
-    static string IdFor(KeyValuePair<string, string> variable) => $"SolidGroundVariable_{variable.Key}";
+    static string IdFor(string variableName) => $"SolidGroundVariable_{variableName}";
 }
