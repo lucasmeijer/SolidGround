@@ -18,7 +18,7 @@ public class SolidGroundBackgroundService(
 {
     readonly Channel<SendRequest> _channel = Channel.CreateUnbounded<SendRequest>(new()
     { 
-        SingleReader = false,
+        SingleReader = true,
         SingleWriter = false 
     });
 

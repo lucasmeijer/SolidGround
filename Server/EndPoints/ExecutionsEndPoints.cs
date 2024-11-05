@@ -130,11 +130,11 @@ public static class ExecutionsEndPoints
 
             IEnumerable<KeyValuePair<string, string>> Headers()
             {
-                yield return new("SolidGroundOutputId", output.Id.ToString());
+                yield return new(SolidGroundConstants.SolidGroundOutputId, output.Id.ToString());
                 if (input.OriginalRequest_ContentType != null)
                     yield return new("Content-Type", input.OriginalRequest_ContentType);
                 foreach (var variable in variables)
-                    yield return new($"{SolidGroundSession.HeaderVariablePrefix}{variable.Name}", Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
+                    yield return new($"{SolidGroundConstants.HeaderVariablePrefix}{variable.Name}", Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
             }
             
             httpClient.Timeout = TimeSpan.FromMinutes(10);
@@ -163,9 +163,4 @@ public static class ExecutionsEndPoints
             await dbContext.SaveChangesAsync();
         }
     }
-}
-
-class SolidGroundVariableHeader
-{
-    
 }

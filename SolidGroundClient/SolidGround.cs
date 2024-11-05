@@ -90,16 +90,14 @@ public class SolidGroundSession(
 {
     HttpRequest Request => httpContext.Request;
 
-    string? _serviceBaseUrl = config["SOLIDGROUND_BASE_URL"]?.TrimEnd("/");
+    string? _serviceBaseUrl = config[SolidGroundConstants.SolidGroundBaseUrl]?.TrimEnd("/");
     
-    string? _outputId = httpContext.Request.Headers.TryGetValue("SolidGroundOutputId", out var outputIdValues) ? outputIdValues.ToString() : null;
+    string? _outputId = httpContext.Request.Headers.TryGetValue(SolidGroundConstants.SolidGroundOutputId, out var outputIdValues) ? outputIdValues.ToString() : null;
     RequestDto? _capturedRequest;
  
     List<OutputComponentDto> _outputComponents = [];
     StringVariableDto[] _stringVariableDtos;
 
-    public static readonly string HeaderVariablePrefix = "SolidGroundVariable_";
-    
     public async Task CaptureRequestAsync()
     {
         if (_serviceBaseUrl == null)
@@ -123,7 +121,7 @@ public class SolidGroundSession(
 
         foreach (var v in variables.Variables)
         {
-            if (httpContext.Request.Headers.TryGetValue($"{HeaderVariablePrefix}{v.Name}", out var overridenValue))
+            if (httpContext.Request.Headers.TryGetValue($"{SolidGroundConstants.HeaderVariablePrefix}{v.Name}", out var overridenValue))
                 v.SetValue(Encoding.UTF8.GetString(Convert.FromBase64String(overridenValue.Single()?.Trim() ?? throw new InvalidOperationException())));
         }
 

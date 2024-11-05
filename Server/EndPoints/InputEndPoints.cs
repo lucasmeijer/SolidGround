@@ -157,14 +157,14 @@ static class InputEndPoints
         List<InputFile>? inputFiles = [];
         List<InputString> ? inputStrings =[];
         await Task.CompletedTask;
-        // try
-        // {
-        //     (inputFiles, inputStrings) = await ParseFormIntoStringsAndFiles(originalRequestContentType, bodyBase64);
-        // }
-        // catch (ArgumentException)
-        // {
-        //     //apparently we're not a form
-        // }
+        try
+        {
+            (inputFiles, inputStrings) = await ParseFormIntoStringsAndFiles(originalRequestContentType, bodyBase64);
+        }
+        catch (ArgumentException)
+        {
+            //apparently we're not a form
+        }
 
         return new()
         {
@@ -178,12 +178,14 @@ static class InputEndPoints
         };
     }
     
-    static async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFormIntoStringsAndFiles(string contentType,
-        string bodyBase64)
+    static async Task<(List<InputFile> inputFiles, List<InputString> inputStrings)> ParseFormIntoStringsAndFiles(string? contentType, string bodyBase64)
     {
         var list = new List<InputFile>();
         var inputStrings1 = new List<InputString>();
 
+        if (contentType == null)
+            return (list, inputStrings1);
+        
         var boundary = HeaderUtilities.RemoveQuotes(MediaTypeHeaderValue.Parse(contentType).Boundary).Value;
         if (boundary == null)
             throw new ArgumentException("No boundary specified in content-type");

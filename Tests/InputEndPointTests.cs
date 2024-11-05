@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net.Mime;
 using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
 using SolidGround;
@@ -7,33 +9,7 @@ using Xunit;
 
 public class InputEndPointTests : IntegrationTestBase
 {
-    [Fact]
-    public async Task VerifyInMemoryDatabaseSharing()
-    {
-        // Arrange
-        var databaseName = "TestDb";
-        var optionsBuilder1 = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: databaseName);
-
-        var optionsBuilder2 = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(databaseName: databaseName);
-        
-        await using var context2 = new AppDbContext(optionsBuilder2.Options);
-            
-        // Act
-        // Write with one context
-        var context1 = new AppDbContext(optionsBuilder1.Options);
-        context1.Inputs.Add(new Input()
-            {
-                OriginalRequest_Host = "asd",
-                OriginalRequest_Body = "asd", OriginalRequest_Route = "", Outputs = [], Strings = [], Tags= []
-            });
-        await context1.SaveChangesAsync();
-        
-        var count = await context2.Inputs.CountAsync();
-        Assert.Equal(1, count);
-    }
-    
+  
     [Fact]
     public async Task GetNonExistingInput_Returns_404()
     {
@@ -54,6 +30,56 @@ public class InputEndPointTests : IntegrationTestBase
         var response = await Client.PostAsJsonAsync("/api/input", SimpleDto);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal("/api/input/1", response.Headers.Location?.OriginalString);
+    }
+    
+    [Fact]
+    public async Task PostNewInputWithFormWithImages_ImagesGetStored()
+    {
+        var multipartContent = new MultipartFormDataContent("----WebKitFormBoundaryABC123")
+        {
+            { 
+                new ByteArrayContent([1, 2, 3, 4, 5]) { Headers = { ContentType = MediaTypeHeaderValue.Parse("application/octet-stream") } },
+                "file1",
+                "file1.txt"
+            },
+            {
+                new StringContent("someValue"),
+                "myString"
+            }    
+        };
+        using var ms = new MemoryStream();
+        await multipartContent.CopyToAsync(ms);
+        
+        var response = await Client.PostAsJsonAsync("/api/input", (InputDto)new()
+        {
+            Output = new()
+            {
+                OutputComponents = [],
+                StringVariables = []
+            },
+            Request = new()
+            {
+                BasePath = "asd",
+                BodyBase64 = Convert.ToBase64String(ms.ToArray()),
+                ContentType = multipartContent.Headers.ContentType?.ToString() ?? throw new Exception(),
+                Route = "/api/hello"
+            }
+        });
+        
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("/api/input/1", response.Headers.Location?.OriginalString);
+
+        var input = await DbContext.Inputs
+            .Include(i=>i.Files)
+            .Include(i=>i.Strings)
+            .SingleAsync();
+        
+        var file = input.Files.Single();
+        Assert.Equivalent((byte[])[1,2,3,4,5], file.Bytes);
+
+        var inputString = input.Strings.Single();
+        Assert.Equal("myString", inputString.Name);
+        Assert.Equal("someValue", inputString.Value);
     }
     
     [Fact]

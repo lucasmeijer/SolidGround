@@ -129,7 +129,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         builder.Services.AddRouting();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
         {
-            { "SOLIDGROUND_BASE_URL", Client.BaseAddress!.ToString() },
+            { SolidGroundConstants.SolidGroundBaseUrl, Client.BaseAddress!.ToString() },
         }!);
         var app = builder.Build();
         app.UseRouting();
