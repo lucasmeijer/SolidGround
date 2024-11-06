@@ -4,9 +4,19 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(OutputId))
+public record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameIdFor(OutputId))
 {
     public static string TurboFrameIdFor(int outputId) => $"output_{outputId}";
+    /*<a href="{ExperimentEndPoints.Routes.api_experiment_newform_id.For(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="text-sm bg-green-200 h-16 p-2 rounded-lg">
+                Adopt variables for new experiment
+            </a>
+            
+            
+                <a href="{ExecutionsEndPoints.Routes.api_executions_id.For(output.ExecutionId)}" data-turbo-method="delete" class="{Buttons.Attrs}{Buttons.RedAttrs}">
+        Delete
+    </a>
+            */
+    protected override bool SkipTurboFrameTags => true;
 
     protected override Delegate RenderFunc => async (AppDbContext db) =>
     {
@@ -17,11 +27,17 @@ public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(Output
                          .AsSplitQuery()
                          .FirstOrDefaultAsync(o => o.Id == OutputId)
                      ?? throw new BadHttpRequestException("No output found");
+        
+        bool finished = output.Status != ExecutionStatus.Started;
+        
+        
         return new Html($"""
+                         <turbo-frame id="{TurboFrameId}" class="flex-1 w-0" ${(finished ? "" : "data-controller='autoreload'")}>
                          <div class="flex flex-row gap-2 items-stretch">
-                             <details class="bg-gray-50 flex-1 shadow-md rounded-lg group/output {ColorFor(output)}">
+                             <details class="bg-gray-50 flex-1 shadow-md rounded-lg group/output {ColorFor(output)}" {(StartOpened ? "open" : "")}>
                                  <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg ">
                                      <h3 class="font-semibold">{HowMuchTimeAgo(output.Execution.StartTime)}</h3>
+                                     {(finished ? "" : "<div class=\"w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin\"></div>")}
                                      <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                      </svg>
@@ -29,9 +45,6 @@ public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(Output
                                  <div class="p-2">
                                      <div class="flex gap-2">
                                          {ResultHtmlsFor(output).Render()}
-                                         <a href="{ExperimentEndPoints.Routes.api_experiment_newform_id.For(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="text-sm bg-green-200 h-16 p-2 rounded-lg">
-                                             Adopt variables for new experiment
-                                         </a>
                                      </div>
                                      <details class="my-4">    
                                          <summary class="text-sm">Details</summary>
@@ -45,10 +58,9 @@ public record OutputTurboFrame(int OutputId) : TurboFrame(TurboFrameIdFor(Output
                                      </details>
                                  </div>
                              </details>
-                             <a href="{ExecutionsEndPoints.Routes.api_executions_id.For(output.ExecutionId)}" data-turbo-method="delete" class="{Buttons.Attrs} {Buttons.RedAttrs}">
-                                 Delete
-                             </a>
+
                          </div>
+                         </turbo-frame>
                          """);
     };
 

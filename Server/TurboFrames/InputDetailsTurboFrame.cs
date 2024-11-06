@@ -18,6 +18,10 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}
             .FirstOrDefaultAsync(i => i.Id == InputId) ?? throw new BadHttpRequestException("input not found");
         return new Html($"""
                          <div class="p-4 flex-col flex gap-4">
+                            <div class="flex justify-between gap-2">
+                            {await input.Outputs.OrderByDescending(o => o.Id).Take(2).Select(output => new OutputTurboFrame(output.Id, true)).RenderAsync(serviceProvider)}
+                            </div>
+                         
                              <div class="flex gap-2">
                                  {input.Files.Render(inputFile => RenderInputFile(inputFile, input))}
                              </div>
@@ -30,11 +34,11 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}
                                      Delete Entire Input
                                  </a>
                              </div>
-                             {await input.Outputs.Select(output => new OutputTurboFrame(output.Id)).RenderAsync(serviceProvider)}
+                             
                          </div>
                          """);
     };
-
+//{await input.Outputs.Select(output => new OutputTurboFrame(output.Id, false)).RenderAsync(serviceProvider)}
     static Html RenderInputFile(InputFile inputFile, Input input) => new($"""
                                                                           <div class="w-32 h-32 overflow-hidden">
                                                                               <a href="{UrlFor(inputFile, input)}" target="_blank">

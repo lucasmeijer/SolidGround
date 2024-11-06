@@ -51,10 +51,7 @@ public record RunExperimentTurboFrame : TurboFrame
         return availableVariablesDto.StringVariables;
     }
 
-    static string TargetAppBaseAddress(IConfiguration config)
-    {
-        return config.GetMandatory("SOLIDGROUND_TARGET_APP");
-    }
+    static string TargetAppBaseAddress(IConfiguration config) => config.GetMandatory("SOLIDGROUND_TARGET_APP");
 
     public new static string TurboFrameId => "run_experiment_form";
 

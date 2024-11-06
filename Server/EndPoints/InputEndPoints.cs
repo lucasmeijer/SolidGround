@@ -19,7 +19,7 @@ static class InputEndPoints
         public static readonly RouteTemplate api_input = RouteTemplate.Create("/api/input");
         public static readonly RouteTemplate api_input_id = RouteTemplate.Create("/api/input/{id:int}");
         public static readonly RouteTemplate api_input_id_name = RouteTemplate.Create("/api/input/{id:int}/name");
-        public static readonly RouteTemplate api_input_id_name_edit = RouteTemplate.Create("/api/input/{id:int}/name");
+        public static readonly RouteTemplate api_input_id_name_edit = RouteTemplate.Create("/api/input/{id:int}/name/edit");
         public static readonly RouteTemplate api_input_id_tags = RouteTemplate.Create("/api/input/{id:int}/tags");
         public static readonly RouteTemplate api_input_id_tags_tagid = RouteTemplate.Create("/api/input/{id:int}/tags/{tagid:int}");
         public static readonly RouteTemplate api_input_id_details = RouteTemplate.Create("/api/input/{id:int}/details");

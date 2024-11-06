@@ -42,19 +42,26 @@ public abstract record PageFragment : IResult, IActionResult
 
 public abstract record TurboFrame(string TurboFrameId) : PageFragment
 {
-    public sealed override async Task<Html> RenderAsync(IServiceProvider serviceProvider) => new($"""
-              <turbo-frame id="{TurboFrameId}" {string.Join(" ",TurboFrameAttributes)}>
-              {await RenderContentsAsync(serviceProvider)}
-              </turbo-frame>
-              """);
+    public sealed override async Task<Html> RenderAsync(IServiceProvider serviceProvider)
+    {
+        var renderContentsAsync = await RenderContentsAsync(serviceProvider);
+
+        return SkipTurboFrameTags 
+            ? renderContentsAsync 
+            : new($"""
+                   <turbo-frame id="{TurboFrameId}">
+                   {renderContentsAsync}
+                   </turbo-frame>
+                   """);
+    }
+
+    protected virtual bool SkipTurboFrameTags => false;
     
     protected virtual Delegate RenderFunc => throw new NotImplementedException();
 
     Func<IServiceProvider, Task<Html>>? _compiledRenderFunc;
-    
-    protected virtual string[] TurboFrameAttributes => [];
 
-    protected virtual Task<Html> RenderContentsAsync(IServiceProvider serviceProvider)
+    Task<Html> RenderContentsAsync(IServiceProvider serviceProvider)
     {
         _compiledRenderFunc ??= ServiceProviderHelper.CompileInjectionFor<Html>(RenderFunc);
         return _compiledRenderFunc(serviceProvider);
