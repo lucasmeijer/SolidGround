@@ -29,15 +29,18 @@ public record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(Turb
                      ?? throw new BadHttpRequestException("No output found");
         
         bool finished = output.Status != ExecutionStatus.Started;
-        
-        
+
+        var spinner = new Html("""
+                                     <div class="animate-spin rounded-full h-8 w-8 border-t-4 border-b-4 border-blue-500"></div>
+                               """);
         return new Html($"""
-                         <turbo-frame id="{TurboFrameId}" class="flex-1 w-0" ${(finished ? "" : "data-controller='autoreload'")}>
+                         <turbo-frame id="{TurboFrameId}" class="flex-1 w-0" {(finished ? "" : "data-controller='autoreload'")}>
                          <div class="flex flex-row gap-2 items-stretch">
                              <details class="bg-gray-50 flex-1 shadow-md rounded-lg group/output {ColorFor(output)}" {(StartOpened ? "open" : "")}>
                                  <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg ">
-                                     <h3 class="font-semibold">{HowMuchTimeAgo(output.Execution.StartTime)}</h3>
-                                     {(finished ? "" : "<div class=\"w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin\"></div>")}
+                                     {output.Execution.Name ?? "Naamloos"}
+                                     {HowMuchTimeAgo(output.Execution.StartTime)}
+                                     {(finished ? "" : spinner)}
                                      <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                      </svg>
@@ -106,7 +109,6 @@ public record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(Turb
 
     static string ColorFor(Output output) => output.Status switch
     {
-        ExecutionStatus.Started => "bg-blue-200",
         ExecutionStatus.Failed => "bg-red-200",
         _ => ""
     };

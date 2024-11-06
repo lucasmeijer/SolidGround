@@ -47,8 +47,8 @@ static class InputEndPoints
         
         app.MapGet(Routes.api_input_id, (int id) => new InputTurboFrame(id));
         app.MapGet(Routes.api_input_id_details, (int id) => new InputDetailsTurboFrame(id));
-        app.MapGet(Routes.api_input_id_name, (int id) => new InputNameTurboFrame(id));
-        app.MapGet(Routes.api_input_id_name_edit, (int id) => new InputNameEditTurboFrame(id));
+        app.MapGet(Routes.api_input_id_name, (int id) => new InputNameTurboFrame(id, EditMode:false));
+        app.MapGet(Routes.api_input_id_name_edit, (int id) => new InputNameTurboFrame(id, EditMode:true));
         
         app.MapDelete(Routes.api_input_id, async (AppDbContext db, int id) =>
         {
@@ -70,7 +70,7 @@ static class InputEndPoints
             input.Name = nameUpdateDto.Name;
             await db.SaveChangesAsync();
 
-            return new InputNameTurboFrame(id);
+            return new InputNameTurboFrame(id, EditMode:false);
         }).DisableAntiforgery();
 
         app.MapPost(Routes.api_input_id_tags, async (AppDbContext db, int id, AddTagToInputDto dto, HttpContext httpContext) =>

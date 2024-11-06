@@ -31,7 +31,7 @@ public abstract record SolidGroundPage(string Title) : PageFragment
              {ImportMap.ToJsonString()}
              </script>
          </head>
-         <body style="scrollbar-gutter: stable; overflow-y: scroll">
+         <body style="scrollbar-gutter: stable; overflow-y: scroll" class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
          {await RenderBodyContent(serviceProvider)}
          <script src="/js/site.js" type="module"></script>
          </body>

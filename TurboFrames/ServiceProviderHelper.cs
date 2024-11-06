@@ -9,19 +9,39 @@ public static class ServiceProviderHelper
         var parameters = method.GetParameters();
         var serviceProviderExpression = Expression.Parameter(typeof(IServiceProvider), "provider");
 
-        Expression[] argumentExpressions = [..parameters.Select(p =>
-            Expression.Convert(
-                Expression.Call(serviceProviderExpression,
-                    typeof(IServiceProvider).GetMethod(nameof(IServiceProvider.GetService))!,
-                    Expression.Constant(p.ParameterType)),
-                p.ParameterType))];
+        Expression[] argumentExpressions = new Expression[parameters.Length];
+    
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            var parameter = parameters[i];
+            var serviceExp = Expression.Call(
+                serviceProviderExpression,
+                typeof(IServiceProvider).GetMethod(nameof(IServiceProvider.GetService))!,
+                Expression.Constant(parameter.ParameterType));
+
+            var convertedExp = Expression.Convert(serviceExp, parameter.ParameterType);
+        
+            var throwExp = Expression.Throw(
+                Expression.New(
+                    typeof(InvalidOperationException).GetConstructor([typeof(string)])!,
+                    Expression.Constant($"Cannot inject parameter '{parameter.Name}' of type '{parameter.ParameterType}'. The service is not registered.")),
+                parameter.ParameterType);
+
+            argumentExpressions[i] = Expression.Condition(
+                Expression.Equal(serviceExp, Expression.Constant(null)),
+                throwExp,
+                convertedExp);
+        }
 
         Expression callExpression = method.IsStatic 
             ? Expression.Call(method, argumentExpressions) 
             : Expression.Call(Expression.Constant(d.Target), method, argumentExpressions);
-        
-        return Expression.Lambda<Func<IServiceProvider, Task<TReturnType>>>(ResultExpression<TReturnType>(method, callExpression), serviceProviderExpression).Compile();
+
+        return Expression.Lambda<Func<IServiceProvider, Task<TReturnType>>>(
+            ResultExpression<TReturnType>(method, callExpression), 
+            serviceProviderExpression).Compile();
     }
+
 
     static Expression ResultExpression<TReturnType>(MethodInfo method, Expression callExpression)
     {

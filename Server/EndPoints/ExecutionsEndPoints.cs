@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
@@ -16,10 +17,28 @@ public static class ExecutionsEndPoints
     {
         public static readonly RouteTemplate api_executions_id = RouteTemplate.Create("/api/executions/{id:int}");
         public static readonly RouteTemplate api_executions = RouteTemplate.Create("/api/executions");
+        
+        public static readonly RouteTemplate api_executions_id_name = RouteTemplate.Create("/api/executions/{id:int}/name");
+        public static readonly RouteTemplate api_executions_id_name_edit = RouteTemplate.Create("/api/executions/{id:int}/name/edit");
     }
 
     public static void MapExecutionsEndPoints(this IEndpointRouteBuilder app)
     {
+        app.MapGet(Routes.api_executions_id_name, (int id) => new ExecutionNameTurboFrame(id, EditMode:false));
+        app.MapGet(Routes.api_executions_id_name_edit, (int id) => new ExecutionNameTurboFrame(id, EditMode:true));
+
+        app.MapPost(Routes.api_executions_id_name, async (AppDbContext db, int id, InputEndPoints.NameUpdateDto nameUpdateDto) =>
+        {
+            var execution = await db.Executions.FindAsync(id);
+            if (execution == null)
+                return Results.NotFound($"Execution {id} not found");
+            
+            execution.Name = nameUpdateDto.Name;
+            await db.SaveChangesAsync();
+
+            return new ExecutionNameTurboFrame(id, EditMode:false);
+        }).DisableAntiforgery();
+        
         app.MapDelete(Routes.api_executions_id, async (int id, AppDbContext db) =>
         {
             var execution = await db.Executions.FindAsync(id) ?? throw new BadHttpRequestException("Execution with ID " + id + " not found.");
@@ -29,7 +48,8 @@ public static class ExecutionsEndPoints
             await db.SaveChangesAsync();
 
             return new TurboStreamCollection([
-                ..execution.Outputs.Select(o => new TurboStream("remove", OutputTurboFrame.TurboFrameIdFor(o.Id)))
+                ..execution.Outputs.Select(o => new TurboStream("remove", OutputTurboFrame.TurboFrameIdFor(o.Id))),
+                new TurboStream("remove", ExecutionTurboFrame.TurboFrameIdFor(id))
             ]);
         });
         

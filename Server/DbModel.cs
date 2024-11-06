@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -79,15 +80,16 @@ public class Execution
     public DateTime StartTime { get; set; }
     public bool IsReference { get; set; }
     public List<Output> Outputs { get; set; } = [];
+    [MaxLength(200)]
+    public string? Name { get; set; } = null;
 }
 
 public class Tag
 {
     public int Id { get; set; }
+    [MaxLength(200)]
     public string Name { get; set; } = null!;
     public List<Input> Inputs { get; set; } = [];
-    
- 
 }
 
 public enum ExecutionStatus

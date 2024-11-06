@@ -70,20 +70,23 @@ public static class Extensions
     {
         return string.Join(seperator, values);
     }
-
-    public static Task<object> InvokeInjected(this IServiceProvider serviceProvider, Delegate d) => throw null!;
     
-    public static async Task<string> RenderAsync(this IEnumerable<TurboFrame> turboFrames, IServiceProvider serviceProvider)
+    public static Task<string> RenderAsync(this IEnumerable<TurboFrame> turboFrames, IServiceProvider serviceProvider)
     {
-        var htmls = await Task.WhenAll(turboFrames.Select(async tf => await tf.RenderAsync(serviceProvider)));
-        return htmls.Render();
+        return turboFrames.RenderAsync(tf => tf.RenderAsync(serviceProvider));
     }
 
     public static string Render(this IEnumerable<Html> source) => source.Select(s => s.ToString()).SeparateWith("\n");
     
     public static string Render<TSource>(this IEnumerable<TSource> source, Func<TSource, Html> xform) => source.Select(xform).Render();
     
-    
+    public static async Task<string> RenderAsync<TSource>(this IEnumerable<TSource> source, Func<TSource, Task<Html>> xform)
+    {
+        var htmls = await Task.WhenAll(source.Select(xform));
+        return htmls.Render();
+    }
+
+
     public static T GetRequired<T>(this JsonElement self, string propertyName)
     {
         if (!self.TryGetOptional<T>(propertyName, out var value))

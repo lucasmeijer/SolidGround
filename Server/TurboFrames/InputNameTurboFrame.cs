@@ -1,22 +1,13 @@
-using Microsoft.AspNetCore.Components;
-using TurboFrames;
-
 namespace SolidGround;
 
-public record InputNameTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId))
+public record InputNameTurboFrame(int InputId, bool EditMode) : EditableNameTurboFrame($"input_{InputId}_name", EditMode)
 {
-    public static string TurboFrameIdFor(int InputId) => $"input_{InputId}_name";
-
-    protected override Delegate RenderFunc => async (AppDbContext db) =>
+    protected override async Task<string> FindCurrentName(AppDbContext db)
     {
         var input = await db.Inputs.FindAsync(InputId) ?? throw new BadHttpRequestException("input not found");
+        return input.Name ?? "Naamloos";
+    }
 
-        return new Html($"""
-                         <h3 class="font-semibold">
-                             <a href="{InputEndPoints.Routes.api_input_id_name_edit.For(InputId)}" data-turbo-frame="{TurboFrameIdFor(InputId)}">
-                                 {(input.Name ?? "Naamloos")}
-                             </a>
-                         </h3>
-                         """);
-    };
+    protected override string EditRoute => InputEndPoints.Routes.api_input_id_name_edit.For(InputId);
+    protected override string ChangeNameEndPoint => InputEndPoints.Routes.api_input_id_name.For(InputId);
 }

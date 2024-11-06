@@ -18,11 +18,7 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}
             .FirstOrDefaultAsync(i => i.Id == InputId) ?? throw new BadHttpRequestException("input not found");
         return new Html($"""
                          <div class="p-4 flex-col flex gap-4">
-                            <div class="flex justify-between gap-2">
-                            {await input.Outputs.OrderByDescending(o => o.Id).Take(2).Select(output => new OutputTurboFrame(output.Id, true)).RenderAsync(serviceProvider)}
-                            </div>
-                         
-                             <div class="flex gap-2">
+                            <div class="flex gap-2">
                                  {input.Files.Render(inputFile => RenderInputFile(inputFile, input))}
                              </div>
                                  
