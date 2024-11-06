@@ -3,12 +3,22 @@ import { Controller } from "@hotwired/stimulus"
 export default class RunExperimentController extends Controller {
     connect() {
         this.element.addEventListener("turbo:submit-start", this.handleSubmit.bind(this))
+        this.element.addEventListener("turbo:submit-end", this.handleSubmitEnd.bind(this))
     }
 
     disconnect() {
         this.element.removeEventListener("turbo:submit-start", this.handleSubmit.bind(this))
+        this.element.removeEventListener("turbo:submit-end", this.handleSubmitEnd.bind(this))
     }
-
+    
+    handleSubmitEnd(event) {
+        // Find the closest dialog element and close it
+        const dialog = this.element.closest('dialog')
+        if (dialog) {
+            dialog.close()
+        }
+    }
+    
     handleSubmit(event) {
         event.preventDefault()
 

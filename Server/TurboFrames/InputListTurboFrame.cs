@@ -3,12 +3,12 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record InputListTurboFrame(int[] InputIds) : TurboFrame("inputlist")
+public record InputListTurboFrame(int[] InputIds, int[] ExecutionIds) : TurboFrame("inputlist")
 {
     protected override Delegate RenderFunc => async (IServiceProvider serviceProvider) => new Html($"""
           <div class="flex-col flex gap-4" id="inputlistdiv" data-inputids="{InputIdsAsJson}">
           {WarningElements().Render()}
-          {await InputIds.Select(i => new InputTurboFrame(i)).RenderAsync(serviceProvider)}
+          {await InputIds.Select(i => new InputTurboFrame(i, ExecutionIds)).RenderAsync(serviceProvider)}
           </div>
          """);
 

@@ -18,6 +18,8 @@ public record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(Turb
             */
     protected override bool SkipTurboFrameTags => true;
 
+    protected override string LazySrc => OutputEndPoints.Routes.api_output_id.For(OutputId);
+
     protected override Delegate RenderFunc => async (AppDbContext db) =>
     {
         var output = await db.Outputs
@@ -26,15 +28,15 @@ public record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(Turb
                          .Include(o => o.StringVariables)
                          .AsSplitQuery()
                          .FirstOrDefaultAsync(o => o.Id == OutputId)
-                     ?? throw new BadHttpRequestException("No output found");
-        
+                     ?? throw new BadHttpRequestException($"Output {OutputId} not found");
+
         bool finished = output.Status != ExecutionStatus.Started;
 
         var spinner = new Html("""
                                      <div class="animate-spin rounded-full h-8 w-8 border-t-4 border-b-4 border-blue-500"></div>
                                """);
         return new Html($"""
-                         <turbo-frame id="{TurboFrameId}" class="flex-1 w-0" {(finished ? "" : "data-controller='autoreload'")}>
+                         <turbo-frame data-src="{OutputEndPoints.Routes.api_output_id.For(OutputId)}" id="{TurboFrameId}" class="flex-1 w-0" {(finished ? "" : "data-controller='autoreload' data-turbo-cache='false'")}>
                          <div class="flex flex-row gap-2 items-stretch">
                              <details class="bg-gray-50 flex-1 shadow-md rounded-lg group/output {ColorFor(output)}" {(StartOpened ? "open" : "")}>
                                  <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg ">

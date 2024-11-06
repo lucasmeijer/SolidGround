@@ -1,16 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
+
 export default class AutoReloadController extends Controller {
     connect() {
         this.interval = setInterval(() => {
-            const details = this.element.querySelector('details');
-            const wasOpen = details.open;
-
-            this.element.reload();
-
-            this.element.addEventListener('turbo:frame-load', () => {
-                const newDetails = this.element.querySelector('details');
-                newDetails.open = wasOpen;
-            }, { once: true });
+            
+            //this seems to work to trigger a reload.
+            this.element.src = this.element.getAttribute('data-src');
         }, 5000);
     }
 

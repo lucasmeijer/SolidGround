@@ -3,7 +3,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record InputTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId))
+public record InputTurboFrame(int InputId, int[] ExecutionIds) : TurboFrame(TurboFrameIdFor(InputId))
 {
     public static string TurboFrameIdFor(int inputId) => $"input_{inputId}";
 
@@ -11,12 +11,11 @@ public record InputTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId)
 
     protected override Delegate RenderFunc => async (IServiceProvider serviceProvider, AppDbContext db) =>
     {
-        var input = await db.Inputs.Include(i=>i.Outputs).FirstOrDefaultAsync(i => i.Id == InputId);
-        if (input == null)
-            throw new NotFoundException();
-                
+        var input = await db.Inputs.FindAsync(InputId) ?? throw new NotFoundException();
+        var outputs = await db.Outputs.Where(o=>o.InputId == InputId && ExecutionIds.Contains(o.ExecutionId)).ToListAsync();
+        
         return new Html($"""
-                    <turbo-frame id="{TurboFrameId}" data-turbo-permanent>
+                    <turbo-frame id="{TurboFrameId}">
                         <details class="bg-white grow shadow-md rounded-lg group/output" open>
                            <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg">
                                {await new InputNameTurboFrame(InputId, EditMode:false).RenderAsync(serviceProvider)}
@@ -25,10 +24,10 @@ public record InputTurboFrame(int InputId) : TurboFrame(TurboFrameIdFor(InputId)
                                </svg>
                            </summary>
                            <div class="flex justify-between gap-2">
-                            {await input.Outputs.OrderByDescending(o => o.Id).Take(2).Select(output => new OutputTurboFrame(output.Id, true)).RenderAsync(serviceProvider)}
+                            {await outputs.Select(output => new OutputTurboFrame(output.Id, true)).RenderAsync(serviceProvider)}
                             </div>
                            <details class="p-4">
-                           <summary>Details about input</summary>
+                           <summary>Details about {input.Name}</summary>
                            {new InputDetailsTurboFrame(InputId).RenderLazy()}
                            </details>
                         </details>

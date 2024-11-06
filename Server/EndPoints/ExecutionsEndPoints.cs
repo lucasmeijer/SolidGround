@@ -1,10 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Net.Http.Headers;
-using System.Reflection;
 using System.Text;
-using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
-using Mono.TextTemplating;
 using SolidGroundClient;
 using TurboFrames;
 
@@ -17,7 +13,9 @@ public static class ExecutionsEndPoints
     {
         public static readonly RouteTemplate api_executions_id = RouteTemplate.Create("/api/executions/{id:int}");
         public static readonly RouteTemplate api_executions = RouteTemplate.Create("/api/executions");
-        
+        public static readonly RouteTemplate api_executions_new = RouteTemplate.Create("/api/executions/new");
+        public static readonly RouteTemplate api_executions_new_production = RouteTemplate.Create("/api/executions/new/production");
+        public static readonly RouteTemplate api_executions_new_executionid = RouteTemplate.Create("/api/executions/new/{executionId:int}");
         public static readonly RouteTemplate api_executions_id_name = RouteTemplate.Create("/api/executions/{id:int}/name");
         public static readonly RouteTemplate api_executions_id_name_edit = RouteTemplate.Create("/api/executions/{id:int}/name/edit");
     }
@@ -26,7 +24,33 @@ public static class ExecutionsEndPoints
     {
         app.MapGet(Routes.api_executions_id_name, (int id) => new ExecutionNameTurboFrame(id, EditMode:false));
         app.MapGet(Routes.api_executions_id_name_edit, (int id) => new ExecutionNameTurboFrame(id, EditMode:true));
+        app.MapGet(Routes.api_executions_new,() => new NewExecutionDialogContentTurboFrame());
+        app.MapGet(Routes.api_executions_new_production, async (IConfiguration config, HttpClient httpClient) =>
+        {
+            var requestUri = $"{ExecutionVariablesTurboFrame.TargetAppBaseAddress(config)}/solidground";
+            var availableVariablesDto = await httpClient.GetFromJsonAsync<AvailableVariablesDto>(requestUri) ?? throw new Exception("No available variables found");
+            return new ExecutionVariablesTurboFrame(availableVariablesDto.StringVariables, "New execution");
+        });
+        app.MapGet(Routes.api_executions_new_executionid, async (int executionId, AppDbContext db) =>
+        {
+            var execution = await db.Executions
+                .Include(e => e.Outputs)
+                .ThenInclude(o=>o.StringVariables)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(e => e.Id == executionId)
+                
+                ?? throw new NotFoundException($"Execution {executionId} not found");
 
+            var variables = execution
+                .Outputs
+                .First()
+                .StringVariables
+                .Select(s => new StringVariableDto() { Name = s.Name, Value = s.Value })
+                .ToArray();
+            
+            return new ExecutionVariablesTurboFrame(variables, execution.Name+" Copy");
+        });
+        
         app.MapPost(Routes.api_executions_id_name, async (AppDbContext db, int id, InputEndPoints.NameUpdateDto nameUpdateDto) =>
         {
             var execution = await db.Executions.FindAsync(id);
@@ -82,27 +106,21 @@ public static class ExecutionsEndPoints
             httpContext.Response.StatusCode = StatusCodes.Status201Created;
             httpContext.Response.Headers.Location = Routes.api_executions_id.For(execution.Id);
             
-            var sb = new StringBuilder();
             foreach (var (inputId, output) in inputsToOutputs)
             {
-                sb.AppendLine($"""
-                               <turbo-stream action="replace" target="input_{inputId}">
-                               <template>
-                               <turbo-frame id="input_{inputId}" src="{InputEndPoints.Routes.api_input_id.For(inputId)}">
-                               </turbo-frame>
-                               </template>
-                               </turbo-stream>
-                               """);
-
                 _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.EndPoint, runExecutionDto.StringVariables, serviceProvider));
             }
 
-            return new TurboStreamCollection([..runExecutionDto.Inputs.Select(i => new TurboStream("replace",TurboFrameContent:new InputTurboFrame(i)))]);
+            var all = await db.Executions.Select(e => e.Id).ToArrayAsync(); 
+            return new TurboStreamCollection([
+                ..runExecutionDto.Inputs.Select(i => new TurboStream("replace",TurboFrameContent:new InputTurboFrame(i, all), Method: "morph")),
+                new TurboStream("replace", TurboFrameContent:new FilterBarExecutionsList(), Method: "morph")
+            ]);
 
             Output OutputFor(int inputId) => new()
             {
                 InputId = inputId,
-                StringVariables = [],
+                StringVariables = [..runExecutionDto.StringVariables.Select(s=> new StringVariable() { Name = s.Name, Value = s.Value})],
                 Status = ExecutionStatus.Started,
                 Components = []
             };

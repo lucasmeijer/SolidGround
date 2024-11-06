@@ -26,7 +26,7 @@ public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}
                                  <div>
                                     {await new InputTagsTurboFrame(input.Id).RenderAsync(serviceProvider)}                  
                                  </div>
-                                 <a href="{InputEndPoints.Routes.api_input_id.For(input.Id)}" data-turbo-method="delete" class="{Buttons.Attrs} {Buttons.RedAttrs}">
+                                 <a href="{InputEndPoints.Routes.api_input_id.For(input.Id)}" data-turbo-method="delete" data-turbo-confirm="Delete Input?" class="{Buttons.Attrs} {Buttons.RedAttrs}">
                                      Delete Entire Input
                                  </a>
                              </div>

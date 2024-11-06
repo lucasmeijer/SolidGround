@@ -26,11 +26,16 @@ export default class FilterBar extends Controller {
         {
             newtags = null
         }
+
+        const executions = Array.from(this.element.querySelectorAll(".execution_checkbox"))
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => parseInt(checkbox.value));
                     
         var body = JSON.stringify({
             tags: newtags ?? this.tagsValue,
             tags_changed: newtags != null,
-            search: this.searchbarTarget.value
+            search: this.searchbarTarget.value,
+            executions: executions
         });
         
         const response = await fetch('/api/search', {

@@ -45,7 +45,7 @@ static class InputEndPoints
             
         }).DisableAntiforgery();
         
-        app.MapGet(Routes.api_input_id, (int id) => new InputTurboFrame(id));
+        //app.MapGet(Routes.api_input_id, (int id) => new InputTurboFrame(id));
         app.MapGet(Routes.api_input_id_details, (int id) => new InputDetailsTurboFrame(id));
         app.MapGet(Routes.api_input_id_name, (int id) => new InputNameTurboFrame(id, EditMode:false));
         app.MapGet(Routes.api_input_id_name_edit, (int id) => new InputNameTurboFrame(id, EditMode:true));

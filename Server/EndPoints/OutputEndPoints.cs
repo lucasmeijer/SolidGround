@@ -14,6 +14,8 @@ static class OutputEndPoints
     
     public static void MapOutputEndPoints(this IEndpointRouteBuilder app)
     {
+        app.MapGet(Routes.api_output_id, (int id) => new OutputTurboFrame(id, true));
+        
         app.MapDelete(Routes.api_output_id, async (AppDbContext db, int id) =>
         {
             var obj = await db.Outputs.FindAsync(id);

@@ -1,17 +1,5 @@
-using System.Globalization;
-using System.Reflection;
-using System.Text;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Razor;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.ViewEngines;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace TurboFrames;
 
@@ -45,7 +33,7 @@ public abstract record TurboFrame(string TurboFrameId) : PageFragment
     public sealed override async Task<Html> RenderAsync(IServiceProvider serviceProvider)
     {
         var renderContentsAsync = await RenderContentsAsync(serviceProvider);
-
+        
         return SkipTurboFrameTags 
             ? renderContentsAsync 
             : new($"""
@@ -67,7 +55,10 @@ public abstract record TurboFrame(string TurboFrameId) : PageFragment
         return _compiledRenderFunc(serviceProvider);
     }
 
-    public Html RenderLazy() => new($"""<turbo-frame id="{TurboFrameId}" src="{LazySrc}" loading="lazy"></turbo-frame>""");
+    public Html RenderLazy() => RenderLazy(TurboFrameId, LazySrc);
 
+    public static Html RenderLazy(string turboFrameId, string lazySrc) => 
+        new($"""<turbo-frame id="{turboFrameId}" src="{lazySrc}" loading="lazy"></turbo-frame>""");
+    
     protected virtual string LazySrc => throw new NotImplementedException();
 }

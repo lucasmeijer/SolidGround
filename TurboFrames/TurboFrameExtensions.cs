@@ -44,4 +44,4 @@ public static class TurboFrameExtensions
     }
 }
 
-public class NotFoundException : Exception; 
+public class NotFoundException(string? message = null) : Exception(message); 
