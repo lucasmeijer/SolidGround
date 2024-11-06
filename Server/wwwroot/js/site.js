@@ -7,6 +7,7 @@ import CursorController from "./cursor_controller.js";
 import FormToJsonController from "./formtojson_controller.js";
 import AutoSubmitSelectController from "./autosubmit_controller.js";
 import RunExperimentController from "./runexperiment_controller.js";
+import TextAreaResizeController from "./textarearesize_controller.js";
 
 // Initialize Stimulus application
 const application = Application.start();
@@ -17,6 +18,7 @@ application.register("filterbar", FilterBar);
 application.register("formtojson", FormToJsonController);
 application.register("autosubmit", AutoSubmitSelectController);
 application.register("runexperiment", RunExperimentController);
+application.register("textarearesize", TextAreaResizeController)
 //application.register("cursor", CursorController);
 
 document.addEventListener("turbo:submit-start", (event) => {

@@ -74,7 +74,7 @@ public static class ExecutionsEndPoints
                                </turbo-stream>
                                """);
 
-                _ = Task.Run(() => ExecutionForInput(inputId, output, runExecutionDto.EndPoint, runExecutionDto.StringVariables, serviceProvider));
+                _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.EndPoint, runExecutionDto.StringVariables, serviceProvider));
             }
 
             return new TurboStreamCollection([..runExecutionDto.Inputs.Select(i => new TurboStream("replace",TurboFrameContent:new InputTurboFrame(i)))]);
@@ -82,10 +82,7 @@ public static class ExecutionsEndPoints
             Output OutputFor(int inputId) => new()
             {
                 InputId = inputId,
-                StringVariables =
-                [
-                    //..variables.Select(kvp => new StringVariable { Name = kvp.Key[prefix.Length..], Value = kvp.Value })
-                ],
+                StringVariables = [],
                 Status = ExecutionStatus.Started,
                 Components = []
             };
@@ -93,13 +90,13 @@ public static class ExecutionsEndPoints
     }
     
     
-    static async Task ExecutionForInput(int inputId, Output output, string appEndPoint, StringVariableDto[] variables, IServiceProvider serviceProvider)
+    static async Task ExecutionForInput(int inputId, int outputId, string appEndPoint, StringVariableDto[] variables, IServiceProvider serviceProvider)
     {
         using var scope = serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
         
-        dbContext.Attach(output);
+        var output = await dbContext.Outputs.FindAsync(outputId) ?? throw new Exception("Output with ID " + outputId + " not found."); 
         try
         {
             var input = await dbContext.Inputs.FindAsync(inputId) ?? throw new ArgumentException("Input not found");
@@ -130,7 +127,7 @@ public static class ExecutionsEndPoints
 
             IEnumerable<KeyValuePair<string, string>> Headers()
             {
-                yield return new(SolidGroundConstants.SolidGroundOutputId, output.Id.ToString());
+                yield return new(SolidGroundConstants.SolidGroundOutputId, outputId.ToString());
                 if (input.OriginalRequest_ContentType != null)
                     yield return new("Content-Type", input.OriginalRequest_ContentType);
                 foreach (var variable in variables)
