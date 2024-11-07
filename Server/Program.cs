@@ -2,6 +2,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SolidGround;
 using SolidGround.Pages;
@@ -13,6 +14,42 @@ CreateWebApplication(args, (configuration, dboptions) =>
     var persistentStorage = configuration["PERSISTENT_STORAGE"] ?? ".";
     dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground.db");
 }).Run();
+
+public record AppState(int[] Tags, int[] Executions, string Search)
+{
+    public static AppState Default => new([], [-1], "");
+}
+
+class AppStateAccessor(IMemoryCache cache, IHttpContextAccessor accessor)
+{
+    public void Set(AppState state)
+    {
+        if (CacheKey == null)
+            return;
+        cache.Set(CacheKey, state);
+    }
+
+    string? CacheKey
+    {
+        get
+        {
+            var context = accessor.HttpContext;
+            if (context == null)
+                return null;
+
+            if (!context.Request.Headers.TryGetValue("X-Tab-Id", out var tabId))
+                return null;
+            return "appstate_"+tabId;
+        }
+    }
+    
+    public AppState Get()
+    {
+        if (CacheKey == null)
+            return AppState.Default;
+        return cache.Get<AppState>(CacheKey) ?? AppState.Default;
+    }
+}
 
 public partial class Program
 {
@@ -29,7 +66,11 @@ public partial class Program
         builder.Services.AddHealthChecks().AddCheck("Health", () => HealthCheckResult.Healthy("OK"));
         builder.Services.AddControllersWithViews();
         builder.Services.AddControllers();
-
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddMemoryCache();
+        builder.Services.AddScoped<AppStateAccessor>();
+        builder.Services.AddScoped<AppState>(sp => sp.GetRequiredService<AppStateAccessor>().Get());
+        
         var app = builder.Build();
         app.MapControllers();
 

@@ -89,7 +89,7 @@ public static class ExecutionsEndPoints
             return Results.Json(new ExecutionStatusDto() { Finished = finished });
         });
         
-        app.MapPost(Routes.api_executions, async (AppDbContext db, IConfiguration config, IServiceProvider serviceProvider, RunExecutionDto runExecutionDto, HttpContext httpContext) =>
+        app.MapPost(Routes.api_executions, async (AppDbContext db, IConfiguration config, IServiceScopeFactory scopeFactory, RunExecutionDto runExecutionDto, HttpContext httpContext, AppStateAccessor appStateAccessor) =>
         {
             var inputsToOutputs = runExecutionDto.Inputs.ToDictionary(id => id, OutputFor);
 
@@ -105,16 +105,19 @@ public static class ExecutionsEndPoints
             await db.SaveChangesAsync();
             httpContext.Response.StatusCode = StatusCodes.Status201Created;
             httpContext.Response.Headers.Location = Routes.api_executions_id.For(execution.Id);
+
+            var appState = appStateAccessor.Get();
+            appStateAccessor.Set(appState with { Executions = [..appState.Executions, execution.Id]});
             
             foreach (var (inputId, output) in inputsToOutputs)
             {
-                _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.EndPoint, runExecutionDto.StringVariables, serviceProvider));
+                _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.EndPoint, runExecutionDto.StringVariables, scopeFactory));
             }
-
-            var all = await db.Executions.Select(e => e.Id).ToArrayAsync(); 
+            
             return new TurboStreamCollection([
-                ..runExecutionDto.Inputs.Select(i => new TurboStream("replace",TurboFrameContent:new InputTurboFrame(i, all), Method: "morph")),
-                new TurboStream("replace", TurboFrameContent:new FilterBarExecutionsList(), Method: "morph")
+                TurboStream.Refresh()
+                // //..runExecutionDto.Inputs.Select(i => new TurboStream("replace",TurboFrameContent:new InputTurboFrame(i, [-1,execution.Id], true), Method: "morph")),
+                // new TurboStream("replace", TurboFrameContent:new FilterBarExecutionsList(), Method: "morph")
             ]);
 
             Output OutputFor(int inputId) => new()
@@ -128,9 +131,9 @@ public static class ExecutionsEndPoints
     }
     
     
-    static async Task ExecutionForInput(int inputId, int outputId, string appEndPoint, StringVariableDto[] variables, IServiceProvider serviceProvider)
+    static async Task ExecutionForInput(int inputId, int outputId, string appEndPoint, StringVariableDto[] variables, IServiceScopeFactory scopeFactory)
     {
-        using var scope = serviceProvider.CreateScope();
+        using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
         

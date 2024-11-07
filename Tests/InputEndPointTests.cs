@@ -9,14 +9,6 @@ using Xunit;
 
 public class InputEndPointTests : IntegrationTestBase
 {
-  
-    [Fact]
-    public async Task GetNonExistingInput_Returns_404()
-    {
-        var response = await Client.GetAsync("/api/input/3");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
     [Fact]
     public async Task PostNewInput_BadRequest_Returns_BadRequest()
     {

@@ -1,4 +1,5 @@
 import {Controller} from "@hotwired/stimulus";
+import {addHeadersToFetchOptions} from "./site.js";
 
 export default class FilterBar extends Controller {
     static targets = [ "searchbar" ]
@@ -6,7 +7,21 @@ export default class FilterBar extends Controller {
         tags: Array,
         alltags: Array,
     }
-    
+
+    // connect() {
+    //     // Store the bound function as an instance property
+    //     this.boundHandleFrameRender = (event) => this.handleFrameRender(event)
+    //     this.element.addEventListener("turbo:frame-render", this.boundHandleFrameRender)
+    // }
+    //
+    // async handleFrameRender(event) {
+    //     await this.sendFiltersToServer();
+    // }
+    //
+    // disconnect() {
+    //     // Remove the event listener using the stored reference
+    //     this.element.removeEventListener("turbo:frame-render", this.boundHandleFrameRender)
+    // }
     async clearSearchBar() {
         this.searchbarTarget.value = "";
         await this.sendFiltersToServer();
@@ -38,14 +53,16 @@ export default class FilterBar extends Controller {
             executions: executions
         });
         
-        const response = await fetch('/api/search', {
+        let options = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'text/vnd.turbo-stream.html',
             },
             body: body
-        });
+        };
+        addHeadersToFetchOptions(options);
+        const response = await fetch('/api/search', options);
 
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         Turbo.renderStreamMessage(await response.text());

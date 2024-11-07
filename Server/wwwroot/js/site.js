@@ -23,26 +23,17 @@ application.register("textarearesize", TextAreaResizeController)
 application.register("autoreload", AutoReloadController)
 //application.register("cursor", CursorController);
 
-document.addEventListener("turbo:submit-start", (event) => {
-    const form = event.target;
+function getSolidGroundTabId() {
+    const tabId = localStorage.getItem('tabId') || crypto.randomUUID();
+    localStorage.setItem('tabId', tabId);
+    return tabId;
+}
 
-    // Only intercept if the attribute is present
-    if (!form.hasAttribute('data-rewrite-form-to-json-body')) {
-        return;  // Let Turbo handle it normally
-    }
+export function addHeadersToFetchOptions(fetchOptions)
+{
+    fetchOptions.headers['X-Tab-Id'] = getSolidGroundTabId();
+}
 
-    event.preventDefault();
-
-    // Convert form data to JSON
-    const formData = new FormData(form);
-    const jsonData = Object.fromEntries(formData.entries());
-
-    // Create a new submission with JSON data
-    const submission = new FormSubmission(form, {
-        body: JSON.stringify(jsonData),
-        contentType: 'application/json'
-    });
-
-    // Let Turbo handle it from here
-    Turbo.navigator.submitForm(form, submission);
+document.addEventListener('turbo:before-fetch-request', (event) => {
+    addHeadersToFetchOptions(event.detail.fetchOptions);
 });

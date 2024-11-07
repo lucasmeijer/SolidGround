@@ -86,7 +86,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
                     var joke = testVariables.Prompt.Value + " " + jokeDto.Subject;
                     session.AddResult(joke);
                     return joke;
-                }).AddEndpointFilter<CaptureRequestBodyFilter>();
+                });
         });
 
         var consumingAppClient = solidGroundConsumingApp.HttpClient;
