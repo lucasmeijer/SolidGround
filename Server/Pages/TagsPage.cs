@@ -3,9 +3,9 @@ using TurboFrames;
 
 namespace SolidGround.Pages;
 
-public record TagsPage() : SolidGroundPage("Tags")
+public record TagsPageBodyContent : PageFragment
 {
-    protected override async Task<Html> RenderBodyContent(IServiceProvider serviceProvider)
+    public override async Task<Html> RenderAsync(IServiceProvider serviceProvider)
     {
         var db = serviceProvider.GetRequiredService<AppDbContext>();
         var tags = await db.Tags.ToArrayAsync();

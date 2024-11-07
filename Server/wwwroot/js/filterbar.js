@@ -1,5 +1,6 @@
 import {Controller} from "@hotwired/stimulus";
 import {addHeadersToFetchOptions} from "./site.js";
+import * as Turbo from "@hotwired/turbo"
 
 export default class FilterBar extends Controller {
     static targets = [ "searchbar" ]
@@ -7,63 +8,38 @@ export default class FilterBar extends Controller {
         tags: Array,
         alltags: Array,
     }
-
-    // connect() {
-    //     // Store the bound function as an instance property
-    //     this.boundHandleFrameRender = (event) => this.handleFrameRender(event)
-    //     this.element.addEventListener("turbo:frame-render", this.boundHandleFrameRender)
-    // }
-    //
-    // async handleFrameRender(event) {
-    //     await this.sendFiltersToServer();
-    // }
-    //
-    // disconnect() {
-    //     // Remove the event listener using the stored reference
-    //     this.element.removeEventListener("turbo:frame-render", this.boundHandleFrameRender)
-    // }
+    
     async clearSearchBar() {
+        window.appSnapshot.state.search = "";
         this.searchbarTarget.value = "";
         await this.sendFiltersToServer();
     }
     
     async removeTag(event) {
         let tagId = event.params.tagid;
-        await this.sendFiltersToServer(this.tagsValue.filter(id => id !== tagId));
+        
+        window.appSnapshot.state.tags = window.appSnapshot.state.tags.filter(id => id !== tagId);
+        Turbo.visit(window.location.href)
+        // await this.sendFiltersToServer(this.tagsValue.filter(id => id !== tagId));
     }
 
     async addTagDropdownChanged(event) {
-        await this.sendFiltersToServer([...this.tagsValue, parseInt(event.target.value)]);
+        window.appSnapshot.state.tags = [...window.appSnapshot.state.tags, parseInt(event.target.value)]
+        Turbo.visit(window.location.href)
+        //await this.sendFiltersToServer([...this.tagsValue, parseInt(event.target.value)]);
     }
     
-    async sendFiltersToServer(newtags) {
-        if (newtags instanceof Event)
-        {
-            newtags = null
-        }
-
-        const executions = Array.from(this.element.querySelectorAll(".execution_checkbox"))
+    async executionCheckboxClicked(event) {
+        window.appSnapshot.state.executions = Array.from(this.element.querySelectorAll(".execution_checkbox"))
             .filter(checkbox => checkbox.checked)
             .map(checkbox => parseInt(checkbox.value));
-                    
-        var body = JSON.stringify({
-            tags: newtags ?? this.tagsValue,
-            tags_changed: newtags != null,
-            search: this.searchbarTarget.value,
-            executions: executions
-        });
-        
-        let options = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'text/vnd.turbo-stream.html',
-            },
-            body: body
-        };
+        Turbo.visit(window.location.href)
+    }
+    
+    async sendFiltersToServer() {
+        let options = {headers:{}};
         addHeadersToFetchOptions(options);
-        const response = await fetch('/api/search', options);
-
+        const response = await fetch('/api/search?query='+encodeURIComponent(this.searchbarTarget.value), options);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         Turbo.renderStreamMessage(await response.text());
     }

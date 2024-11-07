@@ -101,7 +101,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
             Inputs = [DbContext.Inputs.Single().Id],
             StringVariables = [new() { Name = "Prompt", Value = "Give me a haiku about"}]
         });
-        Assert.Equal(StatusCodes.Status201Created, (int)response.StatusCode);
+        Assert.Equal(StatusCodes.Status202Accepted, (int)response.StatusCode);
         
         var executionUrl = response.Headers.Location ?? throw new ApplicationException("No location found on created execution");
         while (true)

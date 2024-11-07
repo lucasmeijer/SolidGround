@@ -6,9 +6,9 @@ public record ExecutionTurboFrame(int ExecutionId, bool Checked) : TurboFrame(Tu
 {
     public static string TurboFrameIdFor(int executionId) => $"execution_{executionId}";
     protected override Delegate RenderFunc => async (IServiceProvider serviceProvider) => new Html($"""
-          <div class="flex rounded-md bg-purple-100 items-center justify-between p-2">
+          <div class="flex rounded-md bg-purple-100 items-center justify-between p-2 h-14">
              <div class="flex gap-2 items-center">
-             <input {(Checked ? "checked" : "")} value="{ExecutionId}" data-action="click->filterbar#sendFiltersToServer" type="checkbox" class="execution_checkbox w-5 h-5 rounded-full text-purple-600 focus:ring-purple-500 cursor-pointer">
+             <input {(Checked ? "checked" : "")} value="{ExecutionId}" data-action="click->filterbar#executionCheckboxClicked" type="checkbox" class="execution_checkbox w-5 h-5 rounded-full text-purple-600 focus:ring-purple-500 cursor-pointer">
              {(ExecutionId == -1 ? "Original" : await new ExecutionNameTurboFrame(ExecutionId, EditMode: false).RenderAsync(serviceProvider))}
              </div>
              {(ExecutionId != -1 ? CloseButton() : "")}         

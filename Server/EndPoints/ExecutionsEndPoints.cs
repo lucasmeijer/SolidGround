@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using SolidGround.Pages;
 using SolidGroundClient;
 using TurboFrames;
 
@@ -89,7 +90,7 @@ public static class ExecutionsEndPoints
             return Results.Json(new ExecutionStatusDto() { Finished = finished });
         });
         
-        app.MapPost(Routes.api_executions, async (AppDbContext db, IConfiguration config, IServiceScopeFactory scopeFactory, RunExecutionDto runExecutionDto, HttpContext httpContext, AppStateAccessor appStateAccessor) =>
+        app.MapPost(Routes.api_executions, async (AppDbContext db, IConfiguration config, IServiceScopeFactory scopeFactory, RunExecutionDto runExecutionDto, HttpContext httpContext, AppState? appState) =>
         {
             var inputsToOutputs = runExecutionDto.Inputs.ToDictionary(id => id, OutputFor);
 
@@ -103,23 +104,21 @@ public static class ExecutionsEndPoints
             };
             db.Executions.Add(execution);
             await db.SaveChangesAsync();
-            httpContext.Response.StatusCode = StatusCodes.Status201Created;
-            httpContext.Response.Headers.Location = Routes.api_executions_id.For(execution.Id);
 
-            var appState = appStateAccessor.Get();
-            appStateAccessor.Set(appState with { Executions = [..appState.Executions, execution.Id]});
-            
             foreach (var (inputId, output) in inputsToOutputs)
             {
                 _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.EndPoint, runExecutionDto.StringVariables, scopeFactory));
             }
-            
-            return new TurboStreamCollection([
-                TurboStream.Refresh()
-                // //..runExecutionDto.Inputs.Select(i => new TurboStream("replace",TurboFrameContent:new InputTurboFrame(i, [-1,execution.Id], true), Method: "morph")),
-                // new TurboStream("replace", TurboFrameContent:new FilterBarExecutionsList(), Method: "morph")
-            ]);
 
+            if (!httpContext.Request.Headers.Accept.Contains("text/vnd.turbo-stream.html"))
+                return Results.Accepted(Routes.api_executions_id.For(execution.Id));
+
+            if (appState == null)
+                throw new ArgumentNullException(nameof(appState));
+            
+            httpContext.Response.StatusCode = StatusCodes.Status202Accepted;
+            return MorphedBodyUpdate.For(appState with { Executions = [..appState.Executions, execution.Id]});
+            
             Output OutputFor(int inputId) => new()
             {
                 InputId = inputId,

@@ -15,7 +15,7 @@ public abstract record TurboStreamBase : IResult, IActionResult
     public Task ExecuteResultAsync(ActionContext context) => ExecuteAsync(context.HttpContext);
 }
 
-public record TurboStream(string Action, string? Target = null, string? RawContent = null, TurboFrame? TurboFrameContent = null, string? Method = null) : TurboStreamBase
+public record TurboStream(string Action, string? Target = null, string? RawContent = null, PageFragment? TurboFrameContent = null, string? Method = null) : TurboStreamBase
 {
     record TurboStreamWithPayload(string payload) : TurboStreamBase
     {
@@ -23,12 +23,12 @@ public record TurboStream(string Action, string? Target = null, string? RawConte
     }
 
     public static TurboStreamBase Refresh() => new TurboStreamWithPayload($"""<turbo-stream action="refresh"></turbo-stream>""");
-
+    
     public override async Task WriteAsync(HttpContext httpContext)
     {
         var response = httpContext.Response;
         
-        var target = Target ?? TurboFrameContent?.TurboFrameId ?? throw new NotSupportedException("Either Target or TurboFrameId must be set."); 
+        var target = Target ?? (TurboFrameContent as TurboFrame)?.TurboFrameId ?? throw new NotSupportedException("Either Target or TurboFrameId must be set."); 
         
         var method = Method == null ? "" : $"method=\"{Method}\"";
         

@@ -3,7 +3,7 @@ using TurboFrames;
 
 namespace SolidGround.Pages;
 
-public abstract record SolidGroundPage(string Title) : PageFragment
+public record SolidGroundPage(string Title, PageFragment BodyContent) : PageFragment
 {
     static JsonObject ImportMap => new()
     {
@@ -13,8 +13,6 @@ public abstract record SolidGroundPage(string Title) : PageFragment
             ["@hotwired/turbo"] = "https://unpkg.com/@hotwired/turbo@8.0.12/dist/turbo.es2017-esm.js"
         }
     };
-
-    protected abstract Task<Html> RenderBodyContent(IServiceProvider serviceProvider);
     
     public sealed override async Task<Html> RenderAsync(IServiceProvider serviceProvider) => new($"""
          <!DOCTYPE html>
@@ -31,8 +29,8 @@ public abstract record SolidGroundPage(string Title) : PageFragment
              {ImportMap.ToJsonString()}
              </script>
          </head>
-         <body style="scrollbar-gutter: stable; overflow-y: scroll" class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-         {await RenderBodyContent(serviceProvider)}
+         <body id="body" style="scrollbar-gutter: stable; overflow-y: scroll" class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+         {await BodyContent.RenderAsync(serviceProvider)}
          <script src="/js/site.js" type="module"></script>
          </body>
          </html>

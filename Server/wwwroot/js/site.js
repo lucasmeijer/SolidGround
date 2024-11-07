@@ -9,6 +9,7 @@ import AutoSubmitSelectController from "./autosubmit_controller.js";
 import RunExperimentController from "./runexperiment_controller.js";
 import TextAreaResizeController from "./textarearesize_controller.js";
 import AutoReloadController from "./autoreload_controller.js";
+import RestoreCursorPositionController from "./RestoreCursorPositionController.js";
 
 // Initialize Stimulus application
 const application = Application.start();
@@ -19,19 +20,21 @@ application.register("filterbar", FilterBar);
 application.register("formtojson", FormToJsonController);
 application.register("autosubmit", AutoSubmitSelectController);
 application.register("runexperiment", RunExperimentController);
-application.register("textarearesize", TextAreaResizeController)
-application.register("autoreload", AutoReloadController)
+application.register("textarearesize", TextAreaResizeController);
+application.register("autoreload", AutoReloadController);
+application.register("restorecursorposition", RestoreCursorPositionController);
 //application.register("cursor", CursorController);
 
-function getSolidGroundTabId() {
-    const tabId = localStorage.getItem('tabId') || crypto.randomUUID();
-    localStorage.setItem('tabId', tabId);
-    return tabId;
-}
+// function getSolidGroundTabId() {
+//     const tabId = localStorage.getItem('tabId') || crypto.randomUUID();
+//     localStorage.setItem('tabId', tabId);
+//     return tabId;
+// }
 
 export function addHeadersToFetchOptions(fetchOptions)
 {
-    fetchOptions.headers['X-Tab-Id'] = getSolidGroundTabId();
+    //fetchOptions.headers['X-Tab-Id'] = getSolidGroundTabId();
+    fetchOptions.headers['X-App-State'] = JSON.stringify(window.appSnapshot.state);
 }
 
 document.addEventListener('turbo:before-fetch-request', (event) => {

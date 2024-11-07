@@ -21,7 +21,7 @@ static class TagEndPoints
     
     public static void MapTagsEndPoints(this IEndpointRouteBuilder builder)
     {
-        builder.MapGet(Routes.tags, () => new TagsPage());
+        builder.MapGet(Routes.tags, () => new SolidGroundPage("Tags", new TagsPageBodyContent()));
         
         builder.MapDelete(Routes.api_tags_id, async (int id, AppDbContext db) =>
         {

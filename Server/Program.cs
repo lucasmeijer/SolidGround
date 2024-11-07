@@ -1,5 +1,6 @@
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -20,36 +21,38 @@ public record AppState(int[] Tags, int[] Executions, string Search)
     public static AppState Default => new([], [-1], "");
 }
 
-class AppStateAccessor(IMemoryCache cache, IHttpContextAccessor accessor)
-{
-    public void Set(AppState state)
-    {
-        if (CacheKey == null)
-            return;
-        cache.Set(CacheKey, state);
-    }
+public record AppSnapshot(AppState State, int[] Inputs);
 
-    string? CacheKey
-    {
-        get
-        {
-            var context = accessor.HttpContext;
-            if (context == null)
-                return null;
-
-            if (!context.Request.Headers.TryGetValue("X-Tab-Id", out var tabId))
-                return null;
-            return "appstate_"+tabId;
-        }
-    }
-    
-    public AppState Get()
-    {
-        if (CacheKey == null)
-            return AppState.Default;
-        return cache.Get<AppState>(CacheKey) ?? AppState.Default;
-    }
-}
+// class AppStateAccessor(IMemoryCache cache, IHttpContextAccessor accessor)
+// {
+//     public void Set(AppState state)
+//     {
+//         if (CacheKey == null)
+//             return;
+//         cache.Set(CacheKey, state);
+//     }
+//
+//     string? CacheKey
+//     {
+//         get
+//         {
+//             var context = accessor.HttpContext;
+//             if (context == null)
+//                 return null;
+//
+//             if (!context.Request.Headers.TryGetValue("X-Tab-Id", out var tabId))
+//                 return null;
+//             return "appstate_"+tabId;
+//         }
+//     }
+//     
+//     public AppState Get()
+//     {
+//         if (CacheKey == null)
+//             return AppState.Default;
+//         return cache.Get<AppState>(CacheKey) ?? AppState.Default;
+//     }
+// }
 
 public partial class Program
 {
@@ -68,8 +71,19 @@ public partial class Program
         builder.Services.AddControllers();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddMemoryCache();
-        builder.Services.AddScoped<AppStateAccessor>();
-        builder.Services.AddScoped<AppState>(sp => sp.GetRequiredService<AppStateAccessor>().Get());
+        //builder.Services.AddScoped<AppStateAccessor>();
+        builder.Services.AddScoped<AppState>(sp =>
+        {
+            var accessor = sp.GetRequiredService<IHttpContextAccessor>();
+            var context = accessor.HttpContext;
+            if (context == null)
+                return AppState.Default;
+
+            if (!context.Request.Headers.TryGetValue("X-App-State", out var appStateJson))
+                return AppState.Default;
+
+            return JsonSerializer.Deserialize<AppState>(appStateJson.ToString(), JsonSerializerOptions.Web) ?? AppState.Default;
+        });
         
         var app = builder.Build();
         app.MapControllers();
@@ -104,8 +118,7 @@ public partial class Program
 
 //    .WithStaticAssets();
 
-        app.MapGet("/", () => new IndexPage());
-
+        app.MapGet("/", (AppState appState) => new SolidGroundPage("SolidGround", new IndexPageBodyContent(appState)));
 
         app.MapTagsEndPoints();
         app.MapSearchEndPoints();

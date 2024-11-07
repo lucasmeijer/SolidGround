@@ -25,7 +25,7 @@ export default class RunExperimentController extends Controller {
         const formData = new FormData(this.element)
         const data = {
             'string_variables': [],
-            'inputs': JSON.parse(document.querySelector('#inputlistdiv').getAttribute('data-inputids')),
+            'inputs': window.appSnapshot.inputs,
             'endpoint': formData.get('endpoint')
         }
        
