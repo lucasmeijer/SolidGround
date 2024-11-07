@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using SolidGround.Pages;
 using SolidGroundClient;
 using TurboFrames;
 
@@ -107,10 +106,11 @@ public static class ExecutionsEndPoints
 
             foreach (var (inputId, output) in inputsToOutputs)
             {
+                //todo: move to a background service that has logging on errors and telemetry
                 _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.EndPoint, runExecutionDto.StringVariables, scopeFactory));
             }
 
-            if (!httpContext.Request.Headers.Accept.Contains("text/vnd.turbo-stream.html"))
+            if (!httpContext.Request.Headers.Accept.ToString().Contains("text/vnd.turbo-stream.html", StringComparison.OrdinalIgnoreCase))
                 return Results.Accepted(Routes.api_executions_id.For(execution.Id));
 
             if (appState == null)
