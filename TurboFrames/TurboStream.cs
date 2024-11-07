@@ -24,6 +24,7 @@ public record TurboStream(string Action, string? Target = null, string? RawConte
 
     public static TurboStreamBase Refresh() => new TurboStreamWithPayload($"""<turbo-stream action="refresh"></turbo-stream>""");
     
+    
     public override async Task WriteAsync(HttpContext httpContext)
     {
         var response = httpContext.Response;

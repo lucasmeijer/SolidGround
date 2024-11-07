@@ -172,7 +172,12 @@ public static class SolidGroundExtensions
 {
     public static void AddSolidGround<T>(this IServiceCollection serviceCollection) where T : SolidGroundVariables
     {
-        serviceCollection.AddHttpClient();
+        serviceCollection.AddHttpClient<SolidGroundHttpClient>((sp,options) =>
+        {
+            var config = sp.GetRequiredService<IConfiguration>();       
+            options.BaseAddress = new Uri(config[SolidGroundConstants.SolidGroundBaseUrl] ?? throw new Exception("Missing SolidGroundBaseUrl"));
+            options.DefaultRequestHeaders.Add("X-Api-Key", config[SolidGroundConstants.SolidGroundApiKey]  ?? throw new Exception("Missing SolidGroundApiKey"));
+        });
         serviceCollection.AddHttpContextAccessor();
         serviceCollection.AddScoped<SolidGroundVariables, T>();
         serviceCollection.AddScoped<T>(sp =>

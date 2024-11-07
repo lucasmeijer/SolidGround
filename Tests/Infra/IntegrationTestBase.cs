@@ -4,18 +4,18 @@ using Xunit;
 
 public abstract class IntegrationTestBase : IAsyncLifetime
 {
-    WebApplicationUnderTest<AppDbContext> WebApplicationUnderTest { get; set; }
+    SolidGroundApplicationUnderTest WebApplicationUnderTest { get; set; }
     protected HttpClient Client => WebApplicationUnderTest.HttpClient;
     protected AppDbContext DbContext => WebApplicationUnderTest.DbContext;
     
     public async Task InitializeAsync()
     {
         string databaseName = Guid.NewGuid().ToString();
-        var webApplication = Program.CreateWebApplication([], (config, dboptions) =>
+        var webApplication = Program.CreateWebApplication([], (services, dboptions) =>
         {
             dboptions.UseInMemoryDatabase(databaseName: databaseName);
         });
-        WebApplicationUnderTest = await WebApplicationUnderTest<AppDbContext>.StartAsync(webApplication);
+        WebApplicationUnderTest = await SolidGroundApplicationUnderTest.StartAsync(webApplication);
     }
 
     async Task IAsyncLifetime.DisposeAsync()

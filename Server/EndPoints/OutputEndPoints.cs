@@ -27,7 +27,7 @@ static class OutputEndPoints
         
             return new TurboStream("remove", Target: OutputTurboFrame.TurboFrameIdFor(id));
         });
-        
+
         app.MapPatch(Routes.api_output_id, async (AppDbContext db, int id, OutputDto outputDto) =>
         {
             var output = await db.Outputs.FindAsync(id);
@@ -38,7 +38,7 @@ static class OutputEndPoints
             output.StringVariables = outputObject.StringVariables;
             output.Status = ExecutionStatus.Completed;
             await db.SaveChangesAsync();
-            return Results.Ok();    
-        });
+            return Results.Ok();
+        }).RequireTenantApiKey();
     }
 }

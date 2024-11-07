@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -11,9 +12,17 @@ public class SendRequest
     public required HttpMethod Method { get; init; }
 }
 
+public class SolidGroundHttpClient(HttpClient httpClient)
+{
+    public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage httpRequestMessage, CancellationToken stoppingToken)
+    {
+        return await httpClient.SendAsync(httpRequestMessage, stoppingToken);
+    }
+}
+
 public class SolidGroundBackgroundService(
     ILogger<SolidGroundBackgroundService> logger,
-    IHttpClientFactory httpClientFactory)
+    SolidGroundHttpClient solidGroundHttpClient)
     : BackgroundService
 {
     readonly Channel<SendRequest> _channel = Channel.CreateUnbounded<SendRequest>(new()
@@ -21,8 +30,7 @@ public class SolidGroundBackgroundService(
         SingleReader = true,
         SingleWriter = false 
     });
-
-    readonly HttpClient _httpClient = httpClientFactory.CreateClient(nameof(SolidGroundBackgroundService));
+    
     readonly SemaphoreSlim _processingCompleteSemaphore = new(0);
     int _pendingRequests = 0;
 
@@ -86,7 +94,7 @@ public class SolidGroundBackgroundService(
     async Task ProcessRequestAsync(SendRequest request, CancellationToken stoppingToken)
     {
         var httpRequestMessage = new HttpRequestMessage(request.Method, request.Url) { Content = JsonContent.Create(request.Payload)};
-        using var response = await _httpClient.SendAsync(httpRequestMessage, stoppingToken);
+        using var response = await solidGroundHttpClient.SendAsync(httpRequestMessage, stoppingToken);
         response.EnsureSuccessStatusCode();
         logger.LogInformation("Successfully sent payload to {Url}", request.Url);
     }

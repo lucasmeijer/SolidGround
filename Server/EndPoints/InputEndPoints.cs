@@ -28,24 +28,24 @@ static class InputEndPoints
     public static void MapInputEndPoints(this IEndpointRouteBuilder app)
     {
         app.MapPost(Routes.api_input, async (AppDbContext db, [FromBody] InputDto inputDto) =>
-        {
-            var input = await InputFor(inputDto);
-
-            var output = OutputFor(inputDto.Output, input);
-
-            db.Add(new Execution
             {
-                Outputs = [output],
-                StartTime = DateTime.Now
-            });
+                var input = await InputFor(inputDto);
 
-            int written = await db.SaveChangesAsync();
+                var output = OutputFor(inputDto.Output, input);
 
-            return TypedResults.Created(Routes.api_input_id.For(input.Id));
-            
-        }).DisableAntiforgery();
+                db.Add(new Execution
+                {
+                    Outputs = [output],
+                    StartTime = DateTime.Now
+                });
+
+                int written = await db.SaveChangesAsync();
+
+                return TypedResults.Created(Routes.api_input_id.For(input.Id));
+
+            }).DisableAntiforgery()
+            .RequireTenantApiKey();
         
-        //app.MapGet(Routes.api_input_id, (int id) => new InputTurboFrame(id));
         app.MapGet(Routes.api_input_id_details, (int id) => new InputDetailsTurboFrame(id));
         app.MapGet(Routes.api_input_id_name, (int id) => new InputNameTurboFrame(id, EditMode:false));
         app.MapGet(Routes.api_input_id_name_edit, (int id) => new InputNameTurboFrame(id, EditMode:true));

@@ -115,8 +115,12 @@ public class InputEndPointTests : IntegrationTestBase
     [Fact]
     public async Task PostToTags_Returns_Created()
     {
-        var input = (await Client.PostAsJsonAsync("/api/input", SimpleDto)).Headers.Location;
-        var tag = (await Client.PostAsJsonAsync("/api/tags", new TagEndPoints.CreateTagDto() { Name = "mytag"})).Headers.Location;
+        var inputResponse = await Client.PostAsJsonAsync("/api/input", SimpleDto);
+        inputResponse.EnsureSuccessStatusCode();
+        var input = inputResponse.Headers.Location;
+        var tagResponse = await Client.PostAsJsonAsync("/api/tags", new TagEndPoints.CreateTagDto() { Name = "mytag"});
+        tagResponse.EnsureSuccessStatusCode();
+        var tag = tagResponse.Headers.Location;
         var response = await Client.PostAsJsonAsync($"{input}/tags", new InputEndPoints.AddTagToInputDto() { TagId = 1 });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal("/api/input/1/tags/1", response.Headers.Location?.OriginalString);

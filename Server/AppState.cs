@@ -17,7 +17,8 @@ abstract record Tenant
 
 record FlashCardsTenant : Tenant
 {
+    public static readonly string _ApiKey = "54983894579837459837495384";
     public override string Identifier => "flashcards";
     public override User[] Users => [new("lucas", "12324")];
-    public override string ApiKey => "54983894579837459837495384";
+    public override string ApiKey => _ApiKey;
 }

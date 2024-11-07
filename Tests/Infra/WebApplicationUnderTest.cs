@@ -1,28 +1,77 @@
+using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SolidGround;
+
+class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
+{
+    SolidGroundApplicationUnderTest(WebApplication webApplication) : base(webApplication)
+    {
+    }
+
+    protected override async Task<HttpClient> CreateHttpClient(Uri baseAddress)
+    {
+        var httpMessageHandler = new HttpClientHandler
+        {
+            CookieContainer = new(),
+            UseCookies = true,
+            AllowAutoRedirect = false,
+        };
+        var client = new HttpClient(httpMessageHandler)
+        {
+            BaseAddress = baseAddress,
+            DefaultRequestHeaders = { {"X-Api-Key", FlashCardsTenant._ApiKey } }
+        };
+
+        //hit the login endpoint so we get assigned a cookie, so all subsequent tests work
+        (await client.PostAsync("/login", new FormUrlEncodedContent(new[]
+        {
+            new KeyValuePair<string, string>("username", "your-username"),
+            new KeyValuePair<string, string>("password", "1234"),
+        }))).EnsureSuccessStatusCode();
+        return client;
+    }
+
+    public new static async Task<SolidGroundApplicationUnderTest> StartAsync(WebApplication webApplication)
+    {
+        var baseAddress = await StartAndGetAddress(webApplication);
+        var result = new SolidGroundApplicationUnderTest(webApplication);
+        result.HttpClient = await result.CreateHttpClient(baseAddress);
+        return result;
+    }
+}
 
 public class WebApplicationUnderTest<TDbContext> : IAsyncDisposable where TDbContext : notnull
 {
     readonly WebApplication _webApplication;
     readonly IServiceScope _scope;
     public IServiceProvider Services { get; }
-    public HttpClient HttpClient { get; }
+    public HttpClient HttpClient { get; set; } = null!;
     public TDbContext DbContext { get; }
 
-    WebApplicationUnderTest(WebApplication webApplication, IServiceProvider services, HttpClient httpClient)
+    protected WebApplicationUnderTest(WebApplication webApplication)
     {
         _webApplication = webApplication;
-        Services = services;
-        HttpClient = httpClient;
-        _scope = services.CreateScope();
+        Services = webApplication.Services;
+        _scope = Services.CreateScope();
         DbContext = typeof(TDbContext).IsAssignableTo(typeof(DbContext)) ? _scope.ServiceProvider.GetRequiredService<TDbContext>() : default!;
     }
 
+    protected virtual Task<HttpClient> CreateHttpClient(Uri baseAddress) => Task.FromResult<HttpClient>(new() { BaseAddress = baseAddress });
+
     public static async Task<WebApplicationUnderTest<TDbContext>> StartAsync(WebApplication webApplication)
+    {
+        var baseAddress = await StartAndGetAddress(webApplication);
+        var result = new WebApplicationUnderTest<TDbContext>(webApplication);
+        result.HttpClient = await result.CreateHttpClient(baseAddress);
+        return result;
+    }
+
+    protected static async Task<Uri> StartAndGetAddress(WebApplication webApplication)
     {
         var serviceProvider = webApplication.Services;
         
@@ -33,13 +82,13 @@ public class WebApplicationUnderTest<TDbContext> : IAsyncDisposable where TDbCon
             .Addresses;
         
         addressesFeatureAddresses.Add("http://127.0.0.1:0");
+        
         await webApplication.StartAsync();
-        
-        var client = new HttpClient() { BaseAddress = new Uri(addressesFeatureAddresses.First()) };
-        
-        return new(webApplication, webApplication.Services, client);
+        var baseAddress = new Uri(addressesFeatureAddresses.First());
+        return baseAddress;
     }
-    
+
+
     public async ValueTask DisposeAsync()
     {
         await _webApplication.StopAsync();

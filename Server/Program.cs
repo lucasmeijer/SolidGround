@@ -1,77 +1,55 @@
-using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SolidGround;
 using SolidGround.Pages;
-using TurboFrames;
+
 [assembly: InternalsVisibleTo("Tests")]
 
-CreateWebApplication(args, (configuration, dboptions) =>
+CreateWebApplication(args, (services, dboptions) =>
 {
-    var persistentStorage = configuration["PERSISTENT_STORAGE"] ?? ".";
+    var persistentStorage = services.GetRequiredService<IConfiguration>()["PERSISTENT_STORAGE"] ?? ".";
     dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground.db");
 }).Run();
 
-public record AppState(int[] Tags, int[] Executions, string Search)
-{
-    public static AppState Default => new([], [-1], "");
-}
-
-public record AppSnapshot(AppState State, int[] Inputs);
-
-// class AppStateAccessor(IMemoryCache cache, IHttpContextAccessor accessor)
-// {
-//     public void Set(AppState state)
-//     {
-//         if (CacheKey == null)
-//             return;
-//         cache.Set(CacheKey, state);
-//     }
-//
-//     string? CacheKey
-//     {
-//         get
-//         {
-//             var context = accessor.HttpContext;
-//             if (context == null)
-//                 return null;
-//
-//             if (!context.Request.Headers.TryGetValue("X-Tab-Id", out var tabId))
-//                 return null;
-//             return "appstate_"+tabId;
-//         }
-//     }
-//     
-//     public AppState Get()
-//     {
-//         if (CacheKey == null)
-//             return AppState.Default;
-//         return cache.Get<AppState>(CacheKey) ?? AppState.Default;
-//     }
-// }
-
 public partial class Program
 {
-    public static WebApplication CreateWebApplication(string[] args, Action<IConfiguration, DbContextOptionsBuilder> setupDb)
+    public static WebApplication CreateWebApplication(string[] args, Action<IServiceProvider, DbContextOptionsBuilder> setupDb)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        builder.Services.AddDbContext<AppDbContext>(setupDb);
+
+        builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddCookie(options =>
+            {
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SecurePolicy = builder.Environment.IsProduction()
+                    ? CookieSecurePolicy.Always
+                    : CookieSecurePolicy.None;
+                options.Cookie.SameSite = SameSiteMode.Strict;
+                options.LoginPath = "/login";
+            });
         
-        builder.Services.AddDbContext<AppDbContext>(options =>
+        builder.Services.AddAuthorization(options =>
         {
-            setupDb(builder.Configuration, options);
+            options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .Build();
         });
-    
+        
         builder.Services.AddHttpClient();
         builder.Services.AddHealthChecks().AddCheck("Health", () => HealthCheckResult.Healthy("OK"));
         builder.Services.AddControllersWithViews();
         builder.Services.AddControllers();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddMemoryCache();
-        //builder.Services.AddScoped<AppStateAccessor>();
+
+        builder.Services.AddScoped<Tenant>(sp => new FlashCardsTenant());
+        
         builder.Services.AddScoped<AppState>(sp =>
         {
             var accessor = sp.GetRequiredService<IHttpContextAccessor>();
@@ -96,7 +74,6 @@ public partial class Program
                 dbContext.Database.Migrate();
         }
 
-// Configure the HTTP request pipeline.
         if (!app.Environment.IsDevelopment())
         {
             app.UseExceptionHandler("/Error");
@@ -104,18 +81,13 @@ public partial class Program
             app.UseHsts();
         }
 
-//app.UseHttpMethodOverride(new() { FormFieldName = "_method"});
         app.UseHttpsRedirection();
         app.UseRouting();
         app.UseAuthorization();
         app.UseHealthChecks("/up");
-        app.MapTurboFramesInSameAssemblyAs(typeof(Program));
-
-
 
 //app.MapStaticAssets();
         app.UseStaticFiles();
-
 //    .WithStaticAssets();
 
         app.MapGet("/", (AppState appState) => new SolidGroundPage("SolidGround", new IndexPageBodyContent(appState)));
@@ -127,6 +99,29 @@ public partial class Program
         app.MapExperimentEndPoints();
         app.MapImagesEndPoints();
         app.MapExecutionsEndPoints();
+        app.MapLoginEndPoints();
         return app;
     }
+}
+
+public static class RouteHandlerBuilderExtensions
+{
+    public static RouteHandlerBuilder RequireTenantApiKey(this RouteHandlerBuilder builder) =>
+        builder
+            //first lets remove the default requirement for cookie authorization:
+            .AllowAnonymous()
+            //and then add our own api checks.
+            .AddEndpointFilter(async (context, next) =>
+        {
+            var tenant = context.HttpContext.RequestServices.GetRequiredService<Tenant>();
+            if (!context.HttpContext.Request.Headers.TryGetValue("X-Api-Key", out var providedApiKey))
+                return Results.Unauthorized();
+
+            if (!tenant.ApiKey.Equals(providedApiKey))
+            {
+                return Results.Unauthorized();
+            }
+
+            return await next(context);
+        });
 }
