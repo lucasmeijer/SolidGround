@@ -1,12 +1,12 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.EntityFrameworkCore.Query;
+using System.Diagnostics.CodeAnalysis;
+using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace SolidGround;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Input> Inputs { get; set; }
     public DbSet<Tag> Tags { get; set; }
@@ -24,72 +24,39 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Configure Execution -> Output relationship
-        modelBuilder.Entity<Execution>()
-            .HasMany(e => e.Outputs)
-            .WithOne(o => o.Execution)
-            .HasForeignKey(o => o.ExecutionId)
-            .OnDelete(DeleteBehavior.Cascade);
-
         modelBuilder.Entity<Tag>()
             .HasMany(i => i.Inputs)
             .WithMany(i => i.Tags)
             .UsingEntity(j => j.ToTable("InputSetInputs"));
-        
-        // Configure Input -> InputStrings relationship
-        modelBuilder.Entity<Input>()
-            .HasMany(i => i.Strings)
-            .WithOne(ic => ic.Input)
-            .HasForeignKey(ic => ic.InputId)
-            .OnDelete(DeleteBehavior.Cascade);
-        
-        modelBuilder.Entity<Input>()
-            .HasMany(i => i.Outputs)
-            .WithOne(ic => ic.Input)
-            .HasForeignKey(ic => ic.InputId)
-            .OnDelete(DeleteBehavior.Cascade);
-        
-        // Configure Input -> InputFiles relationship
-        modelBuilder.Entity<Input>()
-            .HasMany(i => i.Files)
-            .WithOne(ic => ic.Input)
-            .HasForeignKey(ic => ic.InputId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        // Configure Output -> OutputComponent relationship
-        modelBuilder.Entity<Output>()
-            .HasMany(o => o.Components)
-            .WithOne(oc => oc.Output)
-            .HasForeignKey(oc => oc.OutputId)
-            .OnDelete(DeleteBehavior.Cascade);
-        
-        // Configure Output -> StringVariable relationship
-        modelBuilder.Entity<Output>()
-            .HasMany(o => o.StringVariables)
-            .WithOne(oc => oc.Output)
-            .HasForeignKey(oc => oc.OutputId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
-    
-    
 }
 
-public class Execution
+
+
+class Execution
 {
-    public int Id { get; set; }
-    public DateTime StartTime { get; set; }
-    public bool IsReference { get; set; }
-    public List<Output> Outputs { get; set; } = [];
+    public int Id { get; [UsedImplicitly] set; }
+    public DateTime StartTime { get; [UsedImplicitly] set; }
+    public bool IsReference { get; [UsedImplicitly] set; }
+    public List<Output> Outputs { get; [UsedImplicitly] set; } = [];
     [MaxLength(200)]
     public string? Name { get; set; } = null;
+
+    public bool SolidGroundInitiated { get; [UsedImplicitly] set; }
+
+    public Input Input { get; [UsedImplicitly] set; } = null!;
+    public int InputId { get; [UsedImplicitly] set; }
+    
+    [UsedImplicitly]
+    public List<StringVariable> StringVariables { get; set; } = [];
 }
 
-public class Tag
+class Tag
 {
-    public int Id { get; set; }
+    [UsedImplicitly] public int Id { get; set; }
     [MaxLength(200)]
-    public string Name { get; set; } = null!;
-    public List<Input> Inputs { get; set; } = [];
+    [UsedImplicitly] public string Name { get; set; } = null!;
+    [UsedImplicitly] public List<Input> Inputs { get; set; } = [];
 }
 
 public enum ExecutionStatus
@@ -99,21 +66,31 @@ public enum ExecutionStatus
     Failed
 }
 
-public class Input
+// ReSharper disable InconsistentNaming
+class Input
 {
-    public int Id { get; set; }
-    public string? Name { get; set; }
-    public List<Tag> Tags { get; set; } = [];
-    public List<InputString> Strings { get; set; } = [];
-    public List<InputFile> Files { get; set; } = [];
-    public string OriginalRequest_Route { get; set; } = null!;
-    public List<Output> Outputs { get; set; } = [];
-    public string? OriginalRequest_ContentType { get; set; } = null!;
-    public string OriginalRequest_Body { get; set; } = null!;
-    public string OriginalRequest_Host { get; set; } = null!;
-    public string TurboFrameId => $"input_{Id}";
-    public string TurboFrameIdOfTags => $"input_{Id}_tags";
+    
+    public int Id { get; [UsedImplicitly] set; }
+    [MaxLength(200)] public string? Name { get; set; }
+    public List<Tag> Tags { get; [UsedImplicitly] set; } = [];
+    public List<InputString> Strings { get; [UsedImplicitly] set; } = [];
+    public List<InputFile> Files { get; [UsedImplicitly] set; } = [];
+    [MaxLength(200)]
+    public string OriginalRequest_Route { get; [UsedImplicitly] set; } = null!;
+    
+    [SuppressMessage("ReSharper", "EntityFramework.ModelValidation.UnlimitedStringLength")]
+    public string? OriginalRequest_QueryString { get; [UsedImplicitly] set; }
+    
+    public List<Output> Outputs { get; [UsedImplicitly] set; } = [];
+    [MaxLength(200)]
+    public string? OriginalRequest_ContentType { get; [UsedImplicitly] set; }
 
+    [MaxLength(10)]
+    public string OriginalRequest_Method { get; [UsedImplicitly] set; } = "POST";
+    
+    [SuppressMessage("ReSharper", "EntityFramework.ModelValidation.UnlimitedStringLength")]
+    public string OriginalRequest_Body { get; [UsedImplicitly] set; } = null!;
+    
     public static Input Example => new()
     {
         Id = 1,
@@ -125,10 +102,10 @@ public class Input
         ]
     };
 }
+// ReSharper restore InconsistentNaming
 
 
-
-public class InputString
+class InputString
 {
     public int Id { get; set; }
 
@@ -141,30 +118,31 @@ public class InputString
     public string Value { get; set; } = null!;
 }
 
-public class InputFile
+
+class InputFile
 {
     public int Id { get; set; }
 
-    // Foreign key to Input
-    public int InputId { get; set; }
-    public Input Input { get; set; } = null!;
+    public int InputId { get; [UsedImplicitly] set; }
 
-    public string Name { get; set; } = null!;
+    [MaxLength(200)]
+    public string Name { get; [UsedImplicitly] set; } = null!;
     
-    public int Index { get; set; }
-    public string MimeType { get; set; } = null!;
-    public byte[] Bytes { get; set; } = [];
+    public int Index { get; [UsedImplicitly] set; }
+    [MaxLength(100)]
+    public string MimeType { get; [UsedImplicitly] set; } = null!;
+    public byte[] Bytes { get; [UsedImplicitly] set; } = [];
 }
 
-public class Output
+class Output
 {
-    public int Id { get; set; }
+    public int Id { get; [UsedImplicitly] set; }
 
-    public int ExecutionId { get; set; }
-    public Execution Execution { get; set; } = null!;
+    public int ExecutionId { get; [UsedImplicitly] set; }
+    public Execution Execution { get; [UsedImplicitly] set; } = null!;
 
-    public int InputId { get; set; }
-    public Input Input { get; set; }  = null!;
+    public int InputId { get; [UsedImplicitly] set; }
+    public Input Input { get; [UsedImplicitly] set; }  = null!;
     
     public ExecutionStatus Status { get; set; }
     public List<OutputComponent> Components { get; set; } = [];
@@ -172,8 +150,6 @@ public class Output
     public List<StringVariable> StringVariables { get; set; } = [];
     
     public string TurboFrameId => $"output_{Id}";
-
-    
     
     public static Output Example => new()
     {
@@ -182,27 +158,27 @@ public class Output
     };
 }
 
-public class StringVariable
+class StringVariable
 {
-    public Output Output { get; set; } = null!;
-    public int OutputId { get; set; }
+    public int? OutputId { get; set; }
+    public int? ExecutionId { get; set; }
     public int Id { get; set; }
-    public string Name { get; set; } = null!;
-    public string Value { get; set; } = null!;
+    [MaxLength(200)]
+    public string Name { get; [UsedImplicitly] set; } = null!;
+    
+    [SuppressMessage("ReSharper", "EntityFramework.ModelValidation.UnlimitedStringLength")]
+    public string Value { get; [UsedImplicitly] set; } = null!;
 }
 
-public class OutputComponent
+class OutputComponent
 {
-    public int Id { get; set; }
+    public int Id { get; [UsedImplicitly] set; }
 
-    public int OutputId { get; set; }
-    public Output Output { get; set; } = null!;
+    public int OutputId { get; [UsedImplicitly] set; }
+    public Output Output { get; [UsedImplicitly] set; } = null!;
     
-    public string Name { get; set; } = null!;
-    public string? Value { get; set; }
-}
-
-public static class Extensions2
-{
-    
+    [MaxLength(200)]
+    public string Name { get; [UsedImplicitly] set; } = null!;
+    [SuppressMessage("ReSharper", "EntityFramework.ModelValidation.UnlimitedStringLength")]
+    public string? Value { get; [UsedImplicitly] set; }
 }

@@ -3,7 +3,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record InputTurboFrame(int InputId, int[] ExecutionIds, bool StartOpen) : TurboFrame(TurboFrameIdFor(InputId))
+record InputTurboFrame(int InputId, int[] ExecutionIds, bool StartOpen) : TurboFrame(TurboFrameIdFor(InputId))
 {
     public static string TurboFrameIdFor(int inputId) => $"input_{inputId}";
 
@@ -21,9 +21,18 @@ public record InputTurboFrame(int InputId, int[] ExecutionIds, bool StartOpen) :
         if (ExecutionIds.Contains(-1))
         {
             //-1 is a special meaning: it means that for each input just show the output it was first submitted with.
-            var originalOutput = await db.Outputs.Where(o => o.InputId == InputId).OrderBy(o => o.Id).FirstOrDefaultAsync();
-            if (originalOutput != null)
-                outputs.Insert(0, originalOutput);
+            var originalExecution = await db
+                .Executions
+                .Where(e => e.InputId == InputId && e.SolidGroundInitiated == true)
+                .FirstOrDefaultAsync();
+
+            if (originalExecution != null)
+            {
+                await db.Entry(originalExecution).Collection(e=>e.Outputs).LoadAsync();
+                var originalOutput = originalExecution.Outputs.FirstOrDefault();
+                if (originalOutput != null)
+                    outputs.Insert(0, originalOutput);
+            }
         }
         
         return new Html($"""

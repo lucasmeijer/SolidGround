@@ -1,11 +1,11 @@
 namespace SolidGround;
 
-public record ExecutionNameTurboFrame(int ExecutionId, bool EditMode) : EditableNameTurboFrame($"execution_{ExecutionId}_name", EditMode)
+record ExecutionNameTurboFrame(int ExecutionId, bool EditMode) : EditableNameTurboFrame($"execution_{ExecutionId}_name", EditMode)
 {
     protected override async Task<string> FindCurrentName(AppDbContext db)
     {
         var execution = await db.Executions.FindAsync(ExecutionId) ?? throw new BadHttpRequestException("ExecutionId not found");
-        return execution.Name ?? "Naamloos";
+        return execution.Name ?? $"Naamloos ({execution.SolidGroundInitiated})";
     }
 
     protected override string EditRoute => ExecutionsEndPoints.Routes.api_executions_id_name_edit.For(ExecutionId);

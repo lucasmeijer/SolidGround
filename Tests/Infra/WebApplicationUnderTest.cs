@@ -2,10 +2,12 @@ using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SolidGround;
+using Xunit;
 
 class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
 {
@@ -19,7 +21,7 @@ class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
         {
             CookieContainer = new(),
             UseCookies = true,
-            AllowAutoRedirect = false,
+            //AllowAutoRedirect = false,
         };
         var client = new HttpClient(httpMessageHandler)
         {
@@ -28,11 +30,14 @@ class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
         };
 
         //hit the login endpoint so we get assigned a cookie, so all subsequent tests work
-        (await client.PostAsync("/login", new FormUrlEncodedContent(new[]
+        var httpResponseMessage = await client.PostAsync("/login", new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("username", "your-username"),
             new KeyValuePair<string, string>("password", "1234"),
-        }))).EnsureSuccessStatusCode();
+        }));
+        httpResponseMessage.EnsureSuccessStatusCode();
+        // //A succesful login will return .Found for redirect, which is technically not "succesful".
+        // Assert.Equal(HttpStatusCode.Found, httpResponseMessage.StatusCode);
         return client;
     }
 

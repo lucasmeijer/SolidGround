@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 
-public record RouteTemplate
+record RouteTemplate
 {
     readonly (string Placeholder, Type Type)[] _parameters;
     public string Value { get; }

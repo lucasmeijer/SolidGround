@@ -3,7 +3,7 @@ using TurboFrames;
 
 namespace SolidGround.Pages;
 
-public record SolidGroundPage(string Title, PageFragment BodyContent) : PageFragment
+record SolidGroundPage(string Title, PageFragment BodyContent) : PageFragment
 {
     static JsonObject ImportMap => new()
     {

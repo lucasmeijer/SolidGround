@@ -1,7 +1,7 @@
 using SolidGround.Pages;
 using TurboFrames;
 
-public static class MorphedBodyUpdate
+static class MorphedBodyUpdate
 {
     public static IResult For(AppState appState)
     {

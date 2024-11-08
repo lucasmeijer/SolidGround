@@ -1,7 +1,7 @@
 using SolidGround;
 using TurboFrames;
 
-public record RunExperimentTurboFrame : TurboFrame
+record RunExperimentTurboFrame : TurboFrame
 {
     int? OutputIdWhoseVariablesToUse { get; }
     
@@ -19,7 +19,7 @@ public record RunExperimentTurboFrame : TurboFrame
 
     async Task<StringVariableDto[]> GetVariablesFromServiceUnderTest(IConfiguration config, HttpClient httpClient)
     {
-        var requestUri = $"{TargetAppBaseAddress(config)}/solidground";
+        var requestUri = $"{TargetAppBaseUrl(config)}/solidground";
         var availableVariablesDto = await httpClient.GetFromJsonAsync<AvailableVariablesDto>(requestUri) ?? throw new Exception("No available variables found");
         
         //
@@ -46,7 +46,7 @@ public record RunExperimentTurboFrame : TurboFrame
         return availableVariablesDto.StringVariables;
     }
 
-    static string TargetAppBaseAddress(IConfiguration config) => config.GetMandatory("SOLIDGROUND_TARGET_APP");
+    static string TargetAppBaseUrl(IConfiguration config) => config.GetMandatory("SOLIDGROUND_TARGET_APP");
 
     public new static string TurboFrameId => "run_experiment_form";
 
@@ -62,7 +62,7 @@ public record RunExperimentTurboFrame : TurboFrame
                                      
                                        {(await GetVariablesFromServiceUnderTest(config, httpClient)).Render(RenderVariable)} 
                                       
-                                      <input type="hidden" name="endpoint" value="{TargetAppBaseAddress(config)}/photos"/>
+                                      <input type="hidden" name="baseurl" value="{TargetAppBaseUrl(config)}"/>
                                       <button type="submit" class="px-4 py-2 bg-green-200 hover:bg-green-700 rounded">
                                           Run Experiment
                                       </button>

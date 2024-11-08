@@ -3,7 +3,7 @@ using TurboFrames;
 
 namespace SolidGround.Pages;
 
-public record TagsPageBodyContent : PageFragment
+record TagsPageBodyContent : PageFragment
 {
     public override async Task<Html> RenderAsync(IServiceProvider serviceProvider)
     {

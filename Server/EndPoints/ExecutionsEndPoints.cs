@@ -6,7 +6,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public static class ExecutionsEndPoints
+static class ExecutionsEndPoints
 {
     [SuppressMessage("ReSharper", "InconsistentNaming")] // ReSharper disable IdentifierTypo
     public static class Routes
@@ -99,7 +99,9 @@ public static class ExecutionsEndPoints
                 Outputs =
                 [
                     ..inputsToOutputs.Values
-                ]
+                ],
+                StringVariables = [..runExecutionDto.StringVariables.Select(s=> new StringVariable() { Name = s.Name, Value = s.Value})],
+                SolidGroundInitiated = true
             };
             db.Executions.Add(execution);
             await db.SaveChangesAsync();
@@ -107,7 +109,7 @@ public static class ExecutionsEndPoints
             foreach (var (inputId, output) in inputsToOutputs)
             {
                 //todo: move to a background service that has logging on errors and telemetry
-                _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.EndPoint, runExecutionDto.StringVariables, scopeFactory));
+                _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.BaseUrl, runExecutionDto.StringVariables, scopeFactory));
             }
 
             if (!httpContext.Request.Headers.Accept.ToString().Contains("text/vnd.turbo-stream.html", StringComparison.OrdinalIgnoreCase))
@@ -121,8 +123,7 @@ public static class ExecutionsEndPoints
             
             Output OutputFor(int inputId) => new()
             {
-                InputId = inputId,
-                StringVariables = [..runExecutionDto.StringVariables.Select(s=> new StringVariable() { Name = s.Name, Value = s.Value})],
+                StringVariables = [],
                 Status = ExecutionStatus.Started,
                 Components = []
             };
@@ -130,7 +131,7 @@ public static class ExecutionsEndPoints
     }
     
     
-    static async Task ExecutionForInput(int inputId, int outputId, string appEndPoint, StringVariableDto[] variables, IServiceScopeFactory scopeFactory)
+    static async Task ExecutionForInput(int inputId, int outputId, string baseUrl, StringVariableDto[] variables, IServiceScopeFactory scopeFactory)
     {
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -145,16 +146,16 @@ public static class ExecutionsEndPoints
 
             try
             {
-                requestUri = new Uri(appEndPoint);
+                requestUri = new Uri(baseUrl.TrimEnd("/") + input.OriginalRequest_Route + input.OriginalRequest_QueryString);
             }
             catch (UriFormatException ufe)
             {
-                throw new BadHttpRequestException($"Invalid end point: {appEndPoint}", ufe);
+                throw new BadHttpRequestException($"Invalid end point: {baseUrl}", ufe);
             }
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Post,
+                Method = string.Equals(input.OriginalRequest_Method, "post", StringComparison.InvariantCultureIgnoreCase) ? HttpMethod.Post : HttpMethod.Get,
                 RequestUri = requestUri,
                 Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
                 {

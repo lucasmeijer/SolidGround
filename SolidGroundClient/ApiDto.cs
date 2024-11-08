@@ -22,6 +22,12 @@ public record RequestDto
         
     [JsonPropertyName("route")]
     public required string Route { get; init; }
+    
+    [JsonPropertyName("query_string")]
+    public required string? QueryString { get; init; }
+    
+    [JsonPropertyName("method")]
+    public required string Method { get; init; }
         
     [JsonPropertyName("base_path")]
     public required string BasePath { get; init; }
@@ -69,8 +75,8 @@ public record RunExecutionDto
     [JsonPropertyName("string_variables")]
     public required StringVariableDto[] StringVariables { get; init; }
 
-    [JsonPropertyName("endpoint")]
-    public required string EndPoint { get; init; }
+    [JsonPropertyName("baseurl")]
+    public required string BaseUrl { get; init; }
 }
 
 public record ExecutionStatusDto

@@ -5,7 +5,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_details")
+record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_details")
 {
     protected override Delegate RenderFunc => async (IServiceProvider serviceProvider, AppDbContext db) =>
     {

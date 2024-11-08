@@ -35,8 +35,10 @@ static class InputEndPoints
 
                 db.Add(new Execution
                 {
+                    Input = input,
                     Outputs = [output],
-                    StartTime = DateTime.Now
+                    StartTime = DateTime.Now,
+                    SolidGroundInitiated = false
                 });
 
                 int written = await db.SaveChangesAsync();
@@ -122,18 +124,14 @@ static class InputEndPoints
             Name = c.Name,
             Value = c.Value
         });
-            
-        var output = new Output
+
+        return new Output
         {
             Components = [..outputComponents],
             StringVariables = [..variablesElement],
-            Status = ExecutionStatus.Completed
+            Status = ExecutionStatus.Completed,
+            Input = input!
         };
-        
-        if (input != null)
-            output.Input = input;
-        
-        return output;
     }
 
     public record AddTagToInputDto
@@ -174,7 +172,8 @@ static class InputEndPoints
             OriginalRequest_ContentType = originalRequestContentType,
             OriginalRequest_Body = bodyBase64,
             OriginalRequest_Route = inputDto.Request.Route,
-            OriginalRequest_Host = inputDto.Request.BasePath
+            OriginalRequest_QueryString = inputDto.Request.QueryString,
+            OriginalRequest_Method = inputDto.Request.Method
         };
     }
     

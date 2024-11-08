@@ -3,7 +3,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_tags")
+record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_tags")
 {
     protected override Delegate RenderFunc => async (AppDbContext db) =>
     {

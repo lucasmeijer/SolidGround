@@ -6,7 +6,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 {
     SolidGroundApplicationUnderTest WebApplicationUnderTest { get; set; } = null!;
     protected HttpClient Client => WebApplicationUnderTest.HttpClient;
-    protected AppDbContext DbContext => WebApplicationUnderTest.DbContext;
+    internal AppDbContext DbContext => WebApplicationUnderTest.DbContext;
     
     public async Task InitializeAsync()
     {

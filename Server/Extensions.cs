@@ -1,20 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
 using System.Text.Json;
-using JetBrains.Annotations;
-using Microsoft.AspNetCore.Html;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Options;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Microsoft.Extensions.Configuration;
 using TurboFrames;
 
 namespace SolidGround;
 
-public static class Extensions
+static class Extensions
 {
     public static async Task<byte[]> ToBytesAsync(this Stream stream)
     {
@@ -23,6 +13,7 @@ public static class Extensions
         return temp.ToArray();
     }
     
+    public static string HtmlEscape(this string input) => System.Web.HttpUtility.HtmlEncode(input);
     public static string GetMandatory(this IConfiguration config, string keyname) => config[keyname] ?? throw new Exception($"No config found for {keyname}");
 
     public static void Add(this HttpContentHeaders self, IEnumerable<KeyValuePair<string, string>> values)

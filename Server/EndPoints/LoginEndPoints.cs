@@ -11,11 +11,11 @@ public static class LoginEndPoints
 {
     public static void MapLoginEndPoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/login", () =>
+        app.MapGet("/login", (string? RedirectUrl) =>
         {
-            return new SolidGroundPage("Login", new LoginBodyContent());
+            return new SolidGroundPage("Login", new LoginBodyContent(RedirectUrl));
         }).AllowAnonymous();
-        app.MapPost("/login", async (HttpContext context, [FromForm] string username, [FromForm] string password) =>
+        app.MapPost("/login", async (HttpContext context, [FromForm] string username, [FromForm] string password, [FromForm] string? redirecturl) =>
             {
                 if (password != "1234")
                 {
@@ -30,28 +30,29 @@ public static class LoginEndPoints
                         new Claim(ClaimTypes.Role, "User")
                     ], CookieAuthenticationDefaults.AuthenticationScheme)));
                 
-                return Results.Ok();
+                return Results.Redirect(redirecturl ?? "/");
             })
             .DisableAntiforgery()
             .AllowAnonymous();
     }
 }
 
-record LoginBodyContent : PageFragment
+record LoginBodyContent(string? RedirectUrl) : PageFragment
 {
     public override Task<Html> RenderAsync(IServiceProvider serviceProvider)
     {
-        return Task.FromResult(new Html("""
+        return Task.FromResult(new Html($"""
                                         <div class="flex items-center justify-center h-screen">
                                         <div class="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-lg">
                                             <div class="text-center">
                                                 <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
-                                                    Sign in to your account
+                                                    Sign in to your SolidGround account
                                                 </h2>
                                             </div>
                                             
                                             <turbo-frame id="login-form">
                                                 <form class="mt-8 space-y-6" action="/login" method="POST" data-turbo="false">
+                                                    {(RedirectUrl == null ? "" : $"""<input type="hidden" name="redirecturl" value="{RedirectUrl.HtmlEscape()}" />""")}
                                                     <div class="rounded-md shadow-sm space-y-4">
                                                         <div>
                                                             <label for="username" class="sr-only">Username</label>

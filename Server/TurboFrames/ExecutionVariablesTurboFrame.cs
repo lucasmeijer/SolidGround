@@ -1,7 +1,7 @@
 using SolidGround;
 using TurboFrames;
 
-public record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) : TurboFrame(NewExecutionDialogContentTurboFrame.TurboFrameId)
+record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) : TurboFrame(NewExecutionDialogContentTurboFrame.TurboFrameId)
 {
     protected override string LazySrc => ExecutionsEndPoints.Routes.api_executions_new.For();
 

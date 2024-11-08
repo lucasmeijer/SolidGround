@@ -4,7 +4,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameIdFor(OutputId))
+record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameIdFor(OutputId))
 {
     public static string TurboFrameIdFor(int outputId) => $"output_{outputId}";
     /*<a href="{ExperimentEndPoints.Routes.api_experiment_newform_id.For(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="text-sm bg-green-200 h-16 p-2 rounded-lg">

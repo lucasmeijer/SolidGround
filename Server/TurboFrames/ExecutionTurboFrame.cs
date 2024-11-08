@@ -2,7 +2,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record ExecutionTurboFrame(int ExecutionId, bool Checked) : TurboFrame(TurboFrameIdFor(ExecutionId))
+record ExecutionTurboFrame(int ExecutionId, bool Checked) : TurboFrame(TurboFrameIdFor(ExecutionId))
 {
     public static string TurboFrameIdFor(int executionId) => $"execution_{executionId}";
     protected override Delegate RenderFunc => async (IServiceProvider serviceProvider) => new Html($"""

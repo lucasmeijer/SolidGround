@@ -1,7 +1,7 @@
 using System.Text.Json;
 using SolidGround;
 
-public static class TagHelper
+static class TagHelper
 {
     public static async Task<Tag> FindTag(JsonElement tagidElement, AppDbContext appDbContext)
     {

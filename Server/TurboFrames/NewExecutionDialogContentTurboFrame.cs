@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SolidGround;
 using TurboFrames;
 
-public record NewExecutionDialogContentTurboFrame() : TurboFrame(TurboFrameId)
+record NewExecutionDialogContentTurboFrame() : TurboFrame(TurboFrameId)
 {
     public new static string TurboFrameId => "new_execution";
     

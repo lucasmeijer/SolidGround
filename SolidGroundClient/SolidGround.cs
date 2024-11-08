@@ -116,7 +116,9 @@ public class SolidGroundSession(
             BodyBase64 = Convert.ToBase64String(ms.ToArray()),
             ContentType = Request.ContentType,
             BasePath = Request.Scheme + "://" + Request.Host,
+            Method = Request.Method,
             Route = Request.Path.Value ?? throw new ArgumentException("no request path"),
+            QueryString = Request.QueryString.Value
         };
 
         foreach (var v in variables.Variables)

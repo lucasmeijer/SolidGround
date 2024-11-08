@@ -4,7 +4,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record FilterBarTurboFrame(AppState AppState) : TurboFrame(TurboFrameId)
+record FilterBarTurboFrame(AppState AppState) : TurboFrame(TurboFrameId)
 {
     public new static string TurboFrameId => "filter_bar";
     protected override Delegate RenderFunc => async (AppDbContext db, IServiceProvider sp) =>

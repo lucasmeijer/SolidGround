@@ -2,7 +2,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public abstract record EditableNameTurboFrame(string TurboFrameId, bool EditMode) : TurboFrame(TurboFrameId)
+abstract record EditableNameTurboFrame(string TurboFrameId, bool EditMode) : TurboFrame(TurboFrameId)
 {
     protected abstract string EditRoute { get; }
     protected abstract string ChangeNameEndPoint { get; }

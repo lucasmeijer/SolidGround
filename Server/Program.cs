@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SolidGround;
 using SolidGround.Pages;
@@ -11,6 +12,7 @@ using SolidGround.Pages;
 
 CreateWebApplication(args, (services, dboptions) =>
 {
+    dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
     var persistentStorage = services.GetRequiredService<IConfiguration>()["PERSISTENT_STORAGE"] ?? ".";
     dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground.db");
 }).Run();

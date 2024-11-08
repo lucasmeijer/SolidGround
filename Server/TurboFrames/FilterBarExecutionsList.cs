@@ -3,7 +3,7 @@ using TurboFrames;
 
 namespace SolidGround;
 
-public record FilterBarExecutionsList(int[] SelectedExecutions) : TurboFrame(TurboFrameId)
+record FilterBarExecutionsList(int[] SelectedExecutions) : TurboFrame(TurboFrameId)
 {
     public new static string TurboFrameId => "filter_bar_executions_list";
 

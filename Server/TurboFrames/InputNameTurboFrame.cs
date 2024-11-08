@@ -1,6 +1,6 @@
 namespace SolidGround;
 
-public record InputNameTurboFrame(int InputId, bool EditMode) : EditableNameTurboFrame($"input_{InputId}_name", EditMode)
+record InputNameTurboFrame(int InputId, bool EditMode) : EditableNameTurboFrame($"input_{InputId}_name", EditMode)
 {
     protected override async Task<string> FindCurrentName(AppDbContext db)
     {
