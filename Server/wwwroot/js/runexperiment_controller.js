@@ -26,7 +26,7 @@ export default class RunExperimentController extends Controller {
         const data = {
             'string_variables': [],
             'inputs': window.appSnapshot.inputs,
-            'endpoint': formData.get('endpoint')
+            'baseurl': formData.get('baseurl')
         }
        
         for (const [key, value] of formData.entries()) {

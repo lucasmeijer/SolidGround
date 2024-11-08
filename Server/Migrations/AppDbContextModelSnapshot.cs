@@ -7,7 +7,7 @@ using SolidGround;
 
 #nullable disable
 
-namespace Server.Migrations
+namespace SolidGround.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
@@ -36,9 +36,6 @@ namespace Server.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("InputId")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsReference")
@@ -77,9 +74,12 @@ namespace Server.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("OriginalRequest_Host")
+                    b.Property<string>("OriginalRequest_Method")
                         .IsRequired()
-                        .HasMaxLength(200)
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalRequest_QueryString")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalRequest_Route")
@@ -313,13 +313,19 @@ namespace Server.Migrations
 
             modelBuilder.Entity("SolidGround.StringVariable", b =>
                 {
-                    b.HasOne("SolidGround.Execution", null)
+                    b.HasOne("SolidGround.Execution", "Execution")
                         .WithMany("StringVariables")
-                        .HasForeignKey("ExecutionId");
+                        .HasForeignKey("ExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("SolidGround.Output", null)
+                    b.HasOne("SolidGround.Output", "Output")
                         .WithMany("StringVariables")
-                        .HasForeignKey("OutputId");
+                        .HasForeignKey("OutputId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Execution");
+
+                    b.Navigation("Output");
                 });
 
             modelBuilder.Entity("SolidGround.Execution", b =>

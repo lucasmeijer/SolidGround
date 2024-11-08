@@ -35,7 +35,6 @@ static class InputEndPoints
 
                 db.Add(new Execution
                 {
-                    Input = input,
                     Outputs = [output],
                     StartTime = DateTime.Now,
                     SolidGroundInitiated = false

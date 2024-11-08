@@ -21,5 +21,9 @@
       <ProjectReference Include="..\SolidGroundClient\SolidGroundClient.csproj" />
       <ProjectReference Include="..\TurboFrames\TurboFrames.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Migrations\" />
+    </ItemGroup>
     
 </Project>

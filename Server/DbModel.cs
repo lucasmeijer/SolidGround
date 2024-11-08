@@ -28,6 +28,22 @@ class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
             .HasMany(i => i.Inputs)
             .WithMany(i => i.Tags)
             .UsingEntity(j => j.ToTable("InputSetInputs"));
+        
+        // Ensure foreign keys are enforced with cascade delete
+        modelBuilder.Entity<Output>()
+            .HasOne(o => o.Execution)
+            .WithMany(e => e.Outputs)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<StringVariable>()
+            .HasOne(sv => sv.Execution)
+            .WithMany(e => e.StringVariables)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<StringVariable>()
+            .HasOne(sv => sv.Output)
+            .WithMany(o => o.StringVariables)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -44,8 +60,8 @@ class Execution
 
     public bool SolidGroundInitiated { get; [UsedImplicitly] set; }
 
-    public Input Input { get; [UsedImplicitly] set; } = null!;
-    public int InputId { get; [UsedImplicitly] set; }
+    // public Input Input { get; [UsedImplicitly] set; } = null!;
+    // public int InputId { get; [UsedImplicitly] set; }
     
     [UsedImplicitly]
     public List<StringVariable> StringVariables { get; set; } = [];
@@ -161,7 +177,11 @@ class Output
 class StringVariable
 {
     public int? OutputId { get; set; }
+    public Output? Output { get; set; }
+    
     public int? ExecutionId { get; set; }
+    public Execution? Execution { get; set; }
+    
     public int Id { get; set; }
     [MaxLength(200)]
     public string Name { get; [UsedImplicitly] set; } = null!;

@@ -13,6 +13,7 @@ abstract record Tenant
     public abstract string Identifier { get; }
     public abstract User[] Users { get; }
     public abstract string ApiKey { get; }
+    public abstract string BaseUrl { get; }
 } 
 
 record FlashCardsTenant : Tenant
@@ -21,4 +22,5 @@ record FlashCardsTenant : Tenant
     public override string Identifier => "flashcards";
     public override User[] Users => [new("lucas", "12324")];
     public override string ApiKey => _ApiKey;
+    public override string BaseUrl => "https://localhost:7220";
 }

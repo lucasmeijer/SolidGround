@@ -26,11 +26,10 @@ record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) 
     //     var availableVariablesDto = await httpClient.GetFromJsonAsync<AvailableVariablesDto>(requestUri) ?? throw new Exception("No available variables found");
     //     return availableVariablesDto.StringVariables;
     // }
-
-    public static string TargetAppBaseAddress(IConfiguration config) => config.GetMandatory("SOLIDGROUND_TARGET_APP");
+    
     static string IdFor(string variableName) => $"SolidGroundVariable_{variableName}";
 
-    protected override Delegate RenderFunc => (IConfiguration config) => Task.FromResult(new Html($"""
+    protected override Delegate RenderFunc => (Tenant tenant) => Task.FromResult(new Html($"""
          <div class="flex flex-col">
              <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                  <h2 class="text-lg font-semibold text-gray-800">New Execution</h2>
@@ -47,7 +46,7 @@ record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) 
              class="p-4" action="{ExecutionsEndPoints.Routes.api_executions.For()}" method="post">
                  <div class="p-2 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto bg-white text-xs">
                      {Variables.Render(RenderVariable)}
-                     <input type="hidden" name="endpoint" value="{TargetAppBaseAddress(config)}/photos"/>
+                     <input type="hidden" name="baseurl" value="{tenant.BaseUrl}"/>
                  </div>
                  
                  <div class="flex items-center justify-end gap-4 p-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">

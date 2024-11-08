@@ -13,28 +13,11 @@ record InputTurboFrame(int InputId, int[] ExecutionIds, bool StartOpen) : TurboF
     {
         var input = await db.Inputs.FindAsync(InputId) ?? throw new NotFoundException();
 
-        var outputs = await db
-            .Outputs
-            .Where(o => o.InputId == InputId && ExecutionIds.Contains(o.ExecutionId))
-            .ToListAsync();
+        IQueryable<Output> outputQuery = db.Outputs
+            .Where(o => o.InputId == InputId && 
+                        (ExecutionIds.Contains(o.ExecutionId) || 
+                         (ExecutionIds.Contains(-1) && !o.Execution.SolidGroundInitiated)));
 
-        if (ExecutionIds.Contains(-1))
-        {
-            //-1 is a special meaning: it means that for each input just show the output it was first submitted with.
-            var originalExecution = await db
-                .Executions
-                .Where(e => e.InputId == InputId && e.SolidGroundInitiated == true)
-                .FirstOrDefaultAsync();
-
-            if (originalExecution != null)
-            {
-                await db.Entry(originalExecution).Collection(e=>e.Outputs).LoadAsync();
-                var originalOutput = originalExecution.Outputs.FirstOrDefault();
-                if (originalOutput != null)
-                    outputs.Insert(0, originalOutput);
-            }
-        }
-        
         return new Html($"""
                     <turbo-frame id="{TurboFrameId}">
                         <details class="bg-white grow shadow-md rounded-lg group/output" {(StartOpen ? "open": "")}>
@@ -45,7 +28,7 @@ record InputTurboFrame(int InputId, int[] ExecutionIds, bool StartOpen) : TurboF
                                </svg>
                            </summary>
                            <div class="flex justify-between gap-2">
-                            {await outputs.Select(output => new OutputTurboFrame(output.Id, true)).RenderAsync(serviceProvider)}
+                            {await outputQuery.Select(output => new OutputTurboFrame(output.Id, true)).RenderAsync(serviceProvider)}
                             </div>
                            <details class="p-4">
                            <summary>Details about {input.Name}</summary>

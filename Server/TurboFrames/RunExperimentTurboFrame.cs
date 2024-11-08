@@ -17,9 +17,9 @@ record RunExperimentTurboFrame : TurboFrame
         ? ExperimentEndPoints.Routes.api_experiment_newform
         : ExperimentEndPoints.Routes.api_experiment_newform_id.For(OutputIdWhoseVariablesToUse.Value);
 
-    async Task<StringVariableDto[]> GetVariablesFromServiceUnderTest(IConfiguration config, HttpClient httpClient)
+    async Task<StringVariableDto[]> GetVariablesFromServiceUnderTest(IConfiguration config, HttpClient httpClient, Tenant tenant)
     {
-        var requestUri = $"{TargetAppBaseUrl(config)}/solidground";
+        var requestUri = $"{tenant.BaseUrl}/solidground";
         var availableVariablesDto = await httpClient.GetFromJsonAsync<AvailableVariablesDto>(requestUri) ?? throw new Exception("No available variables found");
         
         //
@@ -46,12 +46,12 @@ record RunExperimentTurboFrame : TurboFrame
         return availableVariablesDto.StringVariables;
     }
 
-    static string TargetAppBaseUrl(IConfiguration config) => config.GetMandatory("SOLIDGROUND_TARGET_APP");
+    //static string TargetAppBaseUrl(IConfiguration config) => config.GetMandatory("SOLIDGROUND_TARGET_APP");
 
     public new static string TurboFrameId => "run_experiment_form";
 
     protected override Delegate RenderFunc =>
-        async (HttpClient httpClient, IConfiguration config) =>
+        async (HttpClient httpClient, IConfiguration config, Tenant tenant) =>
         {
             try
             {
@@ -60,9 +60,9 @@ record RunExperimentTurboFrame : TurboFrame
                                      data-controller="runexperiment"
                                      class="p-4" action="{ExecutionsEndPoints.Routes.api_executions.For()}" method="post">
                                      
-                                       {(await GetVariablesFromServiceUnderTest(config, httpClient)).Render(RenderVariable)} 
+                                       {(await GetVariablesFromServiceUnderTest(config, httpClient, tenant)).Render(RenderVariable)} 
                                       
-                                      <input type="hidden" name="baseurl" value="{TargetAppBaseUrl(config)}"/>
+                                      <input type="hidden" name="baseurl" value="{tenant.BaseUrl}"/>
                                       <button type="submit" class="px-4 py-2 bg-green-200 hover:bg-green-700 rounded">
                                           Run Experiment
                                       </button>

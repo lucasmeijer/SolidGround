@@ -9,7 +9,7 @@ record FilterBarExecutionsList(int[] SelectedExecutions) : TurboFrame(TurboFrame
 
     protected override Delegate RenderFunc => async (AppDbContext db, IServiceProvider sp) =>
     {
-        int[] allExecutionIds = [-1,..await db.Executions.Select(e=>e.Id).ToArrayAsync()];
+        int[] allExecutionIds = [-1,..await db.Executions.Where(e=>e.SolidGroundInitiated).Select(e=>e.Id).ToArrayAsync()];
         
         return new Html($"""
                           <div class="grid grid-cols-4 gap-2">

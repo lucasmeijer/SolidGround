@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Server.Migrations
+namespace SolidGround.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,8 +18,9 @@ namespace Server.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     StartTime = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
-                    IsReference = table.Column<bool>(type: "INTEGER", nullable: false)
+                    IsReference = table.Column<bool>(type: "INTEGER", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    SolidGroundInitiated = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,11 +33,12 @@ namespace Server.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", nullable: true),
-                    OriginalRequest_Route = table.Column<string>(type: "TEXT", nullable: true),
-                    OriginalRequest_ContentType = table.Column<string>(type: "TEXT", nullable: false),
-                    OriginalRequest_Body = table.Column<string>(type: "TEXT", nullable: false),
-                    OriginalRequest_Host = table.Column<string>(type: "TEXT", nullable: false)
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    OriginalRequest_Route = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    OriginalRequest_QueryString = table.Column<string>(type: "TEXT", nullable: true),
+                    OriginalRequest_ContentType = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
+                    OriginalRequest_Method = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
+                    OriginalRequest_Body = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -44,16 +46,16 @@ namespace Server.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Tag",
+                name: "Tags",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Name = table.Column<string>(type: "TEXT", nullable: false)
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Tag", x => x.Id);
+                    table.PrimaryKey("PK_Tags", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -63,9 +65,9 @@ namespace Server.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     InputId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     Index = table.Column<int>(type: "INTEGER", nullable: false),
-                    MimeType = table.Column<string>(type: "TEXT", nullable: false),
+                    MimeType = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Bytes = table.Column<byte[]>(type: "BLOB", nullable: false)
                 },
                 constraints: table =>
@@ -145,9 +147,9 @@ namespace Server.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_InputSetInputs_Tag_TagsId",
+                        name: "FK_InputSetInputs_Tags_TagsId",
                         column: x => x.TagsId,
-                        principalTable: "Tag",
+                        principalTable: "Tags",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -159,7 +161,7 @@ namespace Server.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     OutputId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
@@ -171,6 +173,32 @@ namespace Server.Migrations
                         principalTable: "Outputs",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StringVariable",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    OutputId = table.Column<int>(type: "INTEGER", nullable: true),
+                    ExecutionId = table.Column<int>(type: "INTEGER", nullable: true),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Value = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StringVariable", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StringVariable_Executions_ExecutionId",
+                        column: x => x.ExecutionId,
+                        principalTable: "Executions",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_StringVariable_Outputs_OutputId",
+                        column: x => x.OutputId,
+                        principalTable: "Outputs",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
@@ -202,6 +230,16 @@ namespace Server.Migrations
                 name: "IX_Outputs_InputId",
                 table: "Outputs",
                 column: "InputId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StringVariable_ExecutionId",
+                table: "StringVariable",
+                column: "ExecutionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StringVariable_OutputId",
+                table: "StringVariable",
+                column: "OutputId");
         }
 
         /// <inheritdoc />
@@ -220,7 +258,10 @@ namespace Server.Migrations
                 name: "OutputComponents");
 
             migrationBuilder.DropTable(
-                name: "Tag");
+                name: "StringVariable");
+
+            migrationBuilder.DropTable(
+                name: "Tags");
 
             migrationBuilder.DropTable(
                 name: "Outputs");

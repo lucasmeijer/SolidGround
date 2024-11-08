@@ -95,8 +95,11 @@ public class SolidGroundBackgroundService(
     {
         var httpRequestMessage = new HttpRequestMessage(request.Method, request.Url) { Content = JsonContent.Create(request.Payload)};
         using var response = await solidGroundHttpClient.SendAsync(httpRequestMessage, stoppingToken);
-        response.EnsureSuccessStatusCode();
-        logger.LogInformation("Successfully sent payload to {Url}", request.Url);
+        
+        if (!response.IsSuccessStatusCode)
+            logger.LogError($"Failed sending ing payload to {request.Url}. Status: {response.StatusCode} Body: {await response.Content.ReadAsStringAsync(stoppingToken)}");
+        else
+            logger.LogInformation("Successfully sent payload to {Url}", request.Url);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

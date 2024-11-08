@@ -49,7 +49,6 @@ public class ExecutionEndpointTests : IntegrationTestBase
     async Task AssertDatabaseAfterInitialInputSubmitted()
     {
         var execution = await DbContext.Executions
-            .Include(e=>e.Input)
             .Include(e=>e.StringVariables)
             .Include(e=>e.Outputs)
             .ThenInclude(o => o.Components)
@@ -57,7 +56,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
             .ThenInclude(o => o.StringVariables)
             .SingleAsync();
 
-        var input = execution.Input;
+        var input = DbContext.Inputs.Single();
         Assert.Equal("/joke", input.OriginalRequest_Route);
         Assert.Equal("?subject=horse", input.OriginalRequest_QueryString);
         

@@ -8,11 +8,11 @@ using SolidGround;
 
 #nullable disable
 
-namespace Server.Migrations
+namespace SolidGround.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241024150602_huh")]
-    partial class huh
+    [Migration("20241108125404_initial2")]
+    partial class initial2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -44,6 +44,13 @@ namespace Server.Migrations
                     b.Property<bool>("IsReference")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("SolidGroundInitiated")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("TEXT");
 
@@ -59,6 +66,7 @@ namespace Server.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalRequest_Body")
@@ -66,15 +74,20 @@ namespace Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalRequest_ContentType")
-                        .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("OriginalRequest_Host")
+                    b.Property<string>("OriginalRequest_Method")
                         .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalRequest_QueryString")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalRequest_Route")
                         .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -100,10 +113,12 @@ namespace Server.Migrations
 
                     b.Property<string>("MimeType")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -172,6 +187,7 @@ namespace Server.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("OutputId")
@@ -193,11 +209,15 @@ namespace Server.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("ExecutionId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("OutputId")
+                    b.Property<int?>("OutputId")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Value")
@@ -205,6 +225,8 @@ namespace Server.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExecutionId");
 
                     b.HasIndex("OutputId");
 
@@ -219,6 +241,7 @@ namespace Server.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -243,13 +266,11 @@ namespace Server.Migrations
 
             modelBuilder.Entity("SolidGround.InputFile", b =>
                 {
-                    b.HasOne("SolidGround.Input", "Input")
+                    b.HasOne("SolidGround.Input", null)
                         .WithMany("Files")
                         .HasForeignKey("InputId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Input");
                 });
 
             modelBuilder.Entity("SolidGround.InputString", b =>
@@ -295,11 +316,17 @@ namespace Server.Migrations
 
             modelBuilder.Entity("SolidGround.StringVariable", b =>
                 {
+                    b.HasOne("SolidGround.Execution", "Execution")
+                        .WithMany("StringVariables")
+                        .HasForeignKey("ExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.HasOne("SolidGround.Output", "Output")
                         .WithMany("StringVariables")
                         .HasForeignKey("OutputId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Execution");
 
                     b.Navigation("Output");
                 });
@@ -307,6 +334,8 @@ namespace Server.Migrations
             modelBuilder.Entity("SolidGround.Execution", b =>
                 {
                     b.Navigation("Outputs");
+
+                    b.Navigation("StringVariables");
                 });
 
             modelBuilder.Entity("SolidGround.Input", b =>

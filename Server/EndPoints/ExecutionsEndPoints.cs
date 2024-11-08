@@ -25,9 +25,9 @@ static class ExecutionsEndPoints
         app.MapGet(Routes.api_executions_id_name, (int id) => new ExecutionNameTurboFrame(id, EditMode:false));
         app.MapGet(Routes.api_executions_id_name_edit, (int id) => new ExecutionNameTurboFrame(id, EditMode:true));
         app.MapGet(Routes.api_executions_new,() => new NewExecutionDialogContentTurboFrame());
-        app.MapGet(Routes.api_executions_new_production, async (IConfiguration config, HttpClient httpClient) =>
+        app.MapGet(Routes.api_executions_new_production, async (IConfiguration config, HttpClient httpClient, Tenant tenant) =>
         {
-            var requestUri = $"{ExecutionVariablesTurboFrame.TargetAppBaseAddress(config)}/solidground";
+            var requestUri = $"{tenant.BaseUrl}/solidground";
             var availableVariablesDto = await httpClient.GetFromJsonAsync<AvailableVariablesDto>(requestUri) ?? throw new Exception("No available variables found");
             return new ExecutionVariablesTurboFrame(availableVariablesDto.StringVariables, "New execution");
         });
@@ -123,6 +123,7 @@ static class ExecutionsEndPoints
             
             Output OutputFor(int inputId) => new()
             {
+                InputId = inputId,
                 StringVariables = [],
                 Status = ExecutionStatus.Started,
                 Components = []
@@ -146,7 +147,7 @@ static class ExecutionsEndPoints
 
             try
             {
-                requestUri = new Uri(baseUrl.TrimEnd("/") + input.OriginalRequest_Route + input.OriginalRequest_QueryString);
+                requestUri = new Uri(baseUrl.TrimEnd("/") + input.OriginalRequest_Route + (input.OriginalRequest_QueryString ?? ""));
             }
             catch (UriFormatException ufe)
             {
