@@ -83,12 +83,14 @@ public partial class Program
 
         app.UseHttpsRedirection();
         app.UseRouting();
+
+        //static files has to be before authorization.
+        app.UseStaticFiles();
+
         app.UseAuthorization();
         app.UseHealthChecks("/up");
 
-//app.MapStaticAssets();
         app.UseStaticFiles();
-//    .WithStaticAssets();
 
         app.MapGet("/", (AppState appState) => new SolidGroundPage("SolidGround", new IndexPageBodyContent(appState)));
 

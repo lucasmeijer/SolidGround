@@ -96,7 +96,7 @@ public class SolidGroundSession(
     RequestDto? _capturedRequest;
  
     List<OutputComponentDto> _outputComponents = [];
-    StringVariableDto[] _stringVariableDtos;
+    StringVariableDto[] _stringVariableDtos = [];
 
     public async Task CaptureRequestAsync()
     {
@@ -153,7 +153,7 @@ public class SolidGroundSession(
         //this is the normal production flow where we emit a complete execution + input + output
         await solidGroundBackgroundService.EnqueueHttpPost($"{_serviceBaseUrl}/api/input", new InputDto()
         {
-            Request = _capturedRequest,
+            Request = _capturedRequest ?? throw new InvalidOperationException(),
             Output = new()
             {
                 OutputComponents = [.._outputComponents],

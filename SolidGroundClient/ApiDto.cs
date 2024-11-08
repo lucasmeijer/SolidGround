@@ -70,7 +70,7 @@ public record RunExecutionDto
     public required StringVariableDto[] StringVariables { get; init; }
 
     [JsonPropertyName("endpoint")]
-    public string EndPoint { get; init; }
+    public required string EndPoint { get; init; }
 }
 
 public record ExecutionStatusDto

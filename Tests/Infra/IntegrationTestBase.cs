@@ -4,7 +4,7 @@ using Xunit;
 
 public abstract class IntegrationTestBase : IAsyncLifetime
 {
-    SolidGroundApplicationUnderTest WebApplicationUnderTest { get; set; }
+    SolidGroundApplicationUnderTest WebApplicationUnderTest { get; set; } = null!;
     protected HttpClient Client => WebApplicationUnderTest.HttpClient;
     protected AppDbContext DbContext => WebApplicationUnderTest.DbContext;
     

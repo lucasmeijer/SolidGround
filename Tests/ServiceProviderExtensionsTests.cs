@@ -38,7 +38,7 @@ public class ServiceProviderExtensionsTests
     }
 
     [Fact]
-    public async Task InvokeInjected_WithNonMathcingReturnValue_Throws()
+    public void InvokeInjected_WithNonMathcingReturnValue_Throws()
     {
         Delegate voidReturningDelegate = () => { return "123"; };
         Assert.Throws<ArgumentException>(() => ServiceProviderHelper.CompileInjectionFor<int>(voidReturningDelegate));

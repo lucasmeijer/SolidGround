@@ -85,7 +85,7 @@ public class InputEndPointTests : IntegrationTestBase
 
         var input = await DbContext.Inputs.FindAsync(createdId);
         Assert.NotNull(input);
-        Assert.Equal(null, input.Name);
+        Assert.Null(input.Name);
 
         Assert.Equal(HttpStatusCode.OK, (await Client.PostAsJsonAsync($"/api/input/{createdId}/name", new InputEndPoints.NameUpdateDto()
         {
