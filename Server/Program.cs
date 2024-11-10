@@ -53,8 +53,18 @@ public partial class Program
 
         builder.Services.AddScoped<Tenant>(serviceProvider =>
         {
-            var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-            var host = httpContextAccessor.HttpContext?.Request.Host.Host ?? string.Empty;
+            HttpRequest httpContextRequest = serviceProvider
+                .GetRequiredService<IHttpContextAccessor>()
+                .HttpContext?
+                .Request ?? throw new Exception("no http context");
+
+            if (httpContextRequest.Headers.TryGetValue("X-Api-Key", out var apiKey))
+            {
+                Tenant[] tenants = [new SchrijfEvenMeeHuisArtsTenant(), new FlashCardsTenant()];
+                return tenants.Single(t => t.ApiKey == apiKey.ToString());
+            }
+            
+            var host = httpContextRequest?.Host.Host ?? string.Empty;
 
             return host switch
             {
