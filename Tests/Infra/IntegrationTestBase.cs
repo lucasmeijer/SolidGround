@@ -8,7 +8,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     SolidGroundApplicationUnderTest WebApplicationUnderTest { get; set; } = null!;
     protected HttpClient Client => WebApplicationUnderTest.HttpClient;
     internal AppDbContext DbContext => WebApplicationUnderTest.DbContext;
-    protected Tenant Tenant { get; set; } = null!;
+    protected Tenant Tenant { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
@@ -17,9 +17,9 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         {
             dboptions.UseInMemoryDatabase(databaseName: databaseName);
         });
-        WebApplicationUnderTest = await SolidGroundApplicationUnderTest.StartAsync(webApplication);
-        using var serviceScope = webApplication.Services.CreateScope();
-        Tenant = serviceScope.ServiceProvider.GetRequiredService<Tenant>();
+        
+        Tenant = new FlashCardsTenant();
+        WebApplicationUnderTest = await SolidGroundApplicationUnderTest.StartAsync(webApplication, Tenant);
     }
 
     

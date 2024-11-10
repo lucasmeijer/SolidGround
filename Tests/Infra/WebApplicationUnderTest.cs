@@ -11,8 +11,11 @@ using Xunit;
 
 class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
 {
-    SolidGroundApplicationUnderTest(WebApplication webApplication) : base(webApplication)
+    Tenant _tenant;
+
+    SolidGroundApplicationUnderTest(Tenant tenant, WebApplication webApplication) : base(webApplication)
     {
+        _tenant = tenant;
     }
 
     protected override async Task<HttpClient> CreateHttpClient(Uri baseAddress)
@@ -23,15 +26,11 @@ class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
             UseCookies = true,
             //AllowAutoRedirect = false,
         };
-        
-        using var serviceScope = _webApplication.Services.CreateScope();
-        var tenant = serviceScope.ServiceProvider.GetRequiredService<Tenant>();
-        var apiKey = tenant.ApiKey;
-        
+
         var client = new HttpClient(httpMessageHandler)
         {
             BaseAddress = baseAddress,
-            DefaultRequestHeaders = { {"X-Api-Key", apiKey } }
+            DefaultRequestHeaders = { {"X-Api-Key", _tenant.ApiKey } }
         };
 
         //hit the login endpoint so we get assigned a cookie, so all subsequent tests work
@@ -46,10 +45,10 @@ class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
         return client;
     }
 
-    public new static async Task<SolidGroundApplicationUnderTest> StartAsync(WebApplication webApplication)
+    public static async Task<SolidGroundApplicationUnderTest> StartAsync(WebApplication webApplication, Tenant tenant)
     {
         var baseAddress = await StartAndGetAddress(webApplication);
-        var result = new SolidGroundApplicationUnderTest(webApplication);
+        var result = new SolidGroundApplicationUnderTest(tenant, webApplication);
         result.HttpClient = await result.CreateHttpClient(baseAddress);
         return result;
     }

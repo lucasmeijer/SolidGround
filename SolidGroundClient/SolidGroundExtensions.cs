@@ -42,7 +42,7 @@ public static class SolidGroundExtensions
         serviceCollection.AddHttpClient<SolidGroundHttpClient>((sp,options) =>
         {
             var config = sp.GetRequiredService<IConfiguration>();       
-            options.BaseAddress = new Uri(config[SolidGroundConstants.SolidGroundBaseUrl] ?? "solidground.flashcards.lucasmeijer.com");
+            options.BaseAddress = new Uri(config[SolidGroundConstants.SolidGroundBaseUrl] ?? "https://solidground.flashcards.lucasmeijer.com");
             //options.DefaultRequestHeaders.Add("X-Api-Key", config[SolidGroundConstants.SolidGroundApiKey]  ?? throw new Exception("Missing SolidGroundApiKey"));
         });
         

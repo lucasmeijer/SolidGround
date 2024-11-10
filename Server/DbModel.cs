@@ -12,7 +12,7 @@ sealed class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
         //todo: we should only do this once, this is really not production safe.
-        if (Database.GetPendingMigrations().Any())
+        if (Database.IsRelational() && Database.GetPendingMigrations().Any())
         {
             Database.Migrate();
         }
