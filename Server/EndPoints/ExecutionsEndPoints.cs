@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using SolidGroundClient;
 using TurboFrames;
@@ -28,8 +29,14 @@ static class ExecutionsEndPoints
         app.MapGet(Routes.api_executions_new_production, async (IConfiguration config, HttpClient httpClient, Tenant tenant) =>
         {
             var requestUri = $"{tenant.BaseUrl}/solidground";
-            var availableVariablesDto = await httpClient.GetFromJsonAsync<AvailableVariablesDto>(requestUri) ?? throw new Exception("No available variables found");
-            return new ExecutionVariablesTurboFrame(availableVariablesDto.StringVariables, "New execution");
+            var availableVariablesDto = await httpClient.GetFromJsonAsync<JsonArray>(requestUri) ?? throw new Exception("No available variables found");
+            var l = new List<StringVariableDto>();
+
+            foreach (var x in availableVariablesDto[0]!["variables"]!.AsObject())
+            {
+                l.Add(new() { Name = x.Key, Value = x.Value!.ToString()});
+            }
+            return new ExecutionVariablesTurboFrame([..l], "New execution");
         });
         app.MapGet(Routes.api_executions_new_executionid, async (int executionId, AppDbContext db) =>
         {

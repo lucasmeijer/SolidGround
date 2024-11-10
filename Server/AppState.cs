@@ -6,9 +6,9 @@ record AppState(int[] Tags, int[] Executions, string Search)
 record AppSnapshot(AppState State, int[] Inputs);
 
 
-record User(string Name, string HashedPassword);
+public record User(string Name, string HashedPassword);
 
-abstract record Tenant
+public abstract record Tenant
 {
     public abstract string Identifier { get; }
     public abstract User[] Users { get; }
@@ -23,4 +23,13 @@ record FlashCardsTenant : Tenant
     public override User[] Users => [new("lucas", "12324")];
     public override string ApiKey => _ApiKey;
     public override string BaseUrl => "https://localhost:7220";
+}
+
+record SchrijfEvenMeeHuisArtsTenant : Tenant
+{
+    public static readonly string _ApiKey = "solidground-dfd4a85d-21f3-4b8d-98a9-97cd5a6b9f42";
+    public override string Identifier => "huisarts";
+    public override User[] Users => [new("lucas", "12324")];
+    public override string ApiKey => _ApiKey;
+    public override string BaseUrl => "https://localhost:7172";
 }

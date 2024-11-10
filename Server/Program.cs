@@ -12,9 +12,10 @@ using SolidGround.Pages;
 
 CreateWebApplication(args, (services, dboptions) =>
 {
-    dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
+    //dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
+    var tenant = services.GetRequiredService<Tenant>();
     var persistentStorage = services.GetRequiredService<IConfiguration>()["PERSISTENT_STORAGE"] ?? ".";
-    dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground.db");
+    dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground_{tenant.Identifier}.db");
 }).Run();
 
 public partial class Program
@@ -50,7 +51,17 @@ public partial class Program
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddMemoryCache();
 
-        builder.Services.AddScoped<Tenant>(sp => new FlashCardsTenant());
+        builder.Services.AddScoped<Tenant>(serviceProvider =>
+        {
+            var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+            var host = httpContextAccessor.HttpContext?.Request.Host.Host ?? string.Empty;
+
+            return host switch
+            {
+                "solidground.flashcards.lucasmeijer.com" => new FlashCardsTenant(),
+                _ => new SchrijfEvenMeeHuisArtsTenant()
+            };
+        });
         
         builder.Services.AddScoped<AppState>(sp =>
         {

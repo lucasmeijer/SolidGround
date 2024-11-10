@@ -23,10 +23,15 @@ class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
             UseCookies = true,
             //AllowAutoRedirect = false,
         };
+        
+        using var serviceScope = _webApplication.Services.CreateScope();
+        var tenant = serviceScope.ServiceProvider.GetRequiredService<Tenant>();
+        var apiKey = tenant.ApiKey;
+        
         var client = new HttpClient(httpMessageHandler)
         {
             BaseAddress = baseAddress,
-            DefaultRequestHeaders = { {"X-Api-Key", FlashCardsTenant._ApiKey } }
+            DefaultRequestHeaders = { {"X-Api-Key", apiKey } }
         };
 
         //hit the login endpoint so we get assigned a cookie, so all subsequent tests work
@@ -52,7 +57,7 @@ class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
 
 public class WebApplicationUnderTest<TDbContext> : IAsyncDisposable where TDbContext : notnull
 {
-    readonly WebApplication _webApplication;
+    protected readonly WebApplication _webApplication;
     readonly IServiceScope _scope;
     public IServiceProvider Services { get; }
     public HttpClient HttpClient { get; set; } = null!;

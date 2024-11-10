@@ -1,20 +1,21 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using SolidGround;
 
 namespace SolidGroundClient;
 
-class SolidGroundMetadata(SolidGroundVariables Variables)
+class SolidGroundMetadata
 {
-    public SolidGroundVariables For(IServiceProvider sp)
-    {
-        return Variables;
-    }
+    readonly Func<IServiceProvider,SolidGroundVariables> _variablesProvider;
+
+    public SolidGroundMetadata(SolidGroundVariables variables) => _variablesProvider = _ => variables;
+
+    public SolidGroundMetadata(Func<IServiceProvider,SolidGroundVariables> variablesProvider) => _variablesProvider = variablesProvider;
+
+    public SolidGroundVariables For(IServiceProvider sp) => _variablesProvider.Invoke(sp);
 }
 
 public static class SolidGroundExtensions
@@ -27,7 +28,15 @@ public static class SolidGroundExtensions
         });
         return builder;
     }
-    
+    public static IEndpointConventionBuilder ExposeToSolidGround(this IEndpointConventionBuilder builder, Func<IServiceProvider,SolidGroundVariables> variablesProvider)
+    {
+        builder.Add(endpointBuilder =>
+        {
+            endpointBuilder.Metadata.Add(new SolidGroundMetadata(variablesProvider));
+        });
+        return builder;
+    }
+
     public static void AddSolidGround(this IServiceCollection serviceCollection)
     {
         serviceCollection.AddHttpClient<SolidGroundHttpClient>((sp,options) =>

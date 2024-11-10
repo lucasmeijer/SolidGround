@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SolidGround;
 using Xunit;
 
@@ -7,7 +8,8 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     SolidGroundApplicationUnderTest WebApplicationUnderTest { get; set; } = null!;
     protected HttpClient Client => WebApplicationUnderTest.HttpClient;
     internal AppDbContext DbContext => WebApplicationUnderTest.DbContext;
-    
+    protected Tenant Tenant { get; set; } = null!;
+
     public async Task InitializeAsync()
     {
         string databaseName = Guid.NewGuid().ToString();
@@ -16,7 +18,11 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             dboptions.UseInMemoryDatabase(databaseName: databaseName);
         });
         WebApplicationUnderTest = await SolidGroundApplicationUnderTest.StartAsync(webApplication);
+        using var serviceScope = webApplication.Services.CreateScope();
+        Tenant = serviceScope.ServiceProvider.GetRequiredService<Tenant>();
     }
+
+    
 
     async Task IAsyncLifetime.DisposeAsync()
     {

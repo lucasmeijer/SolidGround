@@ -155,7 +155,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
         {
             { SolidGroundConstants.SolidGroundBaseUrl, Client.BaseAddress!.ToString() },
-            { SolidGroundConstants.SolidGroundApiKey, FlashCardsTenant._ApiKey },
+            { SolidGroundConstants.SolidGroundApiKey, Tenant.ApiKey },
         }!);
         var app = builder.Build();
         app.UseRouting();

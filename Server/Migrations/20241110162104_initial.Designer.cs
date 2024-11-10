@@ -11,8 +11,8 @@ using SolidGround;
 namespace SolidGround.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241108125404_initial2")]
-    partial class initial2
+    [Migration("20241110162104_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

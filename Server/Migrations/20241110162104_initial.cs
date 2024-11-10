@@ -193,12 +193,14 @@ namespace SolidGround.Migrations
                         name: "FK_StringVariable_Executions_ExecutionId",
                         column: x => x.ExecutionId,
                         principalTable: "Executions",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_StringVariable_Outputs_OutputId",
                         column: x => x.OutputId,
                         principalTable: "Outputs",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
