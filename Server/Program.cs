@@ -69,6 +69,7 @@ public partial class Program
             return host switch
             {
                 "solidground.flashcards.lucasmeijer.com" => new FlashCardsTenant(),
+                "solidground.huisarts.schrijfevenmee.nl" => new FlashCardsTenant(),
                 _ => new SchrijfEvenMeeHuisArtsTenant()
             };
         });
