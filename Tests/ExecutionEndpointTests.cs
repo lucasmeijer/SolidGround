@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,18 +21,32 @@ public class ExecutionEndpointTests : IntegrationTestBase
 {
     class TestVariables : SolidGroundVariables
     {
-        public SolidGroundVariable<string> Prompt = new("Prompt", "Tell me a joke about a");
+        public string Prompt { get; set; } = "Tell me a joke about a";
     }
 
     [Fact]
     public async Task SolidGroundEndPointReturnsVariables()
     {
-        var webAppFactory = await SetupTestWebApplicationFactory(null);
+        var webAppFactory = await SetupHorseJokeClientApp();
         var client = webAppFactory.HttpClient;
         var response = await client.GetAsync(SolidGroundExtensions.EndPointRoute);
         response.EnsureSuccessStatusCode();
-        var s = await response.Content.ReadFromJsonAsync<AvailableVariablesDto>();
-        Assert.Equivalent(s, new AvailableVariablesDto() { StringVariables = [ new() { Name = "Prompt", Value = "Tell me a joke about a"}]});
+        var s2 = await response.Content.ReadAsStringAsync();
+        var jdoc = JsonDocument.Parse(s2);
+
+        var expected = new JsonArray()
+        {
+            new JsonObject()
+            {
+                ["route"] = "/joke",
+                ["variables"] = new JsonObject
+                {
+                    ["Prompt"] = "Tell me a joke about a"
+                }
+            }
+        };
+        
+        Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(jdoc.RootElement));
     }
     
     [Fact]
@@ -39,6 +55,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         var solidGroundConsumingApp = await SetupHorseJokeClientApp();
 
         var response = await solidGroundConsumingApp.HttpClient.GetAsync("/joke?subject=horse");
+        var s = await response.Content.ReadAsStringAsync();
         response.EnsureSuccessStatusCode();
         Assert.Equal("Tell me a joke about a horse", await response.Content.ReadAsStringAsync());
         
@@ -77,14 +94,14 @@ public class ExecutionEndpointTests : IntegrationTestBase
     {
         return await SetupTestWebApplicationFactory(endpointBuilder =>
         {
-            endpointBuilder.MapGet("/joke", async (string subject, SolidGroundSession session, TestVariables testVariables) =>
+            endpointBuilder.MapGet("/joke", async (string subject, SolidGroundSession session) =>
             {
-                await session.CaptureRequestAsync();
-
-                var joke =  testVariables.Prompt.Value + " " + subject;
+                var joke = session.GetVariables<TestVariables>().Prompt + " " + subject;
                 session.AddResult(joke);
+
+                await session.CompleteAsync(true);
                 return joke;
-            });
+            }).ExposeToSolidGround<TestVariables>();
         });
     }
     
@@ -132,8 +149,9 @@ public class ExecutionEndpointTests : IntegrationTestBase
     Task<WebApplicationUnderTest<int>> SetupTestWebApplicationFactory(Action<IEndpointRouteBuilder>? addEndPoints)
     {
         var builder = WebApplication.CreateBuilder();
-        builder.Services.AddSolidGround<TestVariables>();
+        builder.Services.AddSolidGround();
         builder.Services.AddRouting();
+        
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
         {
             { SolidGroundConstants.SolidGroundBaseUrl, Client.BaseAddress!.ToString() },

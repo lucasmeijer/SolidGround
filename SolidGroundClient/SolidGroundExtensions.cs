@@ -1,14 +1,34 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SolidGround;
 
 namespace SolidGroundClient;
 
+class SolidGroundMetadata(SolidGroundVariables Variables)
+{
+    public SolidGroundVariables For(IServiceProvider sp)
+    {
+        return Variables;
+    }
+}
+
 public static class SolidGroundExtensions
 {
-    public static void AddSolidGround<T>(this IServiceCollection serviceCollection) where T : SolidGroundVariables
+    public static IEndpointConventionBuilder ExposeToSolidGround<T>(this IEndpointConventionBuilder builder) where T : SolidGroundVariables, new()
+    {
+        builder.Add(endpointBuilder =>
+        {
+            endpointBuilder.Metadata.Add(new SolidGroundMetadata(new T()));
+        });
+        return builder;
+    }
+    
+    public static void AddSolidGround(this IServiceCollection serviceCollection)
     {
         serviceCollection.AddHttpClient<SolidGroundHttpClient>((sp,options) =>
         {
@@ -17,18 +37,11 @@ public static class SolidGroundExtensions
             options.DefaultRequestHeaders.Add("X-Api-Key", config[SolidGroundConstants.SolidGroundApiKey]  ?? throw new Exception("Missing SolidGroundApiKey"));
         });
         serviceCollection.AddHttpContextAccessor();
-        serviceCollection.AddScoped<SolidGroundVariables, T>();
-        serviceCollection.AddScoped<T>(sp =>
-        {
-            return sp.GetRequiredService<SolidGroundVariables>() as T ?? throw new InvalidOperationException();
-        });
-        
         serviceCollection.AddScoped<SolidGroundSession>(sp => 
         {
             var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
             var httpContext = httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is null");
             return new(httpContext, sp.GetRequiredService<IConfiguration>(), 
-                sp.GetRequiredService<SolidGroundVariables>(),
                 sp.GetRequiredService<SolidGroundBackgroundService>()
             );
         });
@@ -48,17 +61,28 @@ public static class SolidGroundExtensions
             await next();
         });
         
-        app.MapGet(EndPointRoute, (SolidGroundVariables variables) => new AvailableVariablesDto
+        app.MapGet(EndPointRoute, (IServiceProvider sp) => new JsonArray(app.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .OfType<RouteEndpoint>()
+            .Select(e=>(e, e.Metadata.GetMetadata<SolidGroundMetadata>()))
+            .Where(pair => pair.Item2 != null)
+            .Select(pair => new JsonObject()
+            {
+                ["route"] = pair.Item1.RoutePattern.RawText,
+                ["variables"] = SerializeToNode(pair, sp)
+            })
+            .ToArray<JsonNode>()));
+    }
+
+    static JsonNode? SerializeToNode((RouteEndpoint e, SolidGroundMetadata?) pair, IServiceProvider sp)
+    {
+        var result = new JsonObject();
+        var vars = pair.Item2!.For(sp);
+        foreach (var prop in SolidGroundSession.PropertyInfosFor(vars.GetType()))
         {
-            StringVariables =
-            [
-                ..variables.Variables.Select(v => new StringVariableDto
-                {
-                    Name = v.Name,
-                    Value = v.ValueAsString
-                })
-            ]
-        });
+            var value = prop.GetValue(vars) ?? throw new Exception();
+            result[prop.Name] = (string) value;
+        }
+        return result;
     }
 
     public static string EndPointRoute => "solidground";
