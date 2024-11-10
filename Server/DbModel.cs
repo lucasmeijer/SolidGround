@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using JetBrains.Annotations;
@@ -6,8 +7,17 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace SolidGround;
 
-class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+sealed class AppDbContext : DbContext
 {
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+        //todo: we should only do this once, this is really not production safe.
+        if (Database.GetPendingMigrations().Any())
+        {
+            Database.Migrate();
+        }
+    }
+    
     public DbSet<Input> Inputs { get; set; }
     public DbSet<Tag> Tags { get; set; }
     public DbSet<InputString> InputStrings { get; set; }
