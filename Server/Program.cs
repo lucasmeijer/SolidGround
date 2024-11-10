@@ -12,12 +12,12 @@ using SolidGround.Pages;
 
 CreateWebApplication(args, (services, dboptions) =>
 {
-    //dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
-    var tenant = services.GetRequiredService<Tenant>();
+    var tenant = services.GetRequiredService<Tenant>();  //tenant is injected Scoped, and is different based ont he domain of the incoming reuest.
     var persistentStorage = services.GetRequiredService<IConfiguration>()["PERSISTENT_STORAGE"] ?? ".";
     dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground_{tenant.Identifier}.db");
 }).Run();
 
+//dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
 public partial class Program
 {
     public static WebApplication CreateWebApplication(string[] args, Action<IServiceProvider, DbContextOptionsBuilder> setupDb)
@@ -89,13 +89,13 @@ public partial class Program
         var app = builder.Build();
         app.MapControllers();
 
-        {
-            using var scope = app.Services.CreateScope();
-            var services = scope.ServiceProvider;
-            var dbContext = services.GetRequiredService<AppDbContext>();
-            if (dbContext.Database.IsRelational())
-                dbContext.Database.Migrate();
-        }
+        // {
+        //     using var scope = app.Services.CreateScope();
+        //     var services = scope.ServiceProvider;
+        //     var dbContext = services.GetRequiredService<AppDbContext>();
+        //     if (dbContext.Database.IsRelational())
+        //             dbContext.Database.Migrate();
+        // }
 
         if (!app.Environment.IsDevelopment())
         {
