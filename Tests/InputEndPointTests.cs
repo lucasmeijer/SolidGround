@@ -51,7 +51,6 @@ public class InputEndPointTests : IntegrationTestBase
             },
             Request = new()
             {
-                BasePath = "asd",
                 BodyBase64 = Convert.ToBase64String(ms.ToArray()),
                 ContentType = multipartContent.Headers.ContentType?.ToString() ?? throw new Exception(),
                 Route = "/api/hello",
@@ -107,7 +106,6 @@ public class InputEndPointTests : IntegrationTestBase
         },
         Request = new()
         {
-            BasePath = "asd",
             BodyBase64 = "asd",
             ContentType = "text/html",
             Route = "/api/hello",

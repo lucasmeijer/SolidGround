@@ -37,24 +37,21 @@ public static class SolidGroundExtensions
         return builder;
     }
 
-    public static void AddSolidGround(this IServiceCollection serviceCollection)
+    public static void AddSolidGround(this IServiceCollection serviceCollection, Func<IServiceProvider, string> apiKeyProvider)
     {
         serviceCollection.AddHttpClient<SolidGroundHttpClient>((sp,options) =>
         {
             var config = sp.GetRequiredService<IConfiguration>();       
-            options.BaseAddress = new Uri(config[SolidGroundConstants.SolidGroundBaseUrl] ?? throw new Exception("Missing SolidGroundBaseUrl"));
-            options.DefaultRequestHeaders.Add("X-Api-Key", config[SolidGroundConstants.SolidGroundApiKey]  ?? throw new Exception("Missing SolidGroundApiKey"));
+            options.BaseAddress = new Uri(config[SolidGroundConstants.SolidGroundBaseUrl] ?? "solidground.flashcards.lucasmeijer.com");
+            //options.DefaultRequestHeaders.Add("X-Api-Key", config[SolidGroundConstants.SolidGroundApiKey]  ?? throw new Exception("Missing SolidGroundApiKey"));
         });
+        
         serviceCollection.AddHttpContextAccessor();
-        serviceCollection.AddScoped<SolidGroundSession>(sp => 
+        serviceCollection.AddScoped<SolidGroundSession>(sp =>
         {
-            var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
-            var httpContext = httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is null");
-            return new(httpContext, sp.GetRequiredService<IConfiguration>(), 
-                sp.GetRequiredService<SolidGroundBackgroundService>()
-            );
+            var httpContext = sp.GetRequiredService<IHttpContextAccessor>().HttpContext ?? throw new InvalidOperationException();       
+            return new(httpContext, sp, apiKeyProvider(sp));
         });
-
         serviceCollection.AddSingleton<SolidGroundBackgroundService>();
         serviceCollection.AddHostedService<SolidGroundBackgroundService>(sp => sp.GetRequiredService<SolidGroundBackgroundService>());
     }

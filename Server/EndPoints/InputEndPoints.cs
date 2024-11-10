@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using JetBrains.Annotations;
@@ -37,7 +38,8 @@ static class InputEndPoints
                 {
                     Outputs = [output],
                     StartTime = DateTime.Now,
-                    SolidGroundInitiated = false
+                    SolidGroundInitiated = false,
+                    Name = "Original"
                 });
 
                 int written = await db.SaveChangesAsync();
@@ -162,7 +164,7 @@ static class InputEndPoints
         {
             //apparently we're not a form
         }
-
+        
         return new()
         {
             Files = inputFiles,

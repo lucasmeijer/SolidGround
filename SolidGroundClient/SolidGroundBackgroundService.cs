@@ -10,6 +10,7 @@ public class SendRequest
     public required string Url { get; init; }
     public required object Payload { get; init; }
     public required HttpMethod Method { get; init; }
+    public required string ApiKey { get; init; }
 }
 
 public class SolidGroundHttpClient(HttpClient httpClient)
@@ -20,7 +21,7 @@ public class SolidGroundHttpClient(HttpClient httpClient)
     }
 }
 
-public class SolidGroundBackgroundService(
+class SolidGroundBackgroundService(
     ILogger<SolidGroundBackgroundService> logger,
     SolidGroundHttpClient solidGroundHttpClient)
     : BackgroundService
@@ -33,18 +34,6 @@ public class SolidGroundBackgroundService(
     
     readonly SemaphoreSlim _processingCompleteSemaphore = new(0);
     int _pendingRequests = 0;
-
-    public async Task EnqueueHttpPost(string url, object payload)
-    {
-        var request = new SendRequest
-        {
-            Method = HttpMethod.Post,
-            Url = url,
-            Payload = payload
-        };
-
-        await Enqueue(request);
-    }
 
     public async Task Enqueue(SendRequest request)
     {
@@ -93,7 +82,11 @@ public class SolidGroundBackgroundService(
 
     async Task ProcessRequestAsync(SendRequest request, CancellationToken stoppingToken)
     {
-        var httpRequestMessage = new HttpRequestMessage(request.Method, request.Url) { Content = JsonContent.Create(request.Payload)};
+        var httpRequestMessage = new HttpRequestMessage(request.Method, request.Url)
+        {
+            Content = JsonContent.Create(request.Payload)
+        };
+        httpRequestMessage.Headers.Add("X-Api-Key", request.ApiKey);
         using var response = await solidGroundHttpClient.SendAsync(httpRequestMessage, stoppingToken);
         
         if (!response.IsSuccessStatusCode)

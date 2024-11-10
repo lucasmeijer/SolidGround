@@ -28,9 +28,6 @@ public record RequestDto
     
     [JsonPropertyName("method")]
     public required string Method { get; init; }
-        
-    [JsonPropertyName("base_path")]
-    public required string BasePath { get; init; }
 }
 
 public record OutputComponentDto

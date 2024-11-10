@@ -149,13 +149,12 @@ public class ExecutionEndpointTests : IntegrationTestBase
     Task<WebApplicationUnderTest<int>> SetupTestWebApplicationFactory(Action<IEndpointRouteBuilder>? addEndPoints)
     {
         var builder = WebApplication.CreateBuilder();
-        builder.Services.AddSolidGround();
+        builder.Services.AddSolidGround(_ => Tenant.ApiKey);
         builder.Services.AddRouting();
         
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
         {
             { SolidGroundConstants.SolidGroundBaseUrl, Client.BaseAddress!.ToString() },
-            { SolidGroundConstants.SolidGroundApiKey, Tenant.ApiKey },
         }!);
         var app = builder.Build();
         app.UseRouting();

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using SolidGround;
 
 namespace SolidGroundClient;
@@ -21,7 +22,7 @@ static class RequestDtoExtensions
         {
             BodyBase64 = Convert.ToBase64String(ms.ToArray()),
             ContentType = request.ContentType,
-            BasePath = request.Scheme + "://" + request.Host,
+            //BasePath = request.Scheme + "://" + request.Host,
             Method = request.Method,
             Route = request.Path.Value ?? throw new ArgumentException("no request path"),
             QueryString = request.QueryString.Value
@@ -30,34 +31,26 @@ static class RequestDtoExtensions
 }
 
 public class SolidGroundSession(HttpContext httpContext,
-    IConfiguration config,
-    SolidGroundBackgroundService solidGroundBackgroundService)
+    IServiceProvider serviceProvider,
+    string apiKey)
 {
-    string _serviceBaseUrl = test(config);
+    SolidGroundBackgroundService SolidGroundBackgroundService { get; } = serviceProvider.GetRequiredService<SolidGroundBackgroundService>(); 
+    RequestDto? _reproducingRequest;
 
-    static string test(IConfiguration config)
-    {
-        return config[SolidGroundConstants.SolidGroundBaseUrl]?.TrimEnd('/') ?? throw new ArgumentException($"{SolidGroundConstants.SolidGroundBaseUrl} not found");
-    }
-
-    string? _outputId = test2(httpContext);
-
-    static string? test2(HttpContext httpContext)
-    {
-        return httpContext.Request.Headers.TryGetValue(SolidGroundConstants.SolidGroundOutputId, out var outputIdValues) ? outputIdValues.ToString() : null;
-    }
+    string? _outputId = httpContext.Request.Headers.TryGetValue(SolidGroundConstants.SolidGroundOutputId, out var outputIdValues) ? outputIdValues.ToString() : null;
 
     List<OutputComponentDto> _outputComponents = [];
 
     SolidGroundVariables? _variables;
-   
+
+    public void SetReproducingRequest(RequestDto request) => _reproducingRequest = request;
+    
     public async Task CompleteAsync(bool allowStorage)
     {
         if (allowStorage || IsSolidGroundInitiated)
         {
-            //make sure we capture the request right here and now, because when OnCompleted runs the stream will be dead.
-            var capturedRequest = await httpContext.Request.Capture();
-            httpContext.Response.OnCompleted(() => solidGroundBackgroundService.Enqueue(SendRequestFor(capturedRequest)));
+            var reproducingRequest = _reproducingRequest ?? await httpContext.Request.Capture();
+            await SolidGroundBackgroundService.Enqueue(SendRequestFor(reproducingRequest));
         }
     }
     
@@ -65,19 +58,21 @@ public class SolidGroundSession(HttpContext httpContext,
         ? new SendRequest()
         {
             Method = HttpMethod.Patch,
-            Url = $"{_serviceBaseUrl}/api/outputs/{_outputId}",
-            Payload = OutputDto()
+            Url = $"/api/outputs/{_outputId}",
+            Payload = OutputDto(),
+            ApiKey = apiKey
         }
 
         : new SendRequest()
         {
             Method = HttpMethod.Post,
-            Url = $"{_serviceBaseUrl}/api/input",
+            Url = $"/api/input",
             Payload = new InputDto()
             {
                 Request = capturedRequest,
                 Output = OutputDto()
-            }
+            },
+            ApiKey = apiKey
         };
 
     OutputDto OutputDto() => new()
