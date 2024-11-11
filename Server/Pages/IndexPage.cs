@@ -23,12 +23,16 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
         
         var inputIds = await queryable.Select(t => t.Id).ToArrayAsync();
 
+        var tenant = serviceProvider.GetRequiredService<Tenant>();
         var appSnapShot = new AppSnapshot(AppState, inputIds);
         return new($"""
                     <script>
                         window.appSnapshot = JSON.parse(`{JsonSerializer.Serialize(appSnapShot, JsonSerializerOptions.Web)}`);
                     </script>
                     <div class="m-5 flex flex-col gap-4">
+                        <div class="bg-white shadow-md rounded-lg group flex justify-center items-center p-4 text-lg">
+                            SolidGround For {tenant.Identifier}
+                        </div>
                        {await new FilterBarTurboFrame(AppState).RenderAsync(serviceProvider)}
                        {await new InputListTurboFrame(inputIds, AppState.Executions).RenderAsync(serviceProvider)}
                     </div>

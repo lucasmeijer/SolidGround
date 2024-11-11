@@ -37,6 +37,9 @@ public record OutputComponentDto
         
     [JsonPropertyName("value")]
     public required string Value { get; init; }
+    
+    [JsonPropertyName("content_type")]
+    public required string ContentType { get; init; }
 }
 
 public record StringVariableDto

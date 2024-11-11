@@ -12,12 +12,14 @@ using SolidGround.Pages;
 
 CreateWebApplication(args, (services, dboptions) =>
 {
+    //dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
+    dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.PendingModelChangesWarning));
     var tenant = services.GetRequiredService<Tenant>();  //tenant is injected Scoped, and is different based ont he domain of the incoming reuest.
     var persistentStorage = services.GetRequiredService<IConfiguration>()["PERSISTENT_STORAGE"] ?? ".";
     dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground_{tenant.Identifier}.db");
 }).Run();
 
-//dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
+
 public partial class Program
 {
     public static WebApplication CreateWebApplication(string[] args, Action<IServiceProvider, DbContextOptionsBuilder> setupDb)
@@ -53,40 +55,24 @@ public partial class Program
 
         builder.Services.AddScoped<Tenant>(serviceProvider =>
         {
-            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-            
-            HttpRequest httpContextRequest = serviceProvider
+            HttpRequest request = serviceProvider
                 .GetRequiredService<IHttpContextAccessor>()
                 .HttpContext?
                 .Request ?? throw new Exception("no http context");
-
-            logger.LogInformation($"Incoming 1 {httpContextRequest.Path}");
             
-            if (httpContextRequest.Headers.TryGetValue("X-Api-Key", out var apiKey))
+            if (request.Headers.TryGetValue("X-Api-Key", out var apiKey))
             {
                 Tenant[] tenants = [new SchrijfEvenMeeHuisArtsTenant(), new FlashCardsTenant()];
-                var tenant = tenants.SingleOrDefault(t => t.ApiKey == apiKey.ToString());
-
-                if (tenant == null)
-                {
-                    logger.LogInformation("Incoming 2 Api-Key Invalid");
-                    throw new BadHttpRequestException("API key is invalid");
-                }
-                logger.LogInformation($"Incoming 2 Api-Key from {tenant.Identifier}");
-
-                return tenant;
+                return tenants.SingleOrDefault(t => t.ApiKey == apiKey.ToString()) ?? throw new BadHttpRequestException("API key is invalid");
             }
 
-            Tenant tenant1 = httpContextRequest.Host.Host switch
+            return request.Host.Host switch
             {
                 "solidground.flashcards.lucasmeijer.com" => new FlashCardsTenant(),
                 "solidground.huisarts.schrijfevenmee.nl" => new SchrijfEvenMeeHuisArtsTenant(),
                 "localhost" => new SchrijfEvenMeeHuisArtsTenant(),
-                _ => throw new NotSupportedException("unknown domain: "+httpContextRequest.Host.Host)
+                _ => throw new NotSupportedException("unknown domain: "+request.Host.Host)
             };
-            
-            logger.LogInformation($"Incoming without API key from {tenant1.Identifier} on {httpContextRequest.Host.Host}");
-            return tenant1;
         });
         
         builder.Services.AddScoped<AppState>(sp =>

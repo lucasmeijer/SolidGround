@@ -37,7 +37,7 @@ public static class SolidGroundExtensions
         return builder;
     }
 
-    public static void AddSolidGround(this IServiceCollection serviceCollection, Func<IServiceProvider, string> apiKeyProvider)
+    public static void AddSolidGround(this IServiceCollection serviceCollection, Func<IServiceProvider, string?> apiKeyProvider)
     {
         serviceCollection.AddHttpClient<SolidGroundHttpClient>((sp,options) =>
         {
@@ -47,10 +47,13 @@ public static class SolidGroundExtensions
         });
         
         serviceCollection.AddHttpContextAccessor();
-        serviceCollection.AddScoped<SolidGroundSession>(sp =>
+        serviceCollection.AddScoped<SolidGroundSessionAccessor>(sp =>
         {
-            var httpContext = sp.GetRequiredService<IHttpContextAccessor>().HttpContext ?? throw new InvalidOperationException();       
-            return new(httpContext, sp, apiKeyProvider(sp));
+            var httpContext = sp.GetRequiredService<IHttpContextAccessor>().HttpContext ?? throw new InvalidOperationException();
+            var apiKey = apiKeyProvider(sp);
+            if (apiKey == null)
+                return new(null);
+            return new(new(httpContext, sp, apiKey));
         });
         serviceCollection.AddSingleton<SolidGroundBackgroundService>();
         serviceCollection.AddHostedService<SolidGroundBackgroundService>(sp => sp.GetRequiredService<SolidGroundBackgroundService>());

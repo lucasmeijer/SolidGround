@@ -11,8 +11,8 @@ using SolidGround;
 namespace SolidGround.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241110162104_initial")]
-    partial class initial
+    [Migration("20241111083126_initila")]
+    partial class initila
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -184,6 +184,11 @@ namespace SolidGround.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()

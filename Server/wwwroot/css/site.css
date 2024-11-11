@@ -17,6 +17,15 @@ html {
   min-height: 100%;
 }
 
+.html-highlight {
+    background-color: #282c34;
+    color: #abb2bf;
+    padding: 16px;
+    border-radius: 6px;
+    font-size: 8px;
+    line-height: 1.5;
+}
+
 .json-highlight {
     background-color: #282c34;
     color: #abb2bf;

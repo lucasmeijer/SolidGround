@@ -117,7 +117,8 @@ static class InputEndPoints
         var outputComponents = outputDto.OutputComponents.Select(c => new OutputComponent()
         {
             Name = c.Name,
-            Value = c.Value
+            Value = c.Value,
+            ContentType = c.ContentType
         });
             
         var variablesElement = outputDto.StringVariables.Select(c => new StringVariable()
@@ -126,7 +127,7 @@ static class InputEndPoints
             Value = c.Value
         });
 
-        return new Output
+        return new()
         {
             Components = [..outputComponents],
             StringVariables = [..variablesElement],

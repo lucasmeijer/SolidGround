@@ -3,9 +3,21 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace SolidGround;
+
+class MyDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
+{
+    public AppDbContext CreateDbContext(string[] args)
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.ConfigureWarnings(b => b.Ignore(RelationalEventId.PendingModelChangesWarning));
+        optionsBuilder.UseSqlite("Data Source=design_time.db");
+        return new AppDbContext(optionsBuilder.Options);
+    }
+}
 
 sealed class AppDbContext : DbContext
 {
@@ -116,17 +128,6 @@ class Input
     
     [SuppressMessage("ReSharper", "EntityFramework.ModelValidation.UnlimitedStringLength")]
     public string OriginalRequest_Body { get; [UsedImplicitly] set; } = null!;
-    
-    public static Input Example => new()
-    {
-        Id = 1,
-        Name = "Our dummy input",
-        Files = [new InputFile() { Name = "input.png", Bytes = [0], Id = 0, MimeType = "image/png" }],
-        Strings = [new InputString() { Name = "language", Value = "nl"}],
-        Outputs = [
-            Output.Example
-        ]
-    };
 }
 // ReSharper restore InconsistentNaming
 
@@ -176,12 +177,6 @@ class Output
     public List<StringVariable> StringVariables { get; set; } = [];
     
     public string TurboFrameId => $"output_{Id}";
-    
-    public static Output Example => new()
-    {
-        Status = ExecutionStatus.Completed,
-        Components = [new OutputComponent() { Name = "fullresponse.txt", Value = "heel lange output" }],
-    };
 }
 
 class StringVariable
@@ -206,6 +201,8 @@ class OutputComponent
 
     public int OutputId { get; [UsedImplicitly] set; }
     public Output Output { get; [UsedImplicitly] set; } = null!;
+
+    [MaxLength(200)] public string ContentType { get; set; } = null!;
     
     [MaxLength(200)]
     public string Name { get; [UsedImplicitly] set; } = null!;

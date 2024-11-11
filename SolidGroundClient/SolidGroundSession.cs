@@ -30,6 +30,8 @@ static class RequestDtoExtensions
     }
 }
 
+public record SolidGroundSessionAccessor(SolidGroundSession? Session);
+
 public class SolidGroundSession(HttpContext httpContext,
     IServiceProvider serviceProvider,
     string apiKey)
@@ -116,9 +118,8 @@ public class SolidGroundSession(HttpContext httpContext,
     
     bool IsSolidGroundInitiated => _outputId != null;
 
-
-    public void AddResult(string value) => AddArtifact("result", value);
+    public void AddResult(string value, string? contentType=null) => AddArtifact("result", value, contentType);
     public void AddResultJson(object value) => AddArtifactJson("result", value);
-    public void AddArtifact(string name, string value) => _outputComponents.Add(new() { Name = name, Value = value });
-    public void AddArtifactJson(string name, object value) => AddArtifact(name,JsonSerializer.Serialize(value));
+    public void AddArtifact(string name, string value, string? contentType=null) => _outputComponents.Add(new() { Name = name, Value = value, ContentType = contentType ?? "text/plain"});
+    public void AddArtifactJson(string name, object value) => AddArtifact(name,JsonSerializer.Serialize(value), "application/json");
 }

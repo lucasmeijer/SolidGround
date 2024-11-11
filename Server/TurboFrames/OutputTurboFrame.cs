@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Html;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using SolidGround.Pages;
 using TurboFrames;
@@ -75,7 +77,7 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
             ? [] 
             : [new($"""
                     <div class="text-xs">
-                        {JsonFormatter.FormatMaybeJson(result.Value)}
+                        {RenderValue(result)}
                     </div>
                     """)];
     }
@@ -103,10 +105,26 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                        </svg>
                    </summary>
                    <div class="py-2 text-xs">
-                       {JsonFormatter.FormatMaybeJson(c.Value)}
+                       {RenderValue(c)}
                    </div>
                </details>
            """);
+
+    static Html RenderValue(OutputComponent c)
+    {
+        return c.ContentType == "application/html" ? new($"""
+                                                                     <div class="[&_*]:all-unset">
+                                                                     <div class="html-highlight list-disc list-inside">
+                                                                     <b>evendik</b>
+                                                                     <ul>
+                                                                     <li>ja</li>
+                                                                     <li>ikziehet</li>
+                                                                     </ul>
+                                                                     {c.Value}
+                                                                     </div>
+                                                                     </div>
+                                                                     """) : JsonFormatter.FormatMaybeJson(c.Value);
+    }
 
     static string ColorFor(Output output) => output.Status switch
     {

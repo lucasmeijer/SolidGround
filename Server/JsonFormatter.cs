@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Html;
 
 public static class JsonFormatter
 {
-    public static HtmlString FormatMaybeJson(string? maybeJson)
+    public static Html FormatMaybeJson(string? maybeJson)
     {
         if (maybeJson == null)
             return new ("<pre class=\"json-highlight whitespace-pre-wrap break-all\">Null</pre>");
@@ -27,7 +27,7 @@ public static class JsonFormatter
             .Replace(">", "&gt;");
     }
     
-    static HtmlString FormatJsonToHtml(JsonDocument jsonDocument)
+    static Html FormatJsonToHtml(JsonDocument jsonDocument)
     {
         var stringBuilder = new StringBuilder();
         stringBuilder.Append("<pre class=\"json-highlight whitespace-pre-wrap break-all\">");

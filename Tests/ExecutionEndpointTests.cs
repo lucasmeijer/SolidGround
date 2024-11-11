@@ -14,6 +14,7 @@ using SolidGround;
 using SolidGroundClient;
 using TurboFrames;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Tests;
 
@@ -94,8 +95,9 @@ public class ExecutionEndpointTests : IntegrationTestBase
     {
         return await SetupTestWebApplicationFactory(endpointBuilder =>
         {
-            endpointBuilder.MapGet("/joke", async (string subject, SolidGroundSession session) =>
+            endpointBuilder.MapGet("/joke", async (string subject, SolidGroundSessionAccessor accessor) =>
             {
+                var session = accessor.Session ?? throw new ArgumentException("asd");
                 var joke = session.GetVariables<TestVariables>().Prompt + " " + subject;
                 session.AddResult(joke);
 

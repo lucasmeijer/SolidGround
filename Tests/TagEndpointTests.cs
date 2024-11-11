@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Session;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SolidGround;
@@ -37,7 +38,7 @@ public class TagEndPointTests : IntegrationTestBase
         var doc = XDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("refresh", doc.Descendants("turbo-stream").Single().Attribute("action")?.Value);
     }
-    
+
     // [Fact]
     // public async Task DeleteTagThroughPostWithUnderscoreMethod_Returns_NoContent()
     // {
