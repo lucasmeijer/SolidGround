@@ -62,15 +62,14 @@ public partial class Program
             
             if (request.Headers.TryGetValue("X-Api-Key", out var apiKey))
             {
-                Tenant[] tenants = [new SchrijfEvenMeeHuisArtsTenant(), new FlashCardsTenant()];
-                return tenants.SingleOrDefault(t => t.ApiKey == apiKey.ToString()) ?? throw new BadHttpRequestException("API key is invalid");
+                return Tenant.All.SingleOrDefault(t => t.ApiKey == apiKey.ToString()) ?? throw new BadHttpRequestException("API key is invalid");
             }
 
             return request.Host.Host switch
             {
                 "solidground.flashcards.lucasmeijer.com" => new FlashCardsTenant(),
                 "solidground.huisarts.schrijfevenmee.nl" => new SchrijfEvenMeeHuisArtsTenant(),
-                "localhost" => new SchrijfEvenMeeHuisArtsTenant(),
+                "localhost" => new SchrijfEvenMeeAssessment(),
                 _ => throw new NotSupportedException("unknown domain: "+request.Host.Host)
             };
         });

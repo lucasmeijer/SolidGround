@@ -22,8 +22,20 @@ html {
     color: #abb2bf;
     padding: 16px;
     border-radius: 6px;
-    font-size: 8px;
     line-height: 1.5;
+}
+.html-highlight p {
+    display: block;
+    margin: 1em 0;
+}
+.html-highlight ul {
+    list-style-type: disc;
+    padding-left: 2em;
+    margin: 1em 0;
+}
+
+.html-highlight li {
+    display: list-item;
 }
 
 .json-highlight {

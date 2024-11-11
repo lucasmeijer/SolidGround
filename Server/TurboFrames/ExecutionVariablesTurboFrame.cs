@@ -1,3 +1,4 @@
+using System.Web;
 using SolidGround;
 using TurboFrames;
 
@@ -5,21 +6,25 @@ record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) 
 {
     protected override string LazySrc => ExecutionsEndPoints.Routes.api_executions_new.For();
 
-    static Html RenderVariable(StringVariableDto variable) => new($"""
-                                                                   <div class="mb-6">
-                                                                       <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
-                                                                           {variable.Name}
-                                                                       </label>
-                                                                       <textarea data-controller="textarearesize"
-                                                                       id="{IdFor(variable.Name)}"
-                                                                       name="{IdFor(variable.Name)}"      
-                                                                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                                                                       rows="4"
-                                                                       placeholder="{variable.Value}"
-                                                                       oninput="this.classList.toggle('text-gray-500', this.value === this.placeholder)"
-                                                                           >{variable.Value}</textarea>
-                                                                   </div>
-                                                                   """);
+    static Html RenderVariable(StringVariableDto variable)
+    {
+        var htmlEncode = HttpUtility.HtmlEncode(variable.Value);
+        return new($"""
+                    <div class="mb-6">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
+                            {variable.Name}
+                        </label>
+                        <textarea data-controller="textarearesize"
+                        id="{IdFor(variable.Name)}"
+                        name="{IdFor(variable.Name)}"      
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        rows="4"
+                        placeholder="{htmlEncode}"
+                        oninput="this.classList.toggle('text-gray-500', this.value === this.placeholder)"
+                            >{htmlEncode}</textarea>
+                    </div>
+                    """);
+    }
     // async Task<StringVariableDto[]> GetVariablesFromServiceUnderTest(IConfiguration config, HttpClient httpClient)
     // {
     //     var requestUri = $"{TargetAppBaseAddress(config)}/solidground";

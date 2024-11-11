@@ -76,7 +76,7 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
         return result == null 
             ? [] 
             : [new($"""
-                    <div class="text-xs">
+                    <div class="prose">
                         {RenderValue(result)}
                     </div>
                     """)];
@@ -113,15 +113,8 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
     static Html RenderValue(OutputComponent c)
     {
         return c.ContentType == "application/html" ? new($"""
-                                                                     <div class="[&_*]:all-unset">
                                                                      <div class="html-highlight list-disc list-inside">
-                                                                     <b>evendik</b>
-                                                                     <ul>
-                                                                     <li>ja</li>
-                                                                     <li>ikziehet</li>
-                                                                     </ul>
                                                                      {c.Value}
-                                                                     </div>
                                                                      </div>
                                                                      """) : JsonFormatter.FormatMaybeJson(c.Value);
     }
