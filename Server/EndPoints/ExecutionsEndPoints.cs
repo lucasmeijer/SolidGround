@@ -29,10 +29,13 @@ static class ExecutionsEndPoints
         app.MapGet(Routes.api_executions_new_production, async (IConfiguration config, HttpClient httpClient, Tenant tenant) =>
         {
             var requestUri = $"{tenant.BaseUrl}/solidground";
-            var availableVariablesDto = await httpClient.GetFromJsonAsync<JsonArray>(requestUri) ?? throw new Exception("No available variables found");
+            var routesArray = await httpClient.GetFromJsonAsync<JsonArray>(requestUri) ?? throw new Exception("No available variables found");
             var l = new List<StringVariableDto>();
 
-            foreach (var x in availableVariablesDto[0]!["variables"]!.AsObject())
+            if (routesArray.Count == 0)
+                return Results.BadRequest($"No routes found at {requestUri}");
+            
+            foreach (var x in routesArray[0]!["variables"]!.AsObject())
             {
                 l.Add(new() { Name = x.Key, Value = x.Value!.ToString()});
             }
