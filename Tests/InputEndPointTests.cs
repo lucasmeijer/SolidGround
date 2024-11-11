@@ -44,6 +44,8 @@ public class InputEndPointTests : IntegrationTestBase
         
         var response = await Client.PostAsJsonAsync("/api/input", (InputDto)new()
         {
+            TagNames = [],
+            Name = null,
             Output = new()
             {
                 OutputComponents = [],
@@ -99,6 +101,8 @@ public class InputEndPointTests : IntegrationTestBase
 
     static InputDto SimpleDto => new()
     {
+        TagNames = [],
+        Name = null,
         Output = new()
         {
             OutputComponents = [],
