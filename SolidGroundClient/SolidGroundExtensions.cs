@@ -86,10 +86,17 @@ public static class SolidGroundExtensions
     {
         var result = new JsonObject();
         var vars = pair.Item2!.For(sp);
-        foreach (var prop in SolidGroundSession.PropertyInfosFor(vars.GetType()))
+        foreach (var prop in vars.Properties)
         {
-            var value = prop.GetValue(vars) ?? throw new Exception();
-            result[prop.Name] = (string) value;
+            var jsonObject = new JsonObject() 
+            {  
+                ["type"] = prop.PropertyType == typeof(bool) ? "bool" : "string",
+                ["value"] = vars.GetPropertyAsString(prop) ?? throw new Exception()
+            };
+            if (prop.PropertyType.IsEnum)
+                jsonObject["options"] = new JsonArray([..Enum.GetNames(prop.PropertyType)]);
+            
+            result[prop.Name] = jsonObject;
         }
         return result;
     }

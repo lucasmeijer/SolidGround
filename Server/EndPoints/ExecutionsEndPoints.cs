@@ -37,7 +37,18 @@ static class ExecutionsEndPoints
             
             foreach (var x in routesArray[0]!["variables"]!.AsObject())
             {
-                l.Add(new() { Name = x.Key, Value = x.Value!.ToString()});
+                var valueObject = x.Value!.AsObject();
+                string[] options = [];
+                
+                if (valueObject.TryGetPropertyValue("options", out var optionsNode) && optionsNode != null) 
+                    options = optionsNode.AsArray().Select(e => e!.GetValue<string>()).ToArray();
+                
+                l.Add(new()
+                {
+                    Name = x.Key, 
+                    Value = valueObject["value"]!.GetValue<string>(),
+                    Options = options
+                });
             }
             return new ExecutionVariablesTurboFrame([..l], "New execution");
         });
@@ -55,7 +66,12 @@ static class ExecutionsEndPoints
                 .Outputs
                 .First()
                 .StringVariables
-                .Select(s => new StringVariableDto() { Name = s.Name, Value = s.Value })
+                .Select(s => new StringVariableDto()
+                {
+                    Name = s.Name, 
+                    Value = s.Value, 
+                    Options = []
+                })
                 .ToArray();
             
             return new ExecutionVariablesTurboFrame(variables, execution.Name+" Copy");

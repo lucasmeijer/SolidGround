@@ -55,6 +55,9 @@ public record StringVariableDto
         
     [JsonPropertyName("value")]
     public required string Value { get; init; }
+    
+    [JsonPropertyName("options")]
+    public required string[] Options { get; init; }
 }
 
 public record AvailableVariablesDto

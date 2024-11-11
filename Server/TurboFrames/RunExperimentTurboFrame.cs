@@ -83,16 +83,29 @@ record RunExperimentTurboFrame : TurboFrame
               <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
                   {variable.Name}
               </label>
-              <textarea data-controller="textarearesize"
-              id="{IdFor(variable.Name)}"
-              name="{IdFor(variable.Name)}"      
-              class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              rows="4"
-              placeholder="{variable.Value}"
-              oninput="this.classList.toggle('text-gray-500', this.value === this.placeholder)"
-                  >{variable.Value}</textarea>
+              {(variable.Options.Length == 0 ? RenderTextAreaFor(variable) : RenderDropdownFor(variable))}
           </div>
           """);
 
+    static Html RenderDropdownFor(StringVariableDto variable) => new($"""
+                                                                      <select
+                                                                      id="{IdFor(variable.Name)}"
+                                                                      name="{IdFor(variable.Name)}"
+                                                                         >
+                                                                         {variable.Options.Select(o => $"<option value='{o}'>{o}</option>")}
+                                                                      </select>
+                                                                      """);
+    static Html RenderTextAreaFor(StringVariableDto variable) => new($"""
+                                                                     <textarea data-controller="textarearesize"
+                                                                     id="{IdFor(variable.Name)}"
+                                                                     name="{IdFor(variable.Name)}"      
+                                                                     class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                                                     rows="4"
+                                                                     placeholder="{variable.Value}"
+                                                                     oninput="this.classList.toggle('text-gray-500', this.value === this.placeholder)"
+                                                                         >{variable.Value}</textarea>
+                                                                     """);
+    
+    
     static string IdFor(string variableName) => $"SolidGroundVariable_{variableName}";
 }

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 using SolidGround;
 
 namespace SolidGroundClient;
@@ -90,19 +91,15 @@ public class SolidGroundSession(HttpContext httpContext,
         OutputComponents = [.._outputComponents],
         StringVariables = _variables == null //this can happen in cases like SchrijfEvenMee feedback, where we only have feedback, but not the data of the original run. 
             ? [] 
-            : PropertyInfosFor(_variables.GetType())
+            : _variables.Properties
             .Select(p => new StringVariableDto()
             {
                 Name = p.Name,
-                Value = (string)(p.GetValue(_variables) ?? throw new InvalidOperationException())
+                Value = _variables.GetPropertyAsString(p),
+                Options = _variables.GetPropertyOptions(p)
             })
             .ToArray()
     };
-    
-    internal static IEnumerable<PropertyInfo> PropertyInfosFor(Type t) =>
-        t
-            .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-            .Where(f => f.PropertyType.IsAssignableTo(typeof(string)));
 
     public T GetVariables<T>() where T : SolidGroundVariables, new()
     {
@@ -114,10 +111,10 @@ public class SolidGroundSession(HttpContext httpContext,
         var hd = httpContext.Request.Headers;
         var v = new T();
         _variables = v;
-        foreach (var p in PropertyInfosFor(typeof(T)))
+        foreach (var p in v.Properties)
         {
-            if (hd.TryGetValue($"{SolidGroundConstants.HeaderVariablePrefix}{p.Name}", out var value))
-                p.SetValue(_variables, Encoding.UTF8.GetString(Convert.FromBase64String(value.ToString())));
+            if (hd.TryGetValue($"{SolidGroundConstants.HeaderVariablePrefix}{p.Name}", out var value)) 
+                _variables.SetPropertyAsString(p, Encoding.UTF8.GetString(Convert.FromBase64String(value.ToString())));
         }
         
         return v;

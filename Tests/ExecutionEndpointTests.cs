@@ -20,9 +20,18 @@ namespace Tests;
 
 public class ExecutionEndpointTests : IntegrationTestBase
 {
+    public enum TestEnum
+    {
+        One,
+        Two,
+        Three
+    }
+    
     class TestVariables : SolidGroundVariables
     {
         public string Prompt { get; set; } = "Tell me a joke about a";
+        public TestEnum TestEnum { get; set; }
+        public bool Bool { get; set; }
     }
 
     [Fact]
@@ -42,7 +51,22 @@ public class ExecutionEndpointTests : IntegrationTestBase
                 ["route"] = "/joke",
                 ["variables"] = new JsonObject
                 {
-                    ["Prompt"] = "Tell me a joke about a"
+                    ["Prompt"] = new JsonObject
+                    {
+                        ["type"] = "string",
+                        ["value"] = "Tell me a joke about a",
+                    },
+                    ["TestEnum"] = new JsonObject
+                    {
+                        ["type"] = "string",
+                        ["value"] = "One",
+                        ["options"] = new JsonArray("One", "Two","Three")
+                    },
+                    ["Bool"] = new JsonObject
+                    {
+                        ["type"] = "bool",
+                        ["value"] = "false",
+                    }
                 }
             }
         };
@@ -125,7 +149,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         {
             BaseUrl = consumingAppClient.BaseAddress?.ToString() ?? throw new Exception("No baseaddress"),
             Inputs = [DbContext.Inputs.Single().Id],
-            StringVariables = [new() { Name = "Prompt", Value = "Give me a haiku about"}]
+            StringVariables = [new() { Name = "Prompt", Value = "Give me a haiku about", Options = []}]
         });
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         
