@@ -45,6 +45,12 @@ public class SolidGroundSession(HttpContext httpContext,
 
     SolidGroundVariables? _variables;
 
+    List<string> _tagNames = [];
+    string? _name = null;
+    
+    public void AddTag(string tagName) => _tagNames.Add(tagName);
+    public void SetName(string name) => _name = name;
+    
     public void SetReproducingRequest(RequestDto request) => _reproducingRequest = request;
     
     public async Task CompleteAsync(bool allowStorage)
@@ -71,7 +77,9 @@ public class SolidGroundSession(HttpContext httpContext,
             Url = $"/api/input",
             Payload = new InputDto()
             {
+                Name = _name,
                 Request = capturedRequest,
+                TagNames = [.._tagNames],
                 Output = OutputDto()
             },
             ApiKey = apiKey
@@ -80,7 +88,15 @@ public class SolidGroundSession(HttpContext httpContext,
     OutputDto OutputDto() => new()
     {
         OutputComponents = [.._outputComponents],
-        StringVariables = GetStringVariableDtos()
+        StringVariables = _variables == null //this can happen in cases like SchrijfEvenMee feedback, where we only have feedback, but not the data of the original run. 
+            ? [] 
+            : PropertyInfosFor(_variables.GetType())
+            .Select(p => new StringVariableDto()
+            {
+                Name = p.Name,
+                Value = (string)(p.GetValue(_variables) ?? throw new InvalidOperationException())
+            })
+            .ToArray()
     };
     
     internal static IEnumerable<PropertyInfo> PropertyInfosFor(Type t) =>
@@ -107,15 +123,6 @@ public class SolidGroundSession(HttpContext httpContext,
         return v;
     }
 
-    StringVariableDto[] GetStringVariableDtos() =>
-        PropertyInfosFor((_variables ?? throw new InvalidOperationException()).GetType())
-            .Select(p => new StringVariableDto()
-            {
-                Name = p.Name,
-                Value = (string)(p.GetValue(_variables) ?? throw new InvalidOperationException())
-            })
-            .ToArray();
-    
     bool IsSolidGroundInitiated => _outputId != null;
 
     public void AddResult(string value, string? contentType=null) => AddArtifact("result", value, contentType);

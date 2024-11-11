@@ -6,9 +6,15 @@ public record InputDto
 {
     [JsonPropertyName("request")]
     public required RequestDto Request { get; init; }
-        
+    
+    [JsonPropertyName("tag_names")]
+    public required string[] TagNames { get; init; }
+    
     [JsonPropertyName("output")]
     public required OutputDto Output { get; init; }
+
+    [JsonPropertyName("name")]
+    public required string? Name { get; init; }
 }
 
 

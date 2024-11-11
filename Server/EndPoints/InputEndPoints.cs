@@ -30,7 +30,7 @@ static class InputEndPoints
     {
         app.MapPost(Routes.api_input, async (AppDbContext db, [FromBody] InputDto inputDto) =>
             {
-                var input = await InputFor(inputDto);
+                var input = await InputFor(inputDto, db);
 
                 var output = OutputFor(inputDto.Output, input);
 
@@ -149,7 +149,7 @@ static class InputEndPoints
     }
 
 
-    static async Task<Input> InputFor(InputDto inputDto)
+    static async Task<Input> InputFor(InputDto inputDto, AppDbContext db)
     {
         var bodyBase64 = inputDto.Request.BodyBase64;
         var originalRequestContentType = inputDto.Request.ContentType;
@@ -165,11 +165,14 @@ static class InputEndPoints
         {
             //apparently we're not a form
         }
+
+        var tagIds = await db.Tags.Where(t => inputDto.TagNames.Contains(t.Name)).ToListAsync();
         
         return new()
         {
             Files = inputFiles,
-            Name = null,
+            Name = inputDto.Name,
+            Tags = tagIds,
             Strings = inputStrings,
             OriginalRequest_ContentType = originalRequestContentType,
             OriginalRequest_Body = bodyBase64,
