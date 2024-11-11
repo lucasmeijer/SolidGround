@@ -7,13 +7,14 @@ namespace SolidGround;
 record FilterBarTurboFrame(AppState AppState) : TurboFrame(TurboFrameId)
 {
     public new static string TurboFrameId => "filter_bar";
-    protected override Delegate RenderFunc => async (AppDbContext db, IServiceProvider sp) =>
+    protected override Delegate RenderFunc => async (AppDbContext db, IServiceProvider sp, Tenant tenant) =>
     {
         var allTags = await db.Tags.ToArrayAsync();
         var availableTags = allTags.Where(at => AppState.Tags.All(t => t != at.Id)).ToArray();
         return new Html($"""
                               <div data-controller="filterbar" class="bg-white shadow-md rounded-lg group flex flex-col p-4">
                                  <div class="flex items-center gap-4 h-16">
+                                     Tenant: {tenant.Identifier}
                                      <span class="text-gray-700 font-semibold">Search:</span>
                                      <div class="relative flex-grow">
                                         <input 

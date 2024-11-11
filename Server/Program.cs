@@ -53,25 +53,40 @@ public partial class Program
 
         builder.Services.AddScoped<Tenant>(serviceProvider =>
         {
+            var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+            
             HttpRequest httpContextRequest = serviceProvider
                 .GetRequiredService<IHttpContextAccessor>()
                 .HttpContext?
                 .Request ?? throw new Exception("no http context");
 
+            logger.LogInformation($"Incoming 1 {httpContextRequest.Path}");
+            
             if (httpContextRequest.Headers.TryGetValue("X-Api-Key", out var apiKey))
             {
                 Tenant[] tenants = [new SchrijfEvenMeeHuisArtsTenant(), new FlashCardsTenant()];
-                return tenants.Single(t => t.ApiKey == apiKey.ToString());
-            }
-            
-            var host = httpContextRequest?.Host.Host ?? string.Empty;
+                var tenant = tenants.SingleOrDefault(t => t.ApiKey == apiKey.ToString());
 
-            return host switch
+                if (tenant == null)
+                {
+                    logger.LogInformation("Incoming 2 Api-Key Invalid");
+                    throw new BadHttpRequestException("API key is invalid");
+                }
+                logger.LogInformation($"Incoming 2 Api-Key from {tenant.Identifier}");
+
+                return tenant;
+            }
+
+            Tenant tenant1 = httpContextRequest.Host.Host switch
             {
                 "solidground.flashcards.lucasmeijer.com" => new FlashCardsTenant(),
-                "solidground.huisarts.schrijfevenmee.nl" => new FlashCardsTenant(),
-                _ => new SchrijfEvenMeeHuisArtsTenant()
+                "solidground.huisarts.schrijfevenmee.nl" => new SchrijfEvenMeeHuisArtsTenant(),
+                "localhost" => new SchrijfEvenMeeHuisArtsTenant(),
+                _ => throw new NotSupportedException("unknown domain: "+httpContextRequest.Host.Host)
             };
+            
+            logger.LogInformation($"Incoming without API key from {tenant1.Identifier} on {httpContextRequest.Host.Host}");
+            return tenant1;
         });
         
         builder.Services.AddScoped<AppState>(sp =>
