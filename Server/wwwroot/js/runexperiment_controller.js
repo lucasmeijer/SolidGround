@@ -11,12 +11,21 @@ export default class RunExperimentController extends Controller {
         this.element.removeEventListener("turbo:submit-end", this.handleSubmitEnd.bind(this))
     }
     
-    handleSubmitEnd(event) {
+    cancel()
+    {
+        this.closeDialog();
+    }
+    
+    closeDialog()
+    {
         // Find the closest dialog element and close it
         const dialog = this.element.closest('dialog')
         if (dialog) {
             dialog.close()
         }
+    }
+    handleSubmitEnd(event) {
+        this.closeDialog();
     }
     
     handleSubmit(event) {

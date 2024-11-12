@@ -28,31 +28,10 @@ static class ExecutionsEndPoints
         app.MapGet(Routes.api_executions_new,() => new NewExecutionDialogContentTurboFrame());
         app.MapGet(Routes.api_executions_new_production, async (IConfiguration config, HttpClient httpClient, Tenant tenant) =>
         {
-            var requestUri = $"{tenant.BaseUrl}/solidground";
-            var routesArray = await httpClient.GetFromJsonAsync<JsonArray>(requestUri) ?? throw new Exception("No available variables found");
-            var l = new List<StringVariableDto>();
-
-            if (routesArray.Count == 0)
-                return Results.BadRequest($"No routes found at {requestUri}");
-            
-            foreach (var x in routesArray[0]!["variables"]!.AsObject())
-            {
-                var valueObject = x.Value!.AsObject();
-                string[] options = [];
-                
-                if (valueObject.TryGetPropertyValue("options", out var optionsNode) && optionsNode != null) 
-                    options = optionsNode.AsArray().Select(e => e!.GetValue<string>()).ToArray();
-                
-                l.Add(new()
-                {
-                    Name = x.Key, 
-                    Value = valueObject["value"]!.GetValue<string>(),
-                    Options = options
-                });
-            }
+            var l = await StringVariableDtosFromProduction(tenant, httpClient);
             return new ExecutionVariablesTurboFrame([..l], "New execution");
         });
-        app.MapGet(Routes.api_executions_new_executionid, async (int executionId, AppDbContext db) =>
+        app.MapGet(Routes.api_executions_new_executionid, async (int executionId, AppDbContext db,HttpClient httpClient, Tenant tenant) =>
         {
             var execution = await db.Executions
                 .Include(e => e.Outputs)
@@ -62,19 +41,22 @@ static class ExecutionsEndPoints
                 
                 ?? throw new NotFoundException($"Execution {executionId} not found");
 
-            var variables = execution
+            var productionVariables = await StringVariableDtosFromProduction(tenant, httpClient);
+
+            var outputVariables = execution
                 .Outputs
                 .First()
-                .StringVariables
-                .Select(s => new StringVariableDto()
-                {
-                    Name = s.Name, 
-                    Value = s.Value, 
-                    Options = []
-                })
-                .ToArray();
+                .StringVariables;
             
-            return new ExecutionVariablesTurboFrame(variables, execution.Name+" Copy");
+            var patched = productionVariables.Select(p =>
+            {
+                var outputVar = outputVariables.SingleOrDefault(o => o.Name == p.Name);
+                if (outputVar == null)
+                    return p;
+                return p with { Value = outputVar.Value };
+            });
+            
+            return new ExecutionVariablesTurboFrame([..patched], execution.Name+" Copy");
         });
         
         app.MapPost(Routes.api_executions_id_name, async (AppDbContext db, int id, InputEndPoints.NameUpdateDto nameUpdateDto) =>
@@ -115,7 +97,7 @@ static class ExecutionsEndPoints
             return Results.Json(new ExecutionStatusDto() { Finished = finished });
         });
         
-        app.MapPost(Routes.api_executions, async (AppDbContext db, IConfiguration config, IServiceScopeFactory scopeFactory, RunExecutionDto runExecutionDto, HttpContext httpContext, AppState? appState) =>
+        app.MapPost(Routes.api_executions, async (AppDbContext db, RunExecutionDto runExecutionDto, HttpContext httpContext, AppState? appState, BackgroundWorkService backgroundWorkService) =>
         {
             var inputsToOutputs = runExecutionDto.Inputs.ToDictionary(id => id, OutputsFor);
             
@@ -127,7 +109,11 @@ static class ExecutionsEndPoints
                 [
                     ..inputsToOutputs.Values.SelectMany(o => o)
                 ],
-                StringVariables = [..runExecutionDto.StringVariables.Select(s=> new StringVariable() { Name = s.Name, Value = s.Value})],
+                StringVariables = [..runExecutionDto.StringVariables.Select(s=> new StringVariable()
+                {
+                    Name = s.Name, 
+                    Value = s.Value,
+                })],
                 SolidGroundInitiated = true
             };
             db.Executions.Add(execution);
@@ -135,8 +121,32 @@ static class ExecutionsEndPoints
 
             foreach (var (inputId, outputs) in inputsToOutputs)
             {
-                //todo: move to a background service that has logging on errors and telemetry
-                _ = Task.Run(() => ExecutionForInput(inputId, [..outputs.Select(o=>o.Id)], runExecutionDto.BaseUrl, runExecutionDto.StringVariables, scopeFactory));
+                var input = await db.Inputs.FindAsync(inputId) ?? throw new ArgumentException("Input not found");
+
+                var requestUrlFor = RequestUrlFor(runExecutionDto.BaseUrl, input);
+                
+                foreach (var output in outputs)
+                {
+                    try
+                    {
+                        var request = RequestToHaveTargetAppPopulateOutput(input, runExecutionDto.StringVariables, output.Id, requestUrlFor);
+                        await backgroundWorkService.QueueWorkAsync(async (serviceProvider, cancellationToken) =>
+                        {
+                            await SendRequestAndProcessResponse(serviceProvider, request, output.Id, cancellationToken);
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        output.Status = ExecutionStatus.Failed;
+                        output.Components.Add(new()
+                        {
+                            Name = "Error",
+                            Value = ex.ToString(),
+                            ContentType = "text/plain"
+                        });
+                        await db.SaveChangesAsync();
+                    }
+                }
             }
 
             if (!httpContext.Request.Headers.Accept.ToString().Contains("text/vnd.turbo-stream.html", StringComparison.OrdinalIgnoreCase))
@@ -155,89 +165,100 @@ static class ExecutionsEndPoints
                 Status = ExecutionStatus.Started,
                 Components = []
             }).ToArray();
-        });
-    }
-    
-    
-    static async Task ExecutionForInput(int inputId, int[] outputIds, string baseUrl, StringVariableDto[] variables, IServiceScopeFactory scopeFactory)
-    {
-        await Task.WhenAll(outputIds
-            .Select(outputId => TriggerOutputFor(inputId, baseUrl, variables, scopeFactory, outputId)));
-    }
-
-    static async Task TriggerOutputFor(int inputId, string baseUrl, StringVariableDto[] variables, IServiceScopeFactory scopeFactory, int outputId)
-    {
-        using var scope = scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
-
-        var output = await dbContext.Outputs.FindAsync(outputId) ?? throw new Exception("Output with ID " + outputId + " not found.");
-        try
-        {
-            var input = await dbContext.Inputs.FindAsync(inputId) ?? throw new ArgumentException("Input not found");
-
-            Uri requestUri;
-            try
+            
+            HttpRequestMessage RequestToHaveTargetAppPopulateOutput(Input input, StringVariableDto[] variables, int outputId, Uri requestUrl)
             {
-                requestUri = new Uri(baseUrl.TrimEnd("/") + input.OriginalRequest_Route + (input.OriginalRequest_QueryString ?? ""));
-            }
-            catch (UriFormatException ufe)
-            {
-                throw new BadHttpRequestException($"Invalid end point: {baseUrl}", ufe);
-            }
-
-            var request = new HttpRequestMessage
-            {
-                Method = string.Equals(input.OriginalRequest_Method, "post",
-                    StringComparison.InvariantCultureIgnoreCase)
-                    ? HttpMethod.Post
-                    : HttpMethod.Get,
-                RequestUri = requestUri,
-                Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
+                return new()
                 {
-                    Headers =
+                    Method = string.Equals(input.OriginalRequest_Method, "post",
+                        StringComparison.InvariantCultureIgnoreCase)
+                        ? HttpMethod.Post
+                        : HttpMethod.Get,
+                    RequestUri = requestUrl,
+                    Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
                     {
-                        Headers(),
-                    },
+                        Headers =
+                        {
+                            Headers(),
+                        },
+                    }
+                };
+
+                IEnumerable<KeyValuePair<string, string>> Headers()
+                {
+                    yield return new(SolidGroundConstants.SolidGroundOutputId, outputId.ToString());
+                    if (input.OriginalRequest_ContentType != null)
+                        yield return new("Content-Type", input.OriginalRequest_ContentType);
+                    foreach (var variable in variables)
+                        yield return new($"{SolidGroundConstants.HeaderVariablePrefix}{variable.Name}",
+                            Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
                 }
-            };
-
-            IEnumerable<KeyValuePair<string, string>> Headers()
-            {
-                yield return new(SolidGroundConstants.SolidGroundOutputId, outputId.ToString());
-                if (input.OriginalRequest_ContentType != null)
-                    yield return new("Content-Type", input.OriginalRequest_ContentType);
-                foreach (var variable in variables)
-                    yield return new($"{SolidGroundConstants.HeaderVariablePrefix}{variable.Name}",
-                        Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
             }
-
+        });
+        
+        static async Task SendRequestAndProcessResponse(IServiceProvider sp, HttpRequestMessage request, int outputId, CancellationToken ct)
+        {
+            var httpClient = sp.GetRequiredService<HttpClient>();
             httpClient.Timeout = TimeSpan.FromMinutes(10);
 
-            var result = await httpClient.SendAsync(request);
-            if (!result.IsSuccessStatusCode)
-            {
-                var body = await result.Content.ReadAsStringAsync();
-                output.Status = ExecutionStatus.Failed;
-                output.Components.Add(new()
-                {
-                    Name = $"Http Error {result.StatusCode}",
-                    Value = body,
-                    ContentType = "text/plain",
-                });
-                await dbContext.SaveChangesAsync();
-            }
-        }
-        catch (Exception ex)
-        {
+            var result = await httpClient.SendAsync(request, ct);
+            if (result.IsSuccessStatusCode)
+                return;
+
+            var dbContext = sp.GetRequiredService<AppDbContext>();
+            var output = await dbContext.Outputs.FindAsync([outputId], ct) ?? throw new Exception("Output with ID " + outputId + " not found.");
             output.Status = ExecutionStatus.Failed;
             output.Components.Add(new()
             {
-                Name = "Error",
-                Value = ex.ToString(),
-                ContentType = "text/plain"
+                Name = $"Http Error {result.StatusCode}",
+                Value = await result.Content.ReadAsStringAsync(ct),
+                ContentType = "text/plain",
             });
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(ct);
         }
+
+    }
+
+    static async Task<StringVariableDto[]> StringVariableDtosFromProduction(Tenant tenant, HttpClient httpClient)
+    {
+        var requestUri = $"{tenant.BaseUrl}/solidground";
+        var routesArray = await httpClient.GetFromJsonAsync<JsonArray>(requestUri) ?? throw new Exception("No available variables found");
+        var l = new List<StringVariableDto>();
+
+        if (routesArray.Count == 0)
+            throw new ResultException(Results.BadRequest($"No routes found at {requestUri}"));
+            
+        foreach (var x in routesArray[0]!["variables"]!.AsObject())
+        {
+            var valueObject = x.Value!.AsObject();
+            string[] options = [];
+                
+            if (valueObject.TryGetPropertyValue("options", out var optionsNode) && optionsNode != null) 
+                options = optionsNode.AsArray().Select(e => e!.GetValue<string>()).ToArray();
+                
+            l.Add(new()
+            {
+                Name = x.Key, 
+                Value = valueObject["value"]!.GetValue<string>(),
+                Options = options
+            });
+        }
+
+        return [..l];
+    }
+
+    static Uri RequestUrlFor(string baseUrl, Input input)
+    {
+        Uri requestUri;
+        try
+        {
+            requestUri = new Uri(baseUrl.TrimEnd("/") + input.OriginalRequest_Route + (input.OriginalRequest_QueryString ?? ""));
+        }
+        catch (UriFormatException ufe)
+        {
+            throw new BadHttpRequestException($"Invalid end point: {baseUrl}", ufe);
+        }
+
+        return requestUri;
     }
 }

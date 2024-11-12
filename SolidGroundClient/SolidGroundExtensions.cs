@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace SolidGroundClient;
 
@@ -55,10 +56,15 @@ public static class SolidGroundExtensions
                 return new(null);
             return new(new(httpContext, sp, apiKey));
         });
-        serviceCollection.AddSingleton<SolidGroundBackgroundService>();
-        serviceCollection.AddHostedService<SolidGroundBackgroundService>(sp => sp.GetRequiredService<SolidGroundBackgroundService>());
+        serviceCollection.AddAndInjectHostedService<SolidGroundBackgroundService>();
     }
 
+    public static void AddAndInjectHostedService<TService>(this IServiceCollection serviceCollection) where TService : BackgroundService
+    {
+        serviceCollection.AddSingleton<TService>();
+        serviceCollection.AddHostedService<TService>(sp => sp.GetRequiredService<TService>());
+    }
+    
     public static void MapSolidGroundEndpoint(this WebApplication app)
     {
         //we need to use a custom middleware to enable buffering on the request, before the model binder starts reading from it

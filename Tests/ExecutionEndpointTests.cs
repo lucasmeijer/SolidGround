@@ -63,6 +63,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
                     ["Bool"] = new JsonObject
                     {
                         ["value"] = "false",
+                        ["options"] = new JsonArray("true","false")
                     }
                 }
             }
@@ -104,7 +105,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         Assert.Equal("result", component.Name);
         Assert.Equal("Tell me a joke about a horse", component.Value);
         
-        var outputStringVariable = output.StringVariables.Single();
+        var outputStringVariable = output.StringVariables.Single(v => v.Name == "Prompt");
         Assert.Equal("Prompt", outputStringVariable.Name);
         Assert.Equal("Tell me a joke about a", outputStringVariable.Value);
     

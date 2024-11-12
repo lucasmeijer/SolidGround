@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SolidGround;
 using SolidGround.Pages;
+using SolidGroundClient;
 
 [assembly: InternalsVisibleTo("Tests")]
 
@@ -45,7 +46,8 @@ public partial class Program
                 .RequireAuthenticatedUser()
                 .Build();
         });
-        
+
+        builder.Services.AddAndInjectHostedService<BackgroundWorkService>();
         builder.Services.AddHttpClient();
         builder.Services.AddHealthChecks().AddCheck("Health", () => HealthCheckResult.Healthy("OK"));
         builder.Services.AddControllersWithViews();
