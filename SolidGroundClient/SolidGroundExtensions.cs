@@ -90,11 +90,12 @@ public static class SolidGroundExtensions
         {
             var jsonObject = new JsonObject() 
             {  
-                ["type"] = prop.PropertyType == typeof(bool) ? "bool" : "string",
                 ["value"] = vars.GetPropertyAsString(prop) ?? throw new Exception()
             };
             if (prop.PropertyType.IsEnum)
                 jsonObject["options"] = new JsonArray([..Enum.GetNames(prop.PropertyType)]);
+            if (prop.PropertyType == typeof(bool))
+                jsonObject["options"] = new JsonArray("true", "false");
             
             result[prop.Name] = jsonObject;
         }

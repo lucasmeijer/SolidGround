@@ -26,14 +26,17 @@ export default class RunExperimentController extends Controller {
         const data = {
             'string_variables': [],
             'inputs': window.appSnapshot.inputs,
-            'baseurl': formData.get('baseurl')
+            'baseurl': formData.get('baseurl'),
+            'name': formData.get('name'),
+            'runamount': formData.get('runamount'),
         }
        
         for (const [key, value] of formData.entries()) {
             if (key.startsWith('SolidGroundVariable_')) {
                 data['string_variables'].push({
                     name: key.substring('SolidGroundVariable_'.length),
-                    value: value
+                    value: value,
+                    options: []
                 });
             }
         }

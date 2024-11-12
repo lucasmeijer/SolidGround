@@ -9,15 +9,6 @@ namespace SolidGround;
 record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameIdFor(OutputId))
 {
     public static string TurboFrameIdFor(int outputId) => $"output_{outputId}";
-    /*<a href="{ExperimentEndPoints.Routes.api_experiment_newform_id.For(output.Id)}" data-turbo-frame="{RunExperimentTurboFrame.TurboFrameId}" class="text-sm bg-green-200 h-16 p-2 rounded-lg">
-                Adopt variables for new experiment
-            </a>
-            
-            
-                <a href="{ExecutionsEndPoints.Routes.api_executions_id.For(output.ExecutionId)}" data-turbo-method="delete" class="{Buttons.Attrs}{Buttons.RedAttrs}">
-        Delete
-    </a>
-            */
     protected override bool SkipTurboFrameTags => true;
 
     protected override string LazySrc => OutputEndPoints.Routes.api_output_id.For(OutputId);
@@ -25,12 +16,12 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
     protected override Delegate RenderFunc => async (AppDbContext db) =>
     {
         var output = await db.Outputs
-                         .Include(o => o.Components)
-                         .Include(o => o.Execution)
-                         .Include(o => o.StringVariables)
-                         .AsSplitQuery()
-                         .FirstOrDefaultAsync(o => o.Id == OutputId)
-                     ?? throw new BadHttpRequestException($"Output {OutputId} not found");
+            .Include(o => o.Components)
+            .Include(o => o.Execution)
+            .Include(o => o.StringVariables)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(o => o.Id == OutputId) 
+                                  ?? throw new ResultException(Results.NotFound($"Output {OutputId} not found"));
 
         bool finished = output.Status != ExecutionStatus.Started;
 

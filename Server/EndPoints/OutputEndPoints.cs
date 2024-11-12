@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using TurboFrames;
 
 namespace SolidGround;
@@ -32,7 +33,7 @@ static class OutputEndPoints
         {
             var output = await db.Outputs.FindAsync(id);
             if (output == null)
-                return Results.NotFound($"Output {id} not found");
+                return Results.NotFound($"Output {id} not found.");
             var outputObject = InputEndPoints.OutputFor(outputDto, null);
             output.Components = outputObject.Components;
             output.StringVariables = outputObject.StringVariables;

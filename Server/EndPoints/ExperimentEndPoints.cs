@@ -15,11 +15,11 @@ static class ExperimentEndPoints
         public static readonly RouteTemplate api_experiment_newform_id = RouteTemplate.Create("/api/experiment/newform/{id:int}");
     }
     
-    public static void MapExperimentEndPoints(this IEndpointRouteBuilder app)
-    {
-        app.MapGet(Routes.api_experiment_newform, () => new RunExperimentTurboFrame());
-        app.MapGet(Routes.api_experiment_newform_id, (int id) => new RunExperimentTurboFrame(id));
-    }
+    // public static void MapExperimentEndPoints(this IEndpointRouteBuilder app)
+    // {
+    //     app.MapGet(Routes.api_experiment_newform, () => new RunExperimentTurboFrame());
+    //     app.MapGet(Routes.api_experiment_newform_id, (int id) => new RunExperimentTurboFrame(id));
+    // }
 }
 //
 // [ApiController]

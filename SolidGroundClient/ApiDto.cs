@@ -86,6 +86,12 @@ public record RunExecutionDto
 
     [JsonPropertyName("baseurl")]
     public required string BaseUrl { get; init; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+    
+    [JsonPropertyName("runamount")]
+    public required int RunAmount { get; set; }
 }
 
 public record ExecutionStatusDto

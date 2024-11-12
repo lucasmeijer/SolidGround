@@ -116,13 +116,24 @@ public partial class Program
 
         app.UseStaticFiles();
 
+        app.Use(async (context, next) =>
+        {
+            try
+            {
+                await next(context);
+            }
+            catch (ResultException ex)
+            {
+                await ex.Result.ExecuteAsync(context);
+            }
+        });
+        
         app.MapGet("/", (AppState appState) => new SolidGroundPage("SolidGround", new IndexPageBodyContent(appState)));
 
         app.MapTagsEndPoints();
         app.MapSearchEndPoints();
         app.MapInputEndPoints();
         app.MapOutputEndPoints();
-        app.MapExperimentEndPoints();
         app.MapImagesEndPoints();
         app.MapExecutionsEndPoints();
         app.MapLoginEndPoints();

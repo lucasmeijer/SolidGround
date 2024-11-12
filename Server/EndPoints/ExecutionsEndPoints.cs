@@ -117,14 +117,15 @@ static class ExecutionsEndPoints
         
         app.MapPost(Routes.api_executions, async (AppDbContext db, IConfiguration config, IServiceScopeFactory scopeFactory, RunExecutionDto runExecutionDto, HttpContext httpContext, AppState? appState) =>
         {
-            var inputsToOutputs = runExecutionDto.Inputs.ToDictionary(id => id, OutputFor);
-
+            var inputsToOutputs = runExecutionDto.Inputs.ToDictionary(id => id, OutputsFor);
+            
             var execution = new Execution()
             {
+                Name = string.IsNullOrWhiteSpace(runExecutionDto.Name) ? null : runExecutionDto.Name,
                 StartTime = DateTime.Now,
                 Outputs =
                 [
-                    ..inputsToOutputs.Values
+                    ..inputsToOutputs.Values.SelectMany(o => o)
                 ],
                 StringVariables = [..runExecutionDto.StringVariables.Select(s=> new StringVariable() { Name = s.Name, Value = s.Value})],
                 SolidGroundInitiated = true
@@ -132,10 +133,10 @@ static class ExecutionsEndPoints
             db.Executions.Add(execution);
             await db.SaveChangesAsync();
 
-            foreach (var (inputId, output) in inputsToOutputs)
+            foreach (var (inputId, outputs) in inputsToOutputs)
             {
                 //todo: move to a background service that has logging on errors and telemetry
-                _ = Task.Run(() => ExecutionForInput(inputId, output.Id, runExecutionDto.BaseUrl, runExecutionDto.StringVariables, scopeFactory));
+                _ = Task.Run(() => ExecutionForInput(inputId, [..outputs.Select(o=>o.Id)], runExecutionDto.BaseUrl, runExecutionDto.StringVariables, scopeFactory));
             }
 
             if (!httpContext.Request.Headers.Accept.ToString().Contains("text/vnd.turbo-stream.html", StringComparison.OrdinalIgnoreCase))
@@ -147,30 +148,35 @@ static class ExecutionsEndPoints
             httpContext.Response.StatusCode = StatusCodes.Status202Accepted;
             return MorphedBodyUpdate.For(appState with { Executions = [..appState.Executions, execution.Id]});
             
-            Output OutputFor(int inputId) => new()
+            Output[] OutputsFor(int inputId) => Enumerable.Range(0, runExecutionDto.RunAmount).Select(_ => new Output()
             {
                 InputId = inputId,
                 StringVariables = [],
                 Status = ExecutionStatus.Started,
                 Components = []
-            };
+            }).ToArray();
         });
     }
     
     
-    static async Task ExecutionForInput(int inputId, int outputId, string baseUrl, StringVariableDto[] variables, IServiceScopeFactory scopeFactory)
+    static async Task ExecutionForInput(int inputId, int[] outputIds, string baseUrl, StringVariableDto[] variables, IServiceScopeFactory scopeFactory)
+    {
+        await Task.WhenAll(outputIds
+            .Select(outputId => TriggerOutputFor(inputId, baseUrl, variables, scopeFactory, outputId)));
+    }
+
+    static async Task TriggerOutputFor(int inputId, string baseUrl, StringVariableDto[] variables, IServiceScopeFactory scopeFactory, int outputId)
     {
         using var scope = scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
-        
-        var output = await dbContext.Outputs.FindAsync(outputId) ?? throw new Exception("Output with ID " + outputId + " not found."); 
+
+        var output = await dbContext.Outputs.FindAsync(outputId) ?? throw new Exception("Output with ID " + outputId + " not found.");
         try
         {
             var input = await dbContext.Inputs.FindAsync(inputId) ?? throw new ArgumentException("Input not found");
 
             Uri requestUri;
-
             try
             {
                 requestUri = new Uri(baseUrl.TrimEnd("/") + input.OriginalRequest_Route + (input.OriginalRequest_QueryString ?? ""));
@@ -182,11 +188,14 @@ static class ExecutionsEndPoints
 
             var request = new HttpRequestMessage
             {
-                Method = string.Equals(input.OriginalRequest_Method, "post", StringComparison.InvariantCultureIgnoreCase) ? HttpMethod.Post : HttpMethod.Get,
+                Method = string.Equals(input.OriginalRequest_Method, "post",
+                    StringComparison.InvariantCultureIgnoreCase)
+                    ? HttpMethod.Post
+                    : HttpMethod.Get,
                 RequestUri = requestUri,
                 Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
                 {
-                    Headers = 
+                    Headers =
                     {
                         Headers(),
                     },
@@ -199,9 +208,10 @@ static class ExecutionsEndPoints
                 if (input.OriginalRequest_ContentType != null)
                     yield return new("Content-Type", input.OriginalRequest_ContentType);
                 foreach (var variable in variables)
-                    yield return new($"{SolidGroundConstants.HeaderVariablePrefix}{variable.Name}", Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
+                    yield return new($"{SolidGroundConstants.HeaderVariablePrefix}{variable.Name}",
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
             }
-            
+
             httpClient.Timeout = TimeSpan.FromMinutes(10);
 
             var result = await httpClient.SendAsync(request);
@@ -212,7 +222,8 @@ static class ExecutionsEndPoints
                 output.Components.Add(new()
                 {
                     Name = $"Http Error {result.StatusCode}",
-                    Value = body
+                    Value = body,
+                    ContentType = "text/plain",
                 });
                 await dbContext.SaveChangesAsync();
             }
@@ -223,7 +234,8 @@ static class ExecutionsEndPoints
             output.Components.Add(new()
             {
                 Name = "Error",
-                Value = ex.ToString()
+                Value = ex.ToString(),
+                ContentType = "text/plain"
             });
             await dbContext.SaveChangesAsync();
         }

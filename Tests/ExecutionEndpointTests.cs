@@ -53,18 +53,15 @@ public class ExecutionEndpointTests : IntegrationTestBase
                 {
                     ["Prompt"] = new JsonObject
                     {
-                        ["type"] = "string",
                         ["value"] = "Tell me a joke about a",
                     },
                     ["TestEnum"] = new JsonObject
                     {
-                        ["type"] = "string",
                         ["value"] = "One",
                         ["options"] = new JsonArray("One", "Two","Three")
                     },
                     ["Bool"] = new JsonObject
                     {
-                        ["type"] = "bool",
                         ["value"] = "false",
                     }
                 }
@@ -149,7 +146,8 @@ public class ExecutionEndpointTests : IntegrationTestBase
         {
             BaseUrl = consumingAppClient.BaseAddress?.ToString() ?? throw new Exception("No baseaddress"),
             Inputs = [DbContext.Inputs.Single().Id],
-            StringVariables = [new() { Name = "Prompt", Value = "Give me a haiku about", Options = []}]
+            StringVariables = [new() { Name = "Prompt", Value = "Give me a haiku about", Options = []}],
+            RunAmount = 1
         });
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         
