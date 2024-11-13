@@ -13,11 +13,10 @@ using SolidGroundClient;
 
 CreateWebApplication(args, (services, dboptions) =>
 {
-    //dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
-    dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.PendingModelChangesWarning));
     var tenant = services.GetRequiredService<Tenant>();  //tenant is injected Scoped, and is different based ont he domain of the incoming reuest.
-    var persistentStorage = services.GetRequiredService<IConfiguration>()["PERSISTENT_STORAGE"] ?? ".";
-    dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground_{tenant.Identifier}.db");
+    AppDbContext.ConfigureHostBuilderForTenant(dboptions, tenant, services);
+    //dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
+    
 }).Run();
 
 

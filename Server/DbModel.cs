@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace SolidGround;
-
+[UsedImplicitly(Reason = "used by migrations")]
 class MyDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
     public AppDbContext CreateDbContext(string[] args)
@@ -21,6 +21,13 @@ class MyDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 
 sealed class AppDbContext : DbContext
 {
+    public static void ConfigureHostBuilderForTenant(DbContextOptionsBuilder dboptions, Tenant tenant, IServiceProvider services)
+    {
+        dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.PendingModelChangesWarning));
+        var persistentStorage = services.GetRequiredService<IConfiguration>()["PERSISTENT_STORAGE"] ?? ".";
+        dboptions.UseSqlite($"Data Source={persistentStorage}/solid_ground_{tenant.Identifier}.db");
+    }
+    
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
         //todo: we should only do this once, this is really not production safe.

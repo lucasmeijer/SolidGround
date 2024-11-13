@@ -97,7 +97,7 @@ static class ExecutionsEndPoints
             return Results.Json(new ExecutionStatusDto() { Finished = finished });
         });
         
-        app.MapPost(Routes.api_executions, async (AppDbContext db, RunExecutionDto runExecutionDto, HttpContext httpContext, AppState? appState, BackgroundWorkService backgroundWorkService) =>
+        app.MapPost(Routes.api_executions, async (AppDbContext db, RunExecutionDto runExecutionDto, HttpContext httpContext, AppState? appState, BackgroundWorkService backgroundWorkService, Tenant tenant) =>
         {
             var inputsToOutputs = runExecutionDto.Inputs.ToDictionary(id => id, OutputsFor);
             
@@ -132,7 +132,7 @@ static class ExecutionsEndPoints
                         var request = RequestToHaveTargetAppPopulateOutput(input, runExecutionDto.StringVariables, output.Id, requestUrlFor);
                         await backgroundWorkService.QueueWorkAsync(async (serviceProvider, cancellationToken) =>
                         {
-                            await SendRequestAndProcessResponse(serviceProvider, request, output.Id, cancellationToken);
+                            await SendRequestAndProcessResponse(serviceProvider, request, output.Id, cancellationToken, tenant);
                         });
                     }
                     catch (Exception ex)
@@ -196,7 +196,7 @@ static class ExecutionsEndPoints
             }
         });
         
-        static async Task SendRequestAndProcessResponse(IServiceProvider sp, HttpRequestMessage request, int outputId, CancellationToken ct)
+        static async Task SendRequestAndProcessResponse(IServiceProvider sp, HttpRequestMessage request, int outputId, CancellationToken ct, Tenant tenant)
         {
             var httpClient = sp.GetRequiredService<HttpClient>();
             httpClient.Timeout = TimeSpan.FromMinutes(10);
@@ -205,7 +205,10 @@ static class ExecutionsEndPoints
             if (result.IsSuccessStatusCode)
                 return;
 
-            var dbContext = sp.GetRequiredService<AppDbContext>();
+            var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+            AppDbContext.ConfigureHostBuilderForTenant(optionsBuilder, tenant, sp);
+            await using var dbContext = new AppDbContext(optionsBuilder.Options);
+            
             var output = await dbContext.Outputs.FindAsync([outputId], ct) ?? throw new Exception("Output with ID " + outputId + " not found.");
             output.Status = ExecutionStatus.Failed;
             output.Components.Add(new()
@@ -216,7 +219,6 @@ static class ExecutionsEndPoints
             });
             await dbContext.SaveChangesAsync(ct);
         }
-
     }
 
     static async Task<StringVariableDto[]> StringVariableDtosFromProduction(Tenant tenant, HttpClient httpClient)
