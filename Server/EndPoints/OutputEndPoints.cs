@@ -28,18 +28,18 @@ static class OutputEndPoints
         
             return new TurboStream("remove", Target: OutputTurboFrame.TurboFrameIdFor(id));
         });
-
-        app.MapPatch(Routes.api_output_id, async (AppDbContext db, int id, OutputDto outputDto) =>
-        {
-            var output = await db.Outputs.FindAsync(id);
-            if (output == null)
-                return Results.NotFound($"Output {id} not found.");
-            var outputObject = InputEndPoints.OutputFor(outputDto, null);
-            output.Components = outputObject.Components;
-            output.StringVariables = outputObject.StringVariables;
-            output.Status = ExecutionStatus.Completed;
-            await db.SaveChangesAsync();
-            return Results.Ok();
-        }).RequireTenantApiKey();
+        //
+        // app.MapPatch(Routes.api_output_id, async (AppDbContext db, int id, OutputDto outputDto) =>
+        // {
+        //     var output = await db.Outputs.FindAsync(id);
+        //     if (output == null)
+        //         return Results.NotFound($"Output {id} not found.");
+        //     var outputObject = InputEndPoints.OutputFor(outputDto, null);
+        //     output.Components = outputObject.Components;
+        //     output.StringVariables = outputObject.StringVariables;
+        //     output.Status = ExecutionStatus.Completed;
+        //     await db.SaveChangesAsync();
+        //     return Results.Ok();
+        // }).RequireTenantApiKey();
     }
 }

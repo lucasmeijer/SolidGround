@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SolidGround;
 
 namespace SolidGroundClient;
 
@@ -75,6 +76,8 @@ public static class SolidGroundExtensions
             context.Request.EnableBuffering();
             await next();
         });
+        
+        app.UseResultException();
         
         app.MapGet(EndPointRoute, (IServiceProvider sp) => new JsonArray(app.Services.GetRequiredService<EndpointDataSource>().Endpoints
             .OfType<RouteEndpoint>()

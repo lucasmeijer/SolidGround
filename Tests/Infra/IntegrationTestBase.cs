@@ -1,7 +1,19 @@
+using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SolidGround;
 using Xunit;
+
+[UsedImplicitly]
+class InMemoryDatabaseForTenant : IDatabaseConfigurationForTenant
+{
+    string _databaseName = Guid.NewGuid().ToString();
+    
+    public void Configure(DbContextOptionsBuilder options, Tenant? tenant)
+    {
+        options.UseInMemoryDatabase(databaseName: _databaseName);
+    }
+}
 
 public abstract class IntegrationTestBase : IAsyncLifetime
 {
@@ -12,13 +24,8 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        string databaseName = Guid.NewGuid().ToString();
-        var webApplication = Program.CreateWebApplication([], (services, dboptions) =>
-        {
-            dboptions.UseInMemoryDatabase(databaseName: databaseName);
-        });
-        
         Tenant = new FlashCardsTenant();
+        var webApplication = Program.CreateWebApplication<InMemoryDatabaseForTenant>([], Tenant);
         WebApplicationUnderTest = await SolidGroundApplicationUnderTest.StartAsync(webApplication, Tenant);
     }
 

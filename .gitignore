@@ -3,3 +3,4 @@ obj
 .idea
 .kamal/secrets
 *.DotSettings.user
+node_modules

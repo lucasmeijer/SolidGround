@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using SolidGroundClient;
@@ -127,25 +128,11 @@ static class ExecutionsEndPoints
                 
                 foreach (var output in outputs)
                 {
-                    try
+                    var request = RequestToHaveTargetAppPopulateOutput(input, runExecutionDto.StringVariables, output.Id, requestUrlFor);
+                    await backgroundWorkService.QueueWorkAsync(async (serviceProvider, cancellationToken) =>
                     {
-                        var request = RequestToHaveTargetAppPopulateOutput(input, runExecutionDto.StringVariables, output.Id, requestUrlFor);
-                        await backgroundWorkService.QueueWorkAsync(async (serviceProvider, cancellationToken) =>
-                        {
-                            await SendRequestAndProcessResponse(serviceProvider, request, output.Id, cancellationToken, tenant);
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        output.Status = ExecutionStatus.Failed;
-                        output.Components.Add(new()
-                        {
-                            Name = "Error",
-                            Value = ex.ToString(),
-                            ContentType = "text/plain"
-                        });
-                        await db.SaveChangesAsync();
-                    }
+                        await SendRequestAndProcessResponse(serviceProvider, request, output.Id, cancellationToken, tenant);
+                    });
                 }
             }
 
@@ -186,7 +173,7 @@ static class ExecutionsEndPoints
 
                 IEnumerable<KeyValuePair<string, string>> Headers()
                 {
-                    yield return new(SolidGroundConstants.SolidGroundOutputId, outputId.ToString());
+                    yield return new(SolidGroundConstants.SolidGroundInitiated, "1");
                     if (input.OriginalRequest_ContentType != null)
                         yield return new("Content-Type", input.OriginalRequest_ContentType);
                     foreach (var variable in variables)
@@ -198,26 +185,61 @@ static class ExecutionsEndPoints
         
         static async Task SendRequestAndProcessResponse(IServiceProvider sp, HttpRequestMessage request, int outputId, CancellationToken ct, Tenant tenant)
         {
+            
             var httpClient = sp.GetRequiredService<HttpClient>();
             httpClient.Timeout = TimeSpan.FromMinutes(10);
-
             var result = await httpClient.SendAsync(request, ct);
-            if (result.IsSuccessStatusCode)
-                return;
-
-            var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-            AppDbContext.ConfigureHostBuilderForTenant(optionsBuilder, tenant, sp);
-            await using var dbContext = new AppDbContext(optionsBuilder.Options);
             
+            var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+            sp.GetRequiredService<IDatabaseConfigurationForTenant>().Configure(optionsBuilder, tenant);
+            await using var dbContext = new AppDbContext(optionsBuilder.Options);
+
             var output = await dbContext.Outputs.FindAsync([outputId], ct) ?? throw new Exception("Output with ID " + outputId + " not found.");
-            output.Status = ExecutionStatus.Failed;
-            output.Components.Add(new()
-            {
-                Name = $"Http Error {result.StatusCode}",
-                Value = await result.Content.ReadAsStringAsync(ct),
-                ContentType = "text/plain",
-            });
+
+            await PopulateOutput(output, result,ct);
             await dbContext.SaveChangesAsync(ct);
+        }
+    }
+
+    static async Task PopulateOutput(Output output, HttpResponseMessage result, CancellationToken cancellationToken)
+    {
+        var resultContent = await result.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!result.IsSuccessStatusCode)
+        {
+            PopulateAsFailure(resultContent);
+            return;
+        }
+
+        try
+        {
+            var outputDto = JsonSerializer.Deserialize<OutputDto>(resultContent);
+            if (outputDto != null)
+            {
+                var outputObject = InputEndPoints.OutputFor(outputDto, null);
+                output.Components = outputObject.Components;
+                output.StringVariables = outputObject.StringVariables;
+                output.Status = ExecutionStatus.Completed;
+                return;
+            }
+        } catch(Exception e)
+        {
+            PopulateAsFailure(e.ToString());    
+        }
+        return;
+
+        void PopulateAsFailure(string content)
+        {
+            output.Status = ExecutionStatus.Failed;
+            output.Components =
+            [
+                new OutputComponent()
+                {
+                    Name = $"Http Error {result.StatusCode}",
+                    Value = content,
+                    ContentType = "text/plain",
+                }
+            ];
         }
     }
 

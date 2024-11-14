@@ -40,8 +40,6 @@ public class SolidGroundSession(HttpContext httpContext,
     SolidGroundBackgroundService SolidGroundBackgroundService { get; } = serviceProvider.GetRequiredService<SolidGroundBackgroundService>(); 
     RequestDto? _reproducingRequest;
 
-    string? _outputId = httpContext.Request.Headers.TryGetValue(SolidGroundConstants.SolidGroundOutputId, out var outputIdValues) ? outputIdValues.ToString() : null;
-
     List<OutputComponentDto> _outputComponents = [];
 
     SolidGroundVariables? _variables;
@@ -56,35 +54,29 @@ public class SolidGroundSession(HttpContext httpContext,
     
     public async Task CompleteAsync(bool allowStorage)
     {
-        if (allowStorage || IsSolidGroundInitiated)
+        if (httpContext.Request.Headers.TryGetValue(SolidGroundConstants.SolidGroundInitiated, out _))
+            throw new ResultException(Results.Json(OutputDto()));
+        
+        if (allowStorage)
         {
             var reproducingRequest = _reproducingRequest ?? await httpContext.Request.Capture();
             await SolidGroundBackgroundService.Enqueue(SendRequestFor(reproducingRequest));
         }
     }
-    
-    SendRequest SendRequestFor(RequestDto capturedRequest) => _outputId != null
-        ? new SendRequest()
-        {
-            Method = HttpMethod.Patch,
-            Url = $"/api/outputs/{_outputId}",
-            Payload = OutputDto(),
-            ApiKey = apiKey
-        }
 
-        : new SendRequest()
+    SendRequest SendRequestFor(RequestDto capturedRequest) => new()
+    {
+        Method = HttpMethod.Post,
+        Url = $"/api/input",
+        Payload = new InputDto()
         {
-            Method = HttpMethod.Post,
-            Url = $"/api/input",
-            Payload = new InputDto()
-            {
-                Name = _name,
-                Request = capturedRequest,
-                TagNames = [.._tagNames],
-                Output = OutputDto()
-            },
-            ApiKey = apiKey
-        };
+            Name = _name,
+            Request = capturedRequest,
+            TagNames = [.._tagNames],
+            Output = OutputDto()
+        },
+        ApiKey = apiKey
+    };
 
     OutputDto OutputDto() => new()
     {
@@ -119,8 +111,6 @@ public class SolidGroundSession(HttpContext httpContext,
         
         return v;
     }
-
-    bool IsSolidGroundInitiated => _outputId != null;
 
     public void AddResult(string value, string? contentType=null) => AddArtifact("result", value, contentType);
     public void AddResultJson(object value) => AddArtifactJson("result", value);

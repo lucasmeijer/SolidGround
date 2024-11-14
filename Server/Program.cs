@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -11,23 +12,37 @@ using SolidGroundClient;
 
 [assembly: InternalsVisibleTo("Tests")]
 
-CreateWebApplication(args, (services, dboptions) =>
-{
-    var tenant = services.GetRequiredService<Tenant>();  //tenant is injected Scoped, and is different based ont he domain of the incoming reuest.
-    AppDbContext.ConfigureHostBuilderForTenant(dboptions, tenant, services);
-    //dboptions.ConfigureWarnings(b => b.Ignore(RelationalEventId.NonTransactionalMigrationOperationWarning));
-    
-}).Run();
+CreateWebApplication<RealDbConfigurationForTenant>(args).Run();
 
-
-public partial class Program
+[UsedImplicitly]
+class RealDbConfigurationForTenant(IConfiguration configuration) : IDatabaseConfigurationForTenant
 {
-    public static WebApplication CreateWebApplication(string[] args, Action<IServiceProvider, DbContextOptionsBuilder> setupDb)
+    public void Configure(DbContextOptionsBuilder options, Tenant? tenant)
+    {
+        if (tenant == null)
+            throw new ArgumentNullException();
+        options.ConfigureWarnings(b => b.Ignore(RelationalEventId.PendingModelChangesWarning));
+        var persistentStorage = configuration["PERSISTENT_STORAGE"] ?? ".";
+        options.UseSqlite($"Data Source={persistentStorage}/solid_ground_{tenant.Identifier}.db");
+    }
+}
+
+interface IDatabaseConfigurationForTenant
+{
+    public void Configure(DbContextOptionsBuilder options, Tenant? tenant);
+}
+
+partial class Program
+{
+    public static WebApplication CreateWebApplication<T>(string[] args, Tenant? hardCodedTenant = null) where T : class, IDatabaseConfigurationForTenant
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.Services.AddDbContext<AppDbContext>(setupDb);
-
+        builder.Services.AddSingleton<IDatabaseConfigurationForTenant, T>();
+        builder.Services.AddDbContext<AppDbContext>((sp,db) =>
+        {
+            sp.GetRequiredService<IDatabaseConfigurationForTenant>().Configure(db, sp.GetService<Tenant>());
+        });
         builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
             .AddCookie(options =>
             {
@@ -56,6 +71,9 @@ public partial class Program
 
         builder.Services.AddScoped<Tenant>(serviceProvider =>
         {
+            if (hardCodedTenant != null)
+                return hardCodedTenant;
+            
             HttpRequest request = serviceProvider
                 .GetRequiredService<IHttpContextAccessor>()
                 .HttpContext?
@@ -117,17 +135,7 @@ public partial class Program
 
         app.UseStaticFiles();
 
-        app.Use(async (context, next) =>
-        {
-            try
-            {
-                await next(context);
-            }
-            catch (ResultException ex)
-            {
-                await ex.Result.ExecuteAsync(context);
-            }
-        });
+        app.UseResultException();
         
         app.MapGet("/", (AppState appState) => new SolidGroundPage("SolidGround", new IndexPageBodyContent(appState)));
 

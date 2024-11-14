@@ -1,20 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SolidGround;
 using SolidGroundClient;
-using TurboFrames;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Tests;
 
@@ -80,7 +76,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         var response = await solidGroundConsumingApp.HttpClient.GetAsync("/joke?subject=horse");
         var s = await response.Content.ReadAsStringAsync();
         response.EnsureSuccessStatusCode();
-        Assert.Equal("Tell me a joke about a horse", await response.Content.ReadAsStringAsync());
+        Assert.Equal("Tell me a joke about a horse", await response.Content.ReadFromJsonAsync<string>());
         
         await solidGroundConsumingApp.Services.GetRequiredService<SolidGroundBackgroundService>().FlushAsync();
         await AssertDatabaseAfterInitialInputSubmitted();
@@ -113,43 +109,91 @@ public class ExecutionEndpointTests : IntegrationTestBase
         Assert.Empty(execution.StringVariables);
     }
 
-    async Task<WebApplicationUnderTest<int>> SetupHorseJokeClientApp()
-    {
-        return await SetupTestWebApplicationFactory(endpointBuilder =>
+    async Task<WebApplicationUnderTest<int>> SetupHorseJokeClientApp(Func<SolidGroundSessionAccessor, string, Task<IResult>>? impl = null) =>
+        await SetupTestWebApplicationFactory(endpointBuilder =>
         {
-            endpointBuilder.MapGet("/joke", async (string subject, SolidGroundSessionAccessor accessor) =>
-            {
-                var session = accessor.Session ?? throw new ArgumentException("asd");
-                var joke = session.GetVariables<TestVariables>().Prompt + " " + subject;
-                session.AddResult(joke);
-
-                await session.CompleteAsync(true);
-                return joke;
-            }).ExposeToSolidGround<TestVariables>();
+            endpointBuilder.MapGet("/joke", (string subject, SolidGroundSessionAccessor accessor) => (impl ?? DefaultJokeImplementation)(accessor, subject))
+                .ExposeToSolidGround<TestVariables>();
         });
+
+    static async Task<IResult> DefaultJokeImplementation(SolidGroundSessionAccessor accessor, string subject)
+    {
+        var session = accessor.Session ?? throw new ArgumentException("asd");
+        var joke = session.GetVariables<TestVariables>().Prompt + " " + subject;
+        session.AddResult(joke);
+
+        await session.CompleteAsync(true);
+        return Results.Ok(joke);
     }
     
     [Fact]
     public async Task CanPostExecution()
     {
-        var solidGroundConsumingApp = await SetupHorseJokeClientApp();
+        await using var consumingAppClient = await SetupClientAppAndTriggerFirstInput(null);
 
-        var consumingAppClient = solidGroundConsumingApp.HttpClient;
-        
-        var response2 = await solidGroundConsumingApp.HttpClient.GetAsync("/joke?subject=horse");
-        response2.EnsureSuccessStatusCode();
-        Assert.Equal("Tell me a joke about a horse", await response2.Content.ReadAsStringAsync());
-        
-        await solidGroundConsumingApp.Services.GetRequiredService<SolidGroundBackgroundService>().FlushAsync();
-        await AssertDatabaseAfterInitialInputSubmitted();
-        
-        var response = await Client.PostAsJsonAsync("/api/executions", new RunExecutionDto()
+        var execution = await PostExecutionAndWaitUntilFinished(new()
         {
-            BaseUrl = consumingAppClient.BaseAddress?.ToString() ?? throw new Exception("No baseaddress"),
+            BaseUrl = consumingAppClient.HttpClient.BaseAddress?.ToString() ?? throw new Exception("No baseaddress"),
             Inputs = [DbContext.Inputs.Single().Id],
             StringVariables = [new() { Name = "Prompt", Value = "Give me a haiku about", Options = []}],
             RunAmount = 1
         });
+
+        var output = execution.Outputs.Single();
+        Assert.Equal(ExecutionStatus.Completed, output.Status);
+        
+        var component = output.Components.Single();
+        Assert.Equal("result", component.Name);
+        Assert.Equal("Give me a haiku about horse", component.Value);
+    }
+
+    async Task<WebApplicationUnderTest<int>> SetupClientAppAndTriggerFirstInput(Func<SolidGroundSessionAccessor, string, Task<IResult>>? impl)
+    {
+        var solidGroundConsumingApp = await SetupHorseJokeClientApp(impl);
+        var consumingAppClient = solidGroundConsumingApp.HttpClient;
+        var response = await consumingAppClient.GetAsync("/joke?subject=horse");
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("Tell me a joke about a horse", await response.Content.ReadFromJsonAsync<string>());
+        await solidGroundConsumingApp.Services.GetRequiredService<SolidGroundBackgroundService>().FlushAsync();
+        await AssertDatabaseAfterInitialInputSubmitted();
+        return solidGroundConsumingApp;
+    }
+
+    [Fact]
+    public async Task PostExecution_Against_BrokenApp()
+    {
+        bool firstRequest = true;
+        Func<SolidGroundSessionAccessor,string,Task<IResult>> impl = (accessor, s) =>
+        {
+            if (firstRequest)
+            {
+                firstRequest = false;
+                return DefaultJokeImplementation(accessor, s);
+            }
+            
+            return Task.FromResult(Results.InternalServerError("Hair on fire"));
+        };
+
+        await using var clientApp = await SetupClientAppAndTriggerFirstInput(impl);
+        
+        var execution = await PostExecutionAndWaitUntilFinished(new()
+        {
+            BaseUrl = clientApp.HttpClient.BaseAddress?.ToString() ?? throw new Exception("No baseaddress"),
+            Inputs = [DbContext.Inputs.Single().Id],
+            StringVariables = [new() { Name = "Prompt", Value = "Give me a haiku about", Options = []}],
+            RunAmount = 1
+        });
+        var output = execution.Outputs.Single();
+
+        Assert.Equal(ExecutionStatus.Failed, output.Status);
+        var component = output.Components.Single();
+        Assert.Equal("Http Error InternalServerError", component.Name);
+        Assert.Equal("\"Hair on fire\"", component.Value);
+    }
+
+    async Task<Execution> PostExecutionAndWaitUntilFinished(RunExecutionDto runExecutionDto)
+    {
+        var response = await Client.PostAsJsonAsync("/api/executions", runExecutionDto);
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         
         var executionUrl = response.Headers.Location ?? throw new ApplicationException("No location found on created execution");
@@ -160,17 +204,16 @@ public class ExecutionEndpointTests : IntegrationTestBase
                 break;
             await Task.Delay(100);
         }
-
-        var execution = await DbContext.Executions.FindAsync(int.Parse(executionUrl.ToString().Split("/").Last()))
-            ?? throw new InvalidOperationException();
-        await DbContext.Entry(execution).Collection(e => e.Outputs).LoadAsync();
-        var output = execution.Outputs.Single();
-        await DbContext.Entry(output).Collection(e => e.Components).LoadAsync();
-        var component = output.Components.Single();
-        Assert.Equal("result", component.Name);
-        Assert.Equal("Give me a haiku about horse", component.Value);
-    }
     
+        var id = int.Parse(executionUrl.ToString().Split("/").Last());
+        return await DbContext.Executions
+                   .Include(e => e.Outputs)
+                   .ThenInclude(o => o.Components)
+                   .FirstOrDefaultAsync(e => e.Id == id)
+               ?? throw new Exception();
+    }
+
+
     Task<WebApplicationUnderTest<int>> SetupTestWebApplicationFactory(Action<IEndpointRouteBuilder>? addEndPoints)
     {
         var builder = WebApplication.CreateBuilder();
