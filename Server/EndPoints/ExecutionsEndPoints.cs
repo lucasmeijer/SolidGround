@@ -124,11 +124,9 @@ static class ExecutionsEndPoints
             {
                 var input = await db.Inputs.FindAsync(inputId) ?? throw new ArgumentException("Input not found");
 
-                var requestUrlFor = RequestUrlFor(runExecutionDto.BaseUrl, input);
-                
                 foreach (var output in outputs)
                 {
-                    var request = RequestToHaveTargetAppPopulateOutput(input, runExecutionDto.StringVariables, output.Id, requestUrlFor);
+                    var request = RequestFor(runExecutionDto, input);
                     await backgroundWorkService.QueueWorkAsync(async (serviceProvider, cancellationToken) =>
                     {
                         await SendRequestAndProcessResponse(serviceProvider, request, output.Id, cancellationToken, tenant);
@@ -152,35 +150,6 @@ static class ExecutionsEndPoints
                 Status = ExecutionStatus.Started,
                 Components = []
             }).ToArray();
-            
-            HttpRequestMessage RequestToHaveTargetAppPopulateOutput(Input input, StringVariableDto[] variables, int outputId, Uri requestUrl)
-            {
-                return new()
-                {
-                    Method = string.Equals(input.OriginalRequest_Method, "post",
-                        StringComparison.InvariantCultureIgnoreCase)
-                        ? HttpMethod.Post
-                        : HttpMethod.Get,
-                    RequestUri = requestUrl,
-                    Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
-                    {
-                        Headers =
-                        {
-                            Headers(),
-                        },
-                    }
-                };
-
-                IEnumerable<KeyValuePair<string, string>> Headers()
-                {
-                    yield return new(SolidGroundConstants.SolidGroundInitiated, "1");
-                    if (input.OriginalRequest_ContentType != null)
-                        yield return new("Content-Type", input.OriginalRequest_ContentType);
-                    foreach (var variable in variables)
-                        yield return new($"{SolidGroundConstants.HeaderVariablePrefix}{variable.Name}",
-                            Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
-                }
-            }
         });
         
         static async Task SendRequestAndProcessResponse(IServiceProvider sp, HttpRequestMessage request, int outputId, CancellationToken ct, Tenant tenant)
@@ -199,6 +168,35 @@ static class ExecutionsEndPoints
             await PopulateOutput(output, result,ct);
             await dbContext.SaveChangesAsync(ct);
         }
+
+        HttpRequestMessage RequestFor(RunExecutionDto runExecutionDto, Input input) => new()
+        {
+            Method = string.Equals(input.OriginalRequest_Method, "post",
+                StringComparison.InvariantCultureIgnoreCase)
+                ? HttpMethod.Post
+                : HttpMethod.Get,
+            RequestUri = RequestUrlFor(runExecutionDto.BaseUrl, input),
+            Content = new ByteArrayContent(Convert.FromBase64String(input.OriginalRequest_Body))
+            {
+                Headers =
+                {
+                    (KeyValuePair<string, string>[])
+                    [
+                        new(SolidGroundConstants.SolidGroundInitiated, "1"),
+                        ..runExecutionDto.StringVariables.Select(HeaderFor),
+                    ],
+
+                    input.OriginalRequest_ContentType != null
+                        ? [new("Content-Type", input.OriginalRequest_ContentType)]
+                        : [],
+                },
+            }
+        };
+    }
+
+    static KeyValuePair<string, string> HeaderFor(StringVariableDto variable)
+    {
+        return new($"{SolidGroundConstants.HeaderVariablePrefix}{variable.Name}", Convert.ToBase64String(Encoding.UTF8.GetBytes(variable.Value)));
     }
 
     static async Task PopulateOutput(Output output, HttpResponseMessage result, CancellationToken cancellationToken)
