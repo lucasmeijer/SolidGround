@@ -88,7 +88,11 @@ partial class Program
             {
                 "solidground.flashcards.lucasmeijer.com" => new FlashCardsTenant(),
                 "solidground.huisarts.schrijfevenmee.nl" => new SchrijfEvenMeeHuisArtsTenant(),
-                "solidground.assessment.schrijfevenmee.nl" => new SchrijfEvenMeeAssessment(),
+                "solidground.assessment.schrijfevenmee.nl" => new SchrijfEvenMeeAssessmentTenant(),
+                "solidground.scintilla.schrijfevenmee.nl" => new SchrijfEvenMeeScintillaTenant(),
+                "solidground.ggz.schrijfevenmee.nl" => new SchrijfEvenMeeGgzTenant(),
+                "solidground.christina.schrijfevenmee.nl" => new SchrijfEvenMeeChristinaTenant(),
+                "solidground.schrijfevenmee.nl" => new SchrijfEvenVanillaTenant(),
                 "localhost" => new FlashCardsTenant(),
                 _ => throw new NotSupportedException("unknown domain: "+request.Host.Host)
             };

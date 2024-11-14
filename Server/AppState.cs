@@ -15,7 +15,15 @@ public abstract record Tenant
     public abstract string BaseUrl { get; }
     public abstract string LocalBaseUrl { get; }
 
-    public static Tenant[] All = [new FlashCardsTenant(), new SchrijfEvenMeeAssessment(), new SchrijfEvenMeeHuisArtsTenant()];
+    public static Tenant[] All = [
+        new FlashCardsTenant(), 
+        new SchrijfEvenMeeAssessmentTenant(), 
+        new SchrijfEvenMeeHuisArtsTenant(),
+        new SchrijfEvenVanillaTenant(),
+        new SchrijfEvenMeeGgzTenant(),
+        new SchrijfEvenMeeScintillaTenant(),
+        new SchrijfEvenMeeChristinaTenant()
+    ];
 } 
 
 record FlashCardsTenant : Tenant
@@ -27,20 +35,46 @@ record FlashCardsTenant : Tenant
     public override string LocalBaseUrl => "https://localhost:7220";
 }
 
-record SchrijfEvenMeeHuisArtsTenant : Tenant
+record SchrijfEvenMeeHuisArtsTenant : SchrijfEvenMeeTenant
 {
     public override string Identifier => "huisarts";
-    public override User[] Users => [new("lucas", "12324")];
     public override string ApiKey => "solidground-dfd4a85d-21f3-4b8d-98a9-97cd5a6b9f42";
-    public override string BaseUrl => "https://huisarts.schrijfevenmee.nl";
+}
+
+abstract record SchrijfEvenMeeTenant : Tenant
+{
+    public override User[] Users => [new("lucas", "12324")];
+    public override string BaseUrl => $"https://{Identifier}.schrijfevenmee.nl";
     public override string LocalBaseUrl => "https://localhost:7172";
 }
 
-record SchrijfEvenMeeAssessment : Tenant
+record SchrijfEvenMeeAssessmentTenant : SchrijfEvenMeeTenant
 {
     public override string Identifier => "assessment";
-    public override User[] Users => [new("lucas", "12324")];
     public override string ApiKey => "solidground-8f2e9f3d-5a1b-4c2e-9e7d-8b2c6d3f4a5b";
-    public override string BaseUrl => "https://localhost:7172";
-    public override string LocalBaseUrl => "https://localhost:7172";
+}
+
+record SchrijfEvenMeeChristinaTenant : SchrijfEvenMeeTenant
+{
+    public override string Identifier => "christina";
+    public override string ApiKey => "solidground-1f4c7b9a-d5e2-4f8c-b6a3-9d7e5f2c8b4a";
+}
+
+record SchrijfEvenVanillaTenant : SchrijfEvenMeeTenant
+{
+    public override string BaseUrl => "https://schrijfevenmee.nl";
+    public override string Identifier => "vanilla";
+    public override string ApiKey => "solidground-2d8e5f1c-b7a9-4e6f-8c3b-2d9a5f7e4b1c";
+}
+
+record SchrijfEvenMeeScintillaTenant : SchrijfEvenMeeTenant
+{
+    public override string Identifier => "scintilla";
+    public override string ApiKey => "solidground-9f3c1d7a-e5b2-4f8c-b6a4-2d8e5f1c7b9a";
+}
+
+record SchrijfEvenMeeGgzTenant : SchrijfEvenMeeTenant
+{
+    public override string Identifier => "ggz";
+    public override string ApiKey => "solidground-8c4b2d9a-f5e1-4d7c-b3a6-9f2e8d4c7b1a";
 }
