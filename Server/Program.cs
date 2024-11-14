@@ -88,6 +88,7 @@ partial class Program
             {
                 "solidground.flashcards.lucasmeijer.com" => new FlashCardsTenant(),
                 "solidground.huisarts.schrijfevenmee.nl" => new SchrijfEvenMeeHuisArtsTenant(),
+                "solidground.assessment.schrijfevenmee.nl/" => new SchrijfEvenMeeAssessment(),
                 "localhost" => new FlashCardsTenant(),
                 _ => throw new NotSupportedException("unknown domain: "+request.Host.Host)
             };
