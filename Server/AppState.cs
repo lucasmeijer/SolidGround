@@ -23,8 +23,7 @@ record FlashCardsTenant : Tenant
     public override string Identifier => "flashcards";
     public override User[] Users => [new("lucas", "12324")];
     public override string ApiKey => "solidground-8a1c5cdf-3f2e-4478-b347-a4bf010a5c27";
-    //public override string BaseUrl => "https://flashcards.lucasmeijer.com";
-    public override string BaseUrl => "https://localhost:7220";
+    public override string BaseUrl => "https://flashcards.lucasmeijer.com";
     public override string LocalBaseUrl => "https://localhost:7220";
 }
 

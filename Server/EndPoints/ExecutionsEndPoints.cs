@@ -24,15 +24,16 @@ static class ExecutionsEndPoints
 
     public static void MapExecutionsEndPoints(this IEndpointRouteBuilder app)
     {
+        
         app.MapGet(Routes.api_executions_id_name, (int id) => new ExecutionNameTurboFrame(id, EditMode:false));
         app.MapGet(Routes.api_executions_id_name_edit, (int id) => new ExecutionNameTurboFrame(id, EditMode:true));
         app.MapGet(Routes.api_executions_new,() => new NewExecutionDialogContentTurboFrame());
-        app.MapGet(Routes.api_executions_new_production, async (IConfiguration config, HttpClient httpClient, Tenant tenant) =>
+        app.MapGet(Routes.api_executions_new_production, async (IWebHostEnvironment env, HttpClient httpClient, Tenant tenant) =>
         {
-            var l = await StringVariableDtosFromProduction(tenant, httpClient);
+            var l = await StringVariableDtosFromProduction(tenant, httpClient, env.IsDevelopment());
             return new ExecutionVariablesTurboFrame([..l], "New execution");
         });
-        app.MapGet(Routes.api_executions_new_executionid, async (int executionId, AppDbContext db,HttpClient httpClient, Tenant tenant) =>
+        app.MapGet(Routes.api_executions_new_executionid, async (int executionId, AppDbContext db,HttpClient httpClient, Tenant tenant, IWebHostEnvironment env) =>
         {
             var execution = await db.Executions
                 .Include(e => e.Outputs)
@@ -42,7 +43,7 @@ static class ExecutionsEndPoints
                 
                 ?? throw new NotFoundException($"Execution {executionId} not found");
 
-            var productionVariables = await StringVariableDtosFromProduction(tenant, httpClient);
+            var productionVariables = await StringVariableDtosFromProduction(tenant, httpClient, env.IsDevelopment());
 
             var outputVariables = execution
                 .Outputs
@@ -241,14 +242,14 @@ static class ExecutionsEndPoints
         }
     }
 
-    static async Task<StringVariableDto[]> StringVariableDtosFromProduction(Tenant tenant, HttpClient httpClient)
+    static async Task<StringVariableDto[]> StringVariableDtosFromProduction(Tenant tenant, HttpClient httpClient, bool isDevelopment)
     {
-        var requestUri = $"{tenant.BaseUrl}/solidground";
-        var routesArray = await httpClient.GetFromJsonAsync<JsonArray>(requestUri) ?? throw new Exception("No available variables found");
+        var requestUrl = $"{(isDevelopment ? tenant.LocalBaseUrl : tenant.BaseUrl)}/solidground";
+        var routesArray = await httpClient.GetFromJsonAsync<JsonArray>(requestUrl) ?? throw new Exception("No available variables found");
         var l = new List<StringVariableDto>();
 
         if (routesArray.Count == 0)
-            throw new ResultException(Results.BadRequest($"No routes found at {requestUri}"));
+            throw new ResultException(Results.BadRequest($"No routes found at {requestUrl}"));
             
         foreach (var x in routesArray[0]!["variables"]!.AsObject())
         {
