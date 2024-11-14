@@ -274,7 +274,7 @@ static class ExecutionsEndPoints
         Uri requestUri;
         try
         {
-            requestUri = new Uri(baseUrl.TrimEnd("/") + input.OriginalRequest_Route + (input.OriginalRequest_QueryString ?? ""));
+            requestUri = new Uri(baseUrl.TrimEnd('/') + input.OriginalRequest_Route + (input.OriginalRequest_QueryString ?? ""));
         }
         catch (UriFormatException ufe)
         {
