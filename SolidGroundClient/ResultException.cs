@@ -29,9 +29,10 @@ static class ResultExceptionExtensions
                 var session = context.RequestServices.GetService<SolidGroundSession>();
                 if (session is { IsSolidGroundInitiated: true })
                 {
-                    var problem = Results.Problem(ex.ToString(), null, StatusCodes.Status500InternalServerError,
-                        "Exception");
-                    await problem.ExecuteAsync(context);
+                    await Results.Problem(
+                        detail: ex.ToString(), 
+                        statusCode: StatusCodes.Status500InternalServerError,
+                        title: "Exception in endpoint").ExecuteAsync(context);
                 }
                 else
                     throw;
