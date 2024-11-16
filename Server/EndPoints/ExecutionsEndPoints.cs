@@ -216,6 +216,7 @@ static class ExecutionsEndPoints
             if (outputDto != null)
             {
                 var outputObject = InputEndPoints.OutputFor(outputDto, null);
+                output.Cost = outputDto.Cost;
                 output.Components = outputObject.Components;
                 output.StringVariables = outputObject.StringVariables;
                 output.Status = ExecutionStatus.Completed;
@@ -235,7 +236,7 @@ static class ExecutionsEndPoints
                 new OutputComponent()
                 {
                     Name = $"Http Error {result.StatusCode}",
-                    Value = content,
+                    Value = "body: "+content,
                     ContentType = "text/plain",
                 }
             ];

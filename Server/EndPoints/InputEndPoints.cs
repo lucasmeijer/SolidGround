@@ -129,6 +129,7 @@ static class InputEndPoints
 
         return new()
         {
+            Cost = outputDto.Cost,
             Components = [..outputComponents],
             StringVariables = [..variablesElement],
             Status = ExecutionStatus.Completed,

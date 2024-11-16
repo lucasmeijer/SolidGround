@@ -35,6 +35,8 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                                  <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg ">
                                      {output.Execution.Name ?? "Naamloos"}
                                      {(finished ? "" : spinner)}
+                                     
+                                     
                                      <svg class="w-5 h-5 transition-transform duration-200 group-open/output:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                      </svg>
@@ -42,6 +44,7 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                                  <div class="p-2">
                                      <div class="flex gap-2">
                                          {ResultHtmlsFor(output).Render()}
+                                         {(output.Cost == null ? "Cost unknown" : $"{1m/output.Cost:F}/$")}
                                      </div>
                                      <details class="my-4">    
                                          <summary class="text-sm">Details</summary>

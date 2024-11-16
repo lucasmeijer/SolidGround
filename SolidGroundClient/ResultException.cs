@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using SolidGroundClient;
 
 namespace SolidGround;
 
@@ -21,6 +23,18 @@ static class ResultExceptionExtensions
             catch (ResultException ex)
             {
                 await ex.Result.ExecuteAsync(context);
+            }
+            catch (Exception ex)
+            {
+                var session = context.RequestServices.GetService<SolidGroundSession>();
+                if (session is { IsSolidGroundInitiated: true })
+                {
+                    var problem = Results.Problem(ex.ToString(), null, StatusCodes.Status500InternalServerError,
+                        "Exception");
+                    await problem.ExecuteAsync(context);
+                }
+                else
+                    throw;
             }
         });
     }

@@ -74,6 +74,9 @@ public record OutputDto
         
     [JsonPropertyName("output_components")]
     public required OutputComponentDto[] OutputComponents { get; init; }
+    
+    [JsonPropertyName("cost")]
+    public required decimal? Cost { get; init; }
 }
 
 public record RunExecutionDto

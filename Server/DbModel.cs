@@ -171,6 +171,7 @@ class Output
     public int InputId { get; [UsedImplicitly] set; }
     public Input Input { get; [UsedImplicitly] set; }  = null!;
     
+    public decimal? Cost { get; [UsedImplicitly] set; } = null;
     public ExecutionStatus Status { get; set; }
     public List<OutputComponent> Components { get; set; } = [];
     
