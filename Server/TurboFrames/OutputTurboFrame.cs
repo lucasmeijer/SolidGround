@@ -44,8 +44,8 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                                  <div class="p-2">
                                      <div class="flex gap-2">
                                          {ResultHtmlsFor(output).Render()}
-                                         {(output.Cost == null ? "Cost unknown" : $"{1m/output.Cost:F}/$")}
                                      </div>
+                                     {(output.Cost == null ? "Cost unknown" : $"{1m/output.Cost:F}/$")}
                                      <details class="my-4">    
                                          <summary class="text-sm">Details</summary>
                                          <div class="p-4">
