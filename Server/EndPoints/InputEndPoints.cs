@@ -37,7 +37,7 @@ static class InputEndPoints
                 db.Add(new Execution
                 {
                     Outputs = [output],
-                    StartTime = DateTime.Now,
+                    StartTime = DateTime.UtcNow,
                     SolidGroundInitiated = false,
                     Name = "Original"
                 });
@@ -179,7 +179,8 @@ static class InputEndPoints
             OriginalRequest_Body = bodyBase64,
             OriginalRequest_Route = inputDto.Request.Route,
             OriginalRequest_QueryString = inputDto.Request.QueryString,
-            OriginalRequest_Method = inputDto.Request.Method
+            OriginalRequest_Method = inputDto.Request.Method,
+            CreationTime = DateTime.UtcNow
         };
     }
     

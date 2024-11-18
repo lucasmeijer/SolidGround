@@ -106,7 +106,7 @@ static class ExecutionsEndPoints
             var execution = new Execution()
             {
                 Name = string.IsNullOrWhiteSpace(runExecutionDto.Name) ? null : runExecutionDto.Name,
-                StartTime = DateTime.Now,
+                StartTime = DateTime.UtcNow,
                 Outputs =
                 [
                     ..inputsToOutputs.Values.SelectMany(o => o)

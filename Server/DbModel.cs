@@ -107,7 +107,6 @@ public enum ExecutionStatus
 // ReSharper disable InconsistentNaming
 class Input
 {
-    
     public int Id { get; [UsedImplicitly] set; }
     [MaxLength(200)] public string? Name { get; set; }
     public List<Tag> Tags { get; [UsedImplicitly] set; } = [];
@@ -128,6 +127,8 @@ class Input
     
     [SuppressMessage("ReSharper", "EntityFramework.ModelValidation.UnlimitedStringLength")]
     public string OriginalRequest_Body { get; [UsedImplicitly] set; } = null!;
+    
+    public DateTime CreationTime { get; [UsedImplicitly] set; }
 }
 // ReSharper restore InconsistentNaming
 

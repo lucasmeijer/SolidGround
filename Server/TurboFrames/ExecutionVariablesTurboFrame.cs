@@ -6,7 +6,7 @@ record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) 
 {
     protected override string LazySrc => ExecutionsEndPoints.Routes.api_executions_new.For();
 
-    protected override Delegate RenderFunc => (Tenant tenant) => new Html($"""
+    protected override Delegate RenderFunc => (Tenant tenant, IWebHostEnvironment env) => new Html($"""
          <div class="flex flex-col">
              <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                  <h2 class="text-lg font-semibold text-gray-800">New Execution</h2>
@@ -23,7 +23,7 @@ record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) 
              class="p-4" action="{ExecutionsEndPoints.Routes.api_executions.For()}" method="post">
                  <div class="p-2 space-y-6 max-h-[calc(100vh-16rem)] overflow-y-auto bg-white text-xs">
                      {Variables.Render(RenderVariable)}
-                     <input type="hidden" name="baseurl" value="{tenant.BaseUrl}"/>
+                     <input type="hidden" name="baseurl" value="{(env.IsDevelopment() ? tenant.LocalBaseUrl : tenant.BaseUrl)}"/>
                      
                  </div>
                  

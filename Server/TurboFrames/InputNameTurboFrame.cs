@@ -5,7 +5,7 @@ record InputNameTurboFrame(int InputId, bool EditMode) : EditableNameTurboFrame(
     protected override async Task<string> FindCurrentName(AppDbContext db)
     {
         var input = await db.Inputs.FindAsync(InputId) ?? throw new BadHttpRequestException("input not found");
-        return input.Name ?? "Naamloos";
+        return input.Name ?? TimeHelper.HowMuchTimeAgo(input.CreationTime);
     }
 
     protected override string EditRoute => InputEndPoints.Routes.api_input_id_name_edit.For(InputId);
