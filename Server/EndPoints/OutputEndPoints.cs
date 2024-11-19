@@ -59,7 +59,7 @@ static class OutputEndPoints
             prompt.AppendLine("</ai_variables>");
             prompt.AppendLine("<input>");
 
-            var input = db.Inputs.Include(i => i.Strings).First(i => i.Id == id);
+            var input = db.Inputs.Include(i => i.Strings).First(i => i.Id == output.InputId);
 
             var inputJson = new JsonObject();
             foreach (var s in input.Strings)
