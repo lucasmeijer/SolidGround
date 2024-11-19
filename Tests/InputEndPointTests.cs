@@ -49,7 +49,8 @@ public class InputEndPointTests : IntegrationTestBase
             Output = new()
             {
                 OutputComponents = [],
-                StringVariables = []
+                StringVariables = [],
+                Cost = null
             },
             Request = new()
             {
@@ -106,7 +107,8 @@ public class InputEndPointTests : IntegrationTestBase
         Output = new()
         {
             OutputComponents = [],
-            StringVariables = []
+            StringVariables = [],
+            Cost = null
         },
         Request = new()
         {

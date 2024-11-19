@@ -53,7 +53,7 @@ static class OutputEndPoints
             prompt.AppendLine($"<execution_{output.Id}>");
             prompt.AppendLine("<ai_variables>");
             var v = new JsonObject();
-            foreach (var variable in output.Execution.StringVariables) 
+            foreach (var variable in output.StringVariables) 
                 v[variable.Name] = variable.Value;
             prompt.AppendLine(JsonSerializer.Serialize(v));
             prompt.AppendLine("</ai_variables>");
@@ -61,11 +61,11 @@ static class OutputEndPoints
 
             var input = db.Inputs.Include(i => i.Strings).First(i => i.Id == output.InputId);
 
-            var inputJson = new JsonObject();
-            foreach (var s in input.Strings)
-                inputJson.Add(s.Name, s.Value);
-
-            prompt.AppendLine(JsonSerializer.Serialize(inputJson));
+            if (input.OriginalRequest_ContentType == "application/json")
+                prompt.AppendLine(Encoding.UTF8.GetString(Convert.FromBase64String(input.OriginalRequest_Body)));
+            else 
+                throw new ArgumentException("This input does not have json original request");
+            
             prompt.AppendLine("</input>");
 
             prompt.AppendLine("<output>");

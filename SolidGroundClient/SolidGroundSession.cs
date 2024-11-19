@@ -76,7 +76,7 @@ public class SolidGroundSession(HttpContext httpContext,
             Name = _name,
             Request = capturedRequest,
             TagNames = [.._tagNames],
-            Output = OutputDto()
+            Output = OutputDto(),
         },
         ApiKey = apiKey
     };
@@ -85,17 +85,22 @@ public class SolidGroundSession(HttpContext httpContext,
     {
         Cost = _costInDollar,
         OutputComponents = [.._outputComponents],
-        StringVariables = _variables == null 
+        StringVariables = VariablesAsStringVariableDtos()
+    };
+
+    StringVariableDto[] VariablesAsStringVariableDtos()
+    {
+        return _variables == null 
             ? throw new InvalidOperationException("Variables were not yet set nor get")
             : _variables.Properties
-            .Select(p => new StringVariableDto()
-            {
-                Name = p.Name,
-                Value = _variables.GetPropertyAsString(p),
-                Options = _variables.GetPropertyOptions(p)
-            })
-            .ToArray()
-    };
+                .Select(p => new StringVariableDto()
+                {
+                    Name = p.Name,
+                    Value = _variables.GetPropertyAsString(p),
+                    Options = _variables.GetPropertyOptions(p)
+                })
+                .ToArray();
+    }
 
     public void SetVariables(SolidGroundVariables variables)
     {

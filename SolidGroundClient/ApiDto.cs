@@ -17,7 +17,6 @@ public record InputDto
     public required string? Name { get; init; }
 }
 
-
 public record RequestDto
 {
     [JsonPropertyName("body_base64")]
@@ -59,13 +58,7 @@ public record StringVariableDto
     [JsonPropertyName("options")]
     public required string[] Options { get; init; }
 }
-
-public record AvailableVariablesDto
-{
-    [JsonPropertyName("string_variables")]
-    public required StringVariableDto[] StringVariables { get; init; }
-}
-    
+   
 
 public record OutputDto
 {

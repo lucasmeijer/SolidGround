@@ -39,7 +39,8 @@ static class InputEndPoints
                     Outputs = [output],
                     StartTime = DateTime.UtcNow,
                     SolidGroundInitiated = false,
-                    Name = "Original"
+                    Name = "Original",
+                    StringVariables = output.StringVariables,
                 });
 
                 int written = await db.SaveChangesAsync();
