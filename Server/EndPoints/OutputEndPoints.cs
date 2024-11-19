@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Unicode;
 using Microsoft.EntityFrameworkCore;
 using TurboFrames;
 
@@ -55,7 +57,13 @@ static class OutputEndPoints
             var v = new JsonObject();
             foreach (var variable in output.StringVariables) 
                 v[variable.Name] = variable.Value;
-            prompt.AppendLine(JsonSerializer.Serialize(v));
+            
+            var options = new JsonSerializerOptions
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+
+            prompt.AppendLine(JsonSerializer.Serialize(v, options));
             prompt.AppendLine("</ai_variables>");
             prompt.AppendLine("<input>");
 
