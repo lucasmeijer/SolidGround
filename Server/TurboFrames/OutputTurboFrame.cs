@@ -53,7 +53,8 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                                          {ResultHtmlsFor(output).Render()}
                                      </div>
                                      {(output.Cost == null ? "Cost unknown" : $"{1m/output.Cost:F0}/$")}
-                                     <button 
+                                     <button
+                                          class="px-4 py-2 w-36 bg-blue-200 text-sm m-2 text-gray-700 rounded-md hover:bg-blue-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                           data-controller="prompt" 
                                           data-action="prompt#copy"
                                           data-prompt-output-id-value="123"

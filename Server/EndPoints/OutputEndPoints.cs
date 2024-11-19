@@ -36,7 +36,8 @@ static class OutputEndPoints
         {
             var output = await db.Outputs
                 .Include(o => o.StringVariables)
-                .Include(output => output.Components)
+                .Include(output => output.Components).Include(output => output.Execution)
+                .ThenInclude(execution => execution.StringVariables)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(o => o.Id == id);
 
@@ -50,10 +51,18 @@ static class OutputEndPoints
             var prompt = new StringBuilder();
 
             prompt.AppendLine($"<execution_{output.Id}>");
+            prompt.AppendLine("<ai_variables>");
+            var v = new JsonObject();
+            foreach (var variable in output.Execution.StringVariables) 
+                v[variable.Name] = variable.Value;
+            prompt.AppendLine(JsonSerializer.Serialize(v));
+            prompt.AppendLine("</ai_variables>");
             prompt.AppendLine("<input>");
 
+            var input = db.Inputs.Include(i => i.Strings).First(i => i.Id == id);
+
             var inputJson = new JsonObject();
-            foreach (var s in output.StringVariables)
+            foreach (var s in input.Strings)
                 inputJson.Add(s.Name, s.Value);
 
             prompt.AppendLine(JsonSerializer.Serialize(inputJson));
