@@ -4,8 +4,12 @@ namespace SolidGroundClient;
 
 public abstract class SolidGroundVariables
 {
+    public virtual string? ApplicationInformation => null;
+    public virtual string? PromptingGuidelines => null;
+    
     public IEnumerable<PropertyInfo> Properties => GetType()
         .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
+        .Where(p=>!(p.GetMethod?.IsVirtual ?? false))
         .Where(p=>p.DeclaringType != typeof(SolidGroundVariables));
     
     public void SetPropertyAsString(PropertyInfo p, string valueAsString)
@@ -45,5 +49,12 @@ public abstract class SolidGroundVariables
         return (string)value;
     }
 
-    public string[] GetPropertyOptions(PropertyInfo propertyInfo) => [];
+    public string[]? GetPropertyOptions(PropertyInfo prop)
+    {
+        if (prop.PropertyType.IsEnum)
+            return Enum.GetNames(prop.PropertyType);
+        if (prop.PropertyType == typeof(bool))
+            return ["true", "false"];
+        return null;
+    }
 }

@@ -6,12 +6,14 @@ namespace SolidGroundClient;
 public class PromptBuilder : IEnumerable
 {
     readonly string _template;
+    readonly bool _allowUnusedVariables;
     readonly HashSet<string> _requiredVariables;
     readonly Dictionary<string, string> _providedValues;
 
-    public PromptBuilder(string template)
+    public PromptBuilder(string template, bool allowUnusedVariables = false)
     {
         _template = template;
+        _allowUnusedVariables = allowUnusedVariables;
         _providedValues = new();
         _requiredVariables = ExtractVariables(template);
     }
@@ -32,7 +34,11 @@ public class PromptBuilder : IEnumerable
     public PromptBuilder Add(string variable, string value)
     {
         if (!_requiredVariables.Contains(variable))
-            throw new ArgumentException($"Variable **{variable}** was not found in the original template");
+        {
+            if (!_allowUnusedVariables)
+                throw new ArgumentException($"Variable **{variable}** was not found in the original template");
+            return this;
+        }
 
         _providedValues[variable] = value;
         return this;

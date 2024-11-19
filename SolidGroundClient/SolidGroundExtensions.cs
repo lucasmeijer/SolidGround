@@ -79,37 +79,34 @@ public static class SolidGroundExtensions
         
         app.UseResultException();
         
-        app.MapGet(EndPointRoute, (IServiceProvider sp) => new JsonArray(app.Services.GetRequiredService<EndpointDataSource>().Endpoints
-            .OfType<RouteEndpoint>()
-            .Select(e=>(e, e.Metadata.GetMetadata<SolidGroundMetadata>()))
-            .Where(pair => pair.Item2 != null)
-            .Select(pair => new JsonObject()
-            {
-                ["route"] = pair.Item1.RoutePattern.RawText,
-                ["variables"] = SerializeToNode(pair, sp)
-            })
-            .ToArray<JsonNode>()));
-    }
-
-    static JsonNode? SerializeToNode((RouteEndpoint e, SolidGroundMetadata?) pair, IServiceProvider sp)
-    {
-        var result = new JsonObject();
-        var vars = pair.Item2!.For(sp);
-        foreach (var prop in vars.Properties)
+        app.MapGet(EndPointRoute, (IServiceProvider sp) =>
         {
-            var jsonObject = new JsonObject() 
-            {  
-                ["value"] = vars.GetPropertyAsString(prop) ?? throw new Exception()
-            };
-            if (prop.PropertyType.IsEnum)
-                jsonObject["options"] = new JsonArray([..Enum.GetNames(prop.PropertyType)]);
-            if (prop.PropertyType == typeof(bool))
-                jsonObject["options"] = new JsonArray("true", "false");
-            
-            result[prop.Name] = jsonObject;
-        }
-        return result;
-    }
+            List<SolidGroundRouteInfo> result = [];
+            foreach (var routeEndpoint in app.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>())
+            {
+                var metadata = routeEndpoint.Metadata.GetMetadata<SolidGroundMetadata>();
+                if (metadata == null)
+                    continue;
+                var variables = metadata.For(sp);
+                
+                result.Add(new()
+                {
+                    Route = routeEndpoint.RoutePattern.RawText!,
+                    StringVariables = variables.Properties.Select(p => new StringVariableDto()
+                    {
+                        Name = p.Name,
+                        Value = variables.GetPropertyAsString(p),
+                        Options = variables.GetPropertyOptions(p)
+                    }).ToArray(),
+                    ApplicationInformation = variables.ApplicationInformation,
+                    PromptingGuidelines = variables.PromptingGuidelines
+                });
+                
+            }
 
+            return result;
+        });
+    }
+    
     public static string EndPointRoute => "solidground";
 }

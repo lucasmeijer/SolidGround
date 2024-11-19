@@ -36,8 +36,8 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
       
 
         return new Html($"""
-                         <turbo-frame data-src="{OutputEndPoints.Routes.api_output_id.For(OutputId)}" id="{TurboFrameId}" class="flex-1 w-0" {(finished ? "" : "data-controller='autoreload' data-turbo-cache='false'")}>
-                         <div class="flex flex-row gap-2 items-stretch">
+                         <turbo-frame data-src="{OutputEndPoints.Routes.api_output_id.For(OutputId)}" id="{TurboFrameId}" class="flex-1 w-0" {(finished ? "" : "data-turbo-cache='false'")}>
+                         <div class="flex flex-row gap-2 items-stretch" {(finished ? "" : "data-controller='autoreload'")}>
                              <details class="bg-gray-50 flex-1 shadow-md rounded-lg group/output {ColorFor(output)}" {(StartOpened ? "open" : "")}>
                                  <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg ">
                                      {output.Execution.Name ?? "Naamloos"}
@@ -52,7 +52,7 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                                      <div class="flex gap-2">
                                          {ResultHtmlsFor(output).Render()}
                                      </div>
-                                     {(output.Cost == null ? "Cost unknown" : $"{1m/output.Cost:F0}/$")}
+                                     {(finished ? (output.Cost == null ? "Cost unknown" : $"{1m/output.Cost:F0}/$") : "")}
                                      <button
                                           class="px-4 py-2 w-36 bg-blue-200 text-sm m-2 text-gray-700 rounded-md hover:bg-blue-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                           data-controller="prompt" 

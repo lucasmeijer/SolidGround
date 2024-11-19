@@ -30,8 +30,8 @@ static class ExecutionsEndPoints
         app.MapGet(Routes.api_executions_new,() => new NewExecutionDialogContentTurboFrame());
         app.MapGet(Routes.api_executions_new_production, async (IWebHostEnvironment env, HttpClient httpClient, Tenant tenant) =>
         {
-            var l = await StringVariableDtosFromProduction(tenant, httpClient, env.IsDevelopment());
-            return new ExecutionVariablesTurboFrame([..l], "New execution");
+            var l = await ClientInfoFor(tenant, httpClient, env.IsDevelopment());
+            return new ExecutionVariablesTurboFrame(l.StringVariables, "New execution");
         });
         app.MapGet(Routes.api_executions_new_executionid, async (int executionId, AppDbContext db,HttpClient httpClient, Tenant tenant, IWebHostEnvironment env) =>
         {
@@ -43,7 +43,8 @@ static class ExecutionsEndPoints
                 
                 ?? throw new NotFoundException($"Execution {executionId} not found");
 
-            var productionVariables = await StringVariableDtosFromProduction(tenant, httpClient, env.IsDevelopment());
+            var solidGroundRouteInfo = await ClientInfoFor(tenant, httpClient, env.IsDevelopment());
+            var productionVariables = solidGroundRouteInfo.StringVariables;
 
             var outputVariables = execution
                 .Outputs
@@ -243,32 +244,19 @@ static class ExecutionsEndPoints
         }
     }
 
-    public static async Task<StringVariableDto[]> StringVariableDtosFromProduction(Tenant tenant, HttpClient httpClient, bool isDevelopment)
+    
+    public static async Task<SolidGroundRouteInfo> ClientInfoFor(Tenant? tenant, HttpClient httpClient, bool isDevelopment)
     {
-        var requestUrl = $"{(isDevelopment ? tenant.LocalBaseUrl : tenant.BaseUrl)}/solidground";
-        var routesArray = await httpClient.GetFromJsonAsync<JsonArray>(requestUrl) ?? throw new Exception("No available variables found");
-        var l = new List<StringVariableDto>();
-
-        if (routesArray.Count == 0)
+        var s = tenant == null
+            ? ""
+            : (isDevelopment ? tenant.LocalBaseUrl : tenant.BaseUrl);
+        var requestUrl = $"{s}/solidground";
+        var routesArray = await httpClient.GetFromJsonAsync<SolidGroundRouteInfo[]>(requestUrl) ?? throw new Exception("No available variables found");
+        
+        if (routesArray.Length == 0)
             throw new ResultException(Results.BadRequest($"No routes found at {requestUrl}"));
             
-        foreach (var x in routesArray[0]!["variables"]!.AsObject())
-        {
-            var valueObject = x.Value!.AsObject();
-            string[] options = [];
-                
-            if (valueObject.TryGetPropertyValue("options", out var optionsNode) && optionsNode != null) 
-                options = optionsNode.AsArray().Select(e => e!.GetValue<string>()).ToArray();
-                
-            l.Add(new()
-            {
-                Name = x.Key, 
-                Value = valueObject["value"]!.GetValue<string>(),
-                Options = options
-            });
-        }
-
-        return [..l];
+        return routesArray[0];
     }
 
     static Uri RequestUrlFor(string baseUrl, Input input)

@@ -3,10 +3,12 @@ import { Controller } from "@hotwired/stimulus"
 export default class AutoReloadController extends Controller {
     connect() {
         this.interval = setInterval(() => {
-            
-            //this seems to work to trigger a reload.
-            this.element.src = this.element.getAttribute('data-src');
-        }, 5000);
+            const frame = this.element.closest('turbo-frame');
+            if (frame) {
+                const src = frame.getAttribute('data-src');
+                frame.src = src;
+            }
+        }, 3000);
     }
 
     disconnect() {

@@ -56,9 +56,23 @@ public record StringVariableDto
     public required string Value { get; init; }
     
     [JsonPropertyName("options")]
-    public required string[] Options { get; init; }
+    public required string[]? Options { get; init; }
 }
-   
+
+record SolidGroundRouteInfo
+{
+    [JsonPropertyName("route")] 
+    public required string Route { get; init; }
+    
+    [JsonPropertyName("application_information")]
+    public required string? ApplicationInformation { get; init; }
+    
+    [JsonPropertyName("prompting_guidelines")]
+    public required string? PromptingGuidelines { get; init; }
+    
+    [JsonPropertyName("string_variables")]
+    public required StringVariableDto[] StringVariables { get; init; }
+}
 
 public record OutputDto
 {

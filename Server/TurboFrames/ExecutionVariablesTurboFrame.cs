@@ -72,7 +72,7 @@ record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) 
                  <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
                      {variable.Name}
                  </label>
-                 {(variable.Options.Length == 0 ? RenderTextAreaFor(variable) : RenderDropdownFor(variable))}                
+                 {(variable.Options != null ? RenderTextAreaFor(variable) : RenderDropdownFor(variable))}                
              </div>
              """);
 
@@ -97,7 +97,7 @@ record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) 
                                                                       name="{IdFor(variable.Name)}"
                                                                       class="block w-32 p-3 text-md bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer hover:border-blue-400"
                                                                          >
-                                                                         {variable.Options.Render(o => RenderOption(o, o == variable.Value))}
+                                                                         {variable.Options!.Render(o => RenderOption(o, o == variable.Value))}
                                                                       </select>
                                                                       """);
 

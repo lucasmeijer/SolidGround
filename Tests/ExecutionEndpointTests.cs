@@ -25,6 +25,9 @@ public class ExecutionEndpointTests : IntegrationTestBase
     
     class TestVariables : SolidGroundVariables
     {
+        public override string? PromptingGuidelines => "myguidelines";
+        public override string? ApplicationInformation => "myappinformation";
+        
         public string Prompt { get; set; } = "Tell me a joke about a";
         public TestEnum TestEnum { get; set; }
         public bool Bool { get; set; }
@@ -35,37 +38,37 @@ public class ExecutionEndpointTests : IntegrationTestBase
     {
         var webAppFactory = await SetupHorseJokeClientApp();
         var client = webAppFactory.HttpClient;
-        var response = await client.GetAsync(SolidGroundExtensions.EndPointRoute);
-        response.EnsureSuccessStatusCode();
-        var s2 = await response.Content.ReadAsStringAsync();
-        var jdoc = JsonDocument.Parse(s2);
 
-        var expected = new JsonArray()
+        var cif = await ExecutionsEndPoints.ClientInfoFor(null, client, true);
+
+        var expected = new SolidGroundRouteInfo
         {
-            new JsonObject()
-            {
-                ["route"] = "/joke",
-                ["variables"] = new JsonObject
+            Route = "/joke",
+            ApplicationInformation = "myappinformation",
+            PromptingGuidelines = "myguidelines",
+            StringVariables = [
+                new()
                 {
-                    ["Prompt"] = new JsonObject
-                    {
-                        ["value"] = "Tell me a joke about a",
-                    },
-                    ["TestEnum"] = new JsonObject
-                    {
-                        ["value"] = "One",
-                        ["options"] = new JsonArray("One", "Two","Three")
-                    },
-                    ["Bool"] = new JsonObject
-                    {
-                        ["value"] = "false",
-                        ["options"] = new JsonArray("true","false")
-                    }
+                    Name = "Prompt",
+                    Value = "Tell me a joke about a",
+                    Options = null
+                },
+                new()
+                {
+                    Name = "TestEnum",
+                    Value = "One",
+                    Options = ["One", "Two", "Three"]
+                },
+                new()
+                {
+                    Name = "Bool",
+                    Value = "false",
+                    Options = ["true", "false"]
                 }
-            }
+            ]
         };
-        
-        Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(jdoc.RootElement));
+
+        Assert.Equivalent(expected, cif);
     }
     
     [Fact]
@@ -105,8 +108,9 @@ public class ExecutionEndpointTests : IntegrationTestBase
         Assert.Equal("Prompt", outputStringVariable.Name);
         Assert.Equal("Tell me a joke about a", outputStringVariable.Value);
     
-        //only in manually submitted executions are the stringvariables known ahead of time.
-        Assert.Empty(execution.StringVariables);
+        var executionStringVariable = execution.StringVariables.Single(v => v.Name == "Prompt");
+        Assert.Equal("Prompt", executionStringVariable.Name);
+        Assert.Equal("Tell me a joke about a", executionStringVariable.Value);
     }
 
     async Task<WebApplicationUnderTest<int>> SetupHorseJokeClientApp(Func<SolidGroundSessionAccessor, string, Task<IResult>>? impl = null) =>
@@ -188,7 +192,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         Assert.Equal(ExecutionStatus.Failed, output.Status);
         var component = output.Components.Single();
         Assert.Equal("Http Error InternalServerError", component.Name);
-        Assert.Equal("\"Hair on fire\"", component.Value);
+        Assert.Equal("body: \"Hair on fire\"", component.Value);
     }
 
     async Task<Execution> PostExecutionAndWaitUntilFinished(RunExecutionDto runExecutionDto)
