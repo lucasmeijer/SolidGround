@@ -93,7 +93,7 @@ partial class Program
                 "solidground.ggz.schrijfevenmee.nl" => new SchrijfEvenMeeGgzTenant(),
                 "solidground.christina.schrijfevenmee.nl" => new SchrijfEvenMeeChristinaTenant(),
                 "solidground.schrijfevenmee.nl" => new SchrijfEvenVanillaTenant(),
-                "localhost" => new SchrijfEvenMeeAssessmentTenant(),
+                "localhost" => new SchrijfEvenMeeHuisArtsTenant(),
                 _ => throw new NotSupportedException("unknown domain: "+request.Host.Host)
             };
         });

@@ -243,7 +243,7 @@ static class ExecutionsEndPoints
         }
     }
 
-    static async Task<StringVariableDto[]> StringVariableDtosFromProduction(Tenant tenant, HttpClient httpClient, bool isDevelopment)
+    public static async Task<StringVariableDto[]> StringVariableDtosFromProduction(Tenant tenant, HttpClient httpClient, bool isDevelopment)
     {
         var requestUrl = $"{(isDevelopment ? tenant.LocalBaseUrl : tenant.BaseUrl)}/solidground";
         var routesArray = await httpClient.GetFromJsonAsync<JsonArray>(requestUrl) ?? throw new Exception("No available variables found");

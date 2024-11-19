@@ -34,7 +34,7 @@ static class OutputEndPoints
             return new TurboStream("remove", Target: OutputTurboFrame.TurboFrameIdFor(id));
         });
 
-        app.MapGet(Routes.api_output_id_prompt, async (int id, AppDbContext db) =>
+        app.MapGet(Routes.api_output_id_prompt, async (int id, AppDbContext db,HttpClient httpClient, Tenant tenant, IWebHostEnvironment env) =>
         {
             var output = await db.Outputs
                 .Include(o => o.StringVariables)
@@ -54,9 +54,18 @@ static class OutputEndPoints
 
             prompt.AppendLine($"<execution_{output.Id}>");
             prompt.AppendLine("<ai_variables>");
+
             var v = new JsonObject();
-            foreach (var variable in output.StringVariables) 
-                v[variable.Name] = variable.Value;
+            if (output.StringVariables.Count > 0)
+            {
+                foreach (var variable in output.StringVariables) 
+                    v[variable.Name] = variable.Value;
+            }
+            else
+            {
+                foreach (var dto in await ExecutionsEndPoints.StringVariableDtosFromProduction(tenant, httpClient, env.IsDevelopment()))
+                    v[dto.Name] = dto.Value;
+            }
             
             var options = new JsonSerializerOptions
             {
@@ -70,7 +79,11 @@ static class OutputEndPoints
             var input = db.Inputs.Include(i => i.Strings).First(i => i.Id == output.InputId);
 
             if (input.OriginalRequest_ContentType == "application/json")
-                prompt.AppendLine(Encoding.UTF8.GetString(Convert.FromBase64String(input.OriginalRequest_Body)));
+            {
+                var uglyJsonString = Encoding.UTF8.GetString(Convert.FromBase64String(input.OriginalRequest_Body));
+                var o = JsonSerializer.Deserialize(uglyJsonString, typeof(object), options);
+                prompt.AppendLine(JsonSerializer.Serialize(o, options));
+            }
             else 
                 throw new ArgumentException("This input does not have json original request");
             
@@ -107,10 +120,11 @@ static class OutputEndPoints
                               gets scored on several different competenties that are relevant to the job.
                               - recap: these are notes the psychologist has written down after the interview has taken place. consider these as instructions
                               on what should be in the rapport.
-                              - kind: wether this is a selectie & ontwikkeladvies, or only a ontwikkeladvies.
+                              - passages: wether this is a selectie & ontwikkeladvies, or only a ontwikkeladvies.
                               
                               There's different example rapports for the two kinds of rapports.
                               
+                              All prompts for this application should be written in dutch.
                               </application_information>
 
                               <prompting_guidelines>
