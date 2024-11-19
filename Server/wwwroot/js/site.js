@@ -10,6 +10,7 @@ import RunExperimentController from "./runexperiment_controller.js";
 import TextAreaResizeController from "./textarearesize_controller.js";
 import AutoReloadController from "./autoreload_controller.js";
 import RestoreCursorPositionController from "./RestoreCursorPositionController.js";
+import PromptController from "./prompt_controller.js";
 
 // Initialize Stimulus application
 const application = Application.start();
@@ -23,6 +24,8 @@ application.register("runexperiment", RunExperimentController);
 application.register("textarearesize", TextAreaResizeController);
 application.register("autoreload", AutoReloadController);
 application.register("restorecursorposition", RestoreCursorPositionController);
+application.register("prompt", PromptController);
+
 //application.register("cursor", CursorController);
 
 // function getSolidGroundTabId() {

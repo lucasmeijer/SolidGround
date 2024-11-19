@@ -118,7 +118,7 @@ static class InputEndPoints
         {
             Name = c.Name,
             Value = c.Value,
-            ContentType = c.ContentType
+            ContentType = c.ContentType,
         });
             
         var variablesElement = outputDto.StringVariables.Select(c => new StringVariable()

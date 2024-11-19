@@ -1,3 +1,6 @@
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +31,10 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
         var spinner = new Html("""
                                      <div class="animate-spin rounded-full h-8 w-8 border-t-4 border-b-4 border-blue-500"></div>
                                """);
+
+
+      
+
         return new Html($"""
                          <turbo-frame data-src="{OutputEndPoints.Routes.api_output_id.For(OutputId)}" id="{TurboFrameId}" class="flex-1 w-0" {(finished ? "" : "data-controller='autoreload' data-turbo-cache='false'")}>
                          <div class="flex flex-row gap-2 items-stretch">
@@ -46,6 +53,14 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                                          {ResultHtmlsFor(output).Render()}
                                      </div>
                                      {(output.Cost == null ? "Cost unknown" : $"{1m/output.Cost:F0}/$")}
+                                     <button 
+                                          data-controller="prompt" 
+                                          data-action="prompt#copy"
+                                          data-prompt-output-id-value="123"
+                                          data-prompt-path-value="{OutputEndPoints.Routes.api_output_id_prompt.For(OutputId)}">
+                                          Copy For Prompt
+                                     </button>
+
                                      <details class="my-4">    
                                          <summary class="text-sm">Details</summary>
                                          <div class="p-4">
@@ -66,7 +81,7 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
 
     static Html[] ResultHtmlsFor(Output output)
     {
-        var result = output.Components.FirstOrDefault(c => c.Name == "result");
+        var result = ResultComponentFor(output);
         return result == null 
             ? [] 
             : [new($"""
@@ -76,19 +91,24 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                     """)];
     }
 
+    static OutputComponent? ResultComponentFor(Output output)
+    {
+        return output.Components.FirstOrDefault(c => c.Name == "result");
+    }
+
     static Html RenderStringVariable(StringVariable stringVariable) => new($"""
-        <details class="p-2 border-b last:border-b-0 text-sm group/component">
-            <summary class="cursor-pointer flex justify-between items-center hover:bg-gray-50">
-                <h3 class="font-semibold">{stringVariable.Name}</h3>
-                <svg class="w-5 h-5 transition-transform duration-200 transform rotate-0 group-open/component:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-            </summary>
-            <div class="py-2 text-xs">
-                {JsonFormatter.FormatMaybeJson(stringVariable.Value)}
-            </div>
-        </details>
-        """);
+                                                                            <details class="p-2 border-b last:border-b-0 text-sm group/component">
+                                                                                <summary class="cursor-pointer flex justify-between items-center hover:bg-gray-50">
+                                                                                    <h3 class="font-semibold">{stringVariable.Name}</h3>
+                                                                                    <svg class="w-5 h-5 transition-transform duration-200 transform rotate-0 group-open/component:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                                                    </svg>
+                                                                                </summary>
+                                                                                <div class="py-2 text-xs">
+                                                                                    {JsonFormatter.FormatMaybeJson(stringVariable.Value)}
+                                                                                </div>
+                                                                            </details>
+                                                                            """);
 
     static Html RenderComponent(OutputComponent c) => new($"""
                <details class="p-2 border-b last:border-b-0 text-sm group/component">

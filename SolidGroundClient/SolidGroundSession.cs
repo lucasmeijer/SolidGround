@@ -85,8 +85,8 @@ public class SolidGroundSession(HttpContext httpContext,
     {
         Cost = _costInDollar,
         OutputComponents = [.._outputComponents],
-        StringVariables = _variables == null //this can happen in cases like SchrijfEvenMee feedback, where we only have feedback, but not the data of the original run. 
-            ? [] 
+        StringVariables = _variables == null 
+            ? throw new InvalidOperationException("Variables were not yet set nor get")
             : _variables.Properties
             .Select(p => new StringVariableDto()
             {
@@ -97,6 +97,13 @@ public class SolidGroundSession(HttpContext httpContext,
             .ToArray()
     };
 
+    public void SetVariables(SolidGroundVariables variables)
+    {
+        if (_variables != null)
+            throw new InvalidOperationException("variables already set");
+        _variables = variables;
+    }
+    
     public T GetVariables<T>() where T : SolidGroundVariables, new()
     {
         if (_variables is T t)
@@ -116,7 +123,7 @@ public class SolidGroundSession(HttpContext httpContext,
         return v;
     }
 
-    public void AddCost(decimal dollars) => _costInDollar = dollars;
+    public void SetCost(decimal dollars) => _costInDollar = dollars;
     public void AddResult(string value, string? contentType=null) => AddArtifact("result", value, contentType);
     public void AddResultJson(object value) => AddArtifactJson("result", value);
     public void AddArtifact(string name, string value, string? contentType=null) => _outputComponents.Add(new() { Name = name, Value = value, ContentType = contentType ?? "text/plain"});

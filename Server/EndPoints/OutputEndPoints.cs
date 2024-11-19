@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using TurboFrames;
 
@@ -11,6 +13,7 @@ static class OutputEndPoints
     public static class Routes
     {
         public static readonly RouteTemplate api_output_id = RouteTemplate.Create("/api/outputs/{id:int}");
+        public static readonly RouteTemplate api_output_id_prompt = RouteTemplate.Create("/api/outputs/{id:int}/prompt");
     }
     
     public static void MapOutputEndPoints(this IEndpointRouteBuilder app)
@@ -27,6 +30,50 @@ static class OutputEndPoints
             await db.SaveChangesAsync();
         
             return new TurboStream("remove", Target: OutputTurboFrame.TurboFrameIdFor(id));
+        });
+
+        app.MapGet(Routes.api_output_id_prompt, async (int id, AppDbContext db) =>
+        {
+            var output = await db.Outputs
+                .Include(o => o.StringVariables)
+                .Include(output => output.Components)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            if (output == null)
+                return Results.NotFound();
+
+            var result = output.Components.FirstOrDefault(c => c.Name == "result");
+            if (result == null)
+                return Results.NotFound();
+
+            var prompt = new StringBuilder();
+
+            prompt.AppendLine($"<execution_{output.Id}>");
+            prompt.AppendLine("<input>");
+
+            var inputJson = new JsonObject();
+            foreach (var s in output.StringVariables)
+                inputJson.Add(s.Name, s.Value);
+
+            prompt.AppendLine(JsonSerializer.Serialize(inputJson));
+            prompt.AppendLine("</input>");
+
+            prompt.AppendLine("<output>");
+            prompt.AppendLine(result.Value);
+            prompt.AppendLine("</output>");
+
+            var feedbackComponent = output.Components.FirstOrDefault(c => c.Name == "UserFeedback");
+            if (feedbackComponent != null)
+            {
+                prompt.AppendLine("<userfeedback>");
+                prompt.AppendLine(feedbackComponent.Value);
+                prompt.AppendLine("</userfeedback>");
+            }
+
+            prompt.AppendLine($"</execution_{output.Id}>");
+
+            return Results.Text(prompt.ToString());
         });
         //
         // app.MapPatch(Routes.api_output_id, async (AppDbContext db, int id, OutputDto outputDto) =>
