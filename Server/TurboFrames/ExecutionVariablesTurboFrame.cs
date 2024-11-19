@@ -72,7 +72,7 @@ record ExecutionVariablesTurboFrame(StringVariableDto[] Variables, string Name) 
                  <label class="block text-gray-700 text-sm font-bold mb-2" for="@id">
                      {variable.Name}
                  </label>
-                 {(variable.Options != null ? RenderTextAreaFor(variable) : RenderDropdownFor(variable))}                
+                 {(variable.Options == null ? RenderTextAreaFor(variable) : RenderDropdownFor(variable))}                
              </div>
              """);
 
