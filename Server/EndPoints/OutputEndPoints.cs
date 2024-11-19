@@ -90,6 +90,64 @@ static class OutputEndPoints
 
             prompt.AppendLine($"</execution_{output.Id}>");
 
+
+            prompt.AppendLine("""
+                              <application_information>
+                              The application is a writing assistant for psychologists that write assessment reports.
+                              
+                              A company hires our psychologist to either decide if a certain candidate should get a job (selectie advies),
+                              or hires the psychologist to write a recommendation for how the person can develop themselves to be suitable for a certain role
+                              (ontwikkeladvies).
+                              
+                              The applications job is to write the psychologist report, based on the following inputs:
+                              
+                              inputs to the application are 
+                              - 'functieomschrijving': which is a description of the job to be filled
+                              - 'compenties': which are the result of a skill test the psychologist had the candidate do. the candidate
+                              gets scored on several different competenties that are relevant to the job.
+                              - recap: these are notes the psychologist has written down after the interview has taken place. consider these as instructions
+                              on what should be in the rapport.
+                              - kind: wether this is a selectie & ontwikkeladvies, or only a ontwikkeladvies.
+                              
+                              There's different example rapports for the two kinds of rapports.
+                              
+                              </application_information>
+
+                              <prompting_guidelines>
+                              The application itself expects the final written rapport to be written inside <rapport></rapport> tags. we can use everything before that as a scratch pad.
+                              The LLM used by the application works well with chain of thought prompting. If you want to make sure the final report contains something
+                              you can insert in the chain of thought prompt a request to write that something in <something></something> tags. The fact that the LLM has to write it out
+                              makes it more likely to "remember" that fact when it is writing the actual prompt.
+                              
+                              The general structure of a good prompt is:
+                              
+                              - a system prompt that does a role based assignment to set the stage. "You are an expert psychologist with a very clear writing style".
+                              
+                              a regular prompt that:
+                              - describes who this application is for, and what they want it to do.
+                              - starts with a description of what the inputs of the application are.
+                              - a description of what the outputs of the applications are.
+                              
+                              - a chain-of-thought list of steps that must be taken to come to a good output.
+                              - the final instruction of the chain of thought should be to write a rapport in <rapport</rapport> tags, and specify the language it needs to be written in.
+                              </prompting_guidelines>
+                              
+                              You will be assisting in optimizing an AI application. 
+                              You'll find one or more <execution_?> tags. these contain input/output pairs for this application that it has produced in the past.
+                              You'll also find userfeedback in it. That contains feedback the end user has about that output of the application.
+                              You'll also find <ai_variables></ai_variables>. These contain the values of the configurable settings the application has, at the time this
+                              input/output pair was produced.
+                              
+                              You might be asked to suggest changes to the ai_variables. The application will take the ai_variables, and produce a large language model prompt from them.
+                              It does so in a straight forward manner. The prompt template itself is a variable, when you see **SOMETHING** that means the application will inject something
+                              into the prompt there. When changing ai variables related to the prompting, take into consideration the <prompting_guidelines></prompting_guidelines> you need
+                              to adhere to. Refer to <application_info> to better understand what the application should do, and the context in which it will be used.
+                              
+                              When you are asked to make suggestions for different values of ai_variables that we could try to get better results, make minimal changes.
+                              do not change all values for the fun of it. First think out loud of the difference in behaviour you'd like to see, then make a plan on which ai_variable(s) to change
+                              for that,  and then only make that decisive change, keeping all other variables untouched. only write the new values of variables you actually changed.
+                              """);
+            
             return Results.Text(prompt.ToString());
         });
         //
