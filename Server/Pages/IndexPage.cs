@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 using TurboFrames;
 
@@ -17,11 +16,14 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
         var queryable = appDbContext.Inputs
             .Include(i => i.Tags)
             .Where(input => input.Tags.Count(t => queryTags.Contains(t.Id)) == queryTags.Length);
-        
+            
         if (!string.IsNullOrEmpty(searchString))
             queryable = queryable.Where(i => EF.Functions.Like(i.Name, $"%{searchString}%"));
-        
-        var inputIds = await queryable.Select(t => t.Id).ToArrayAsync();
+
+        var inputIds = await queryable
+            .OrderByDescending(i => i.CreationTime)
+            .Take(10)
+            .Select(t => t.Id).ToArrayAsync();
 
         var tenant = serviceProvider.GetRequiredService<Tenant>();
         var appSnapShot = new AppSnapshot(AppState, inputIds);
