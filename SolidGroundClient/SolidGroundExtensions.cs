@@ -99,7 +99,8 @@ public static class SolidGroundExtensions
                         Options = variables.GetPropertyOptions(p)
                     }).ToArray(),
                     ApplicationInformation = variables.ApplicationInformation,
-                    PromptingGuidelines = variables.PromptingGuidelines
+                    PromptingGuidelines = variables.PromptingGuidelines,
+                    EvaluationCriteria = variables.EvaluationCriteria,
                 });
                 
             }

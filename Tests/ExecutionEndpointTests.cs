@@ -1,7 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -46,7 +44,8 @@ public class ExecutionEndpointTests : IntegrationTestBase
             Route = "/joke",
             ApplicationInformation = "myappinformation",
             PromptingGuidelines = "myguidelines",
-            StringVariables = [
+            StringVariables =
+            [
                 new()
                 {
                     Name = "Prompt",
@@ -65,6 +64,9 @@ public class ExecutionEndpointTests : IntegrationTestBase
                     Value = "false",
                     Options = ["true", "false"]
                 }
+            ],
+            EvaluationCriteria =
+            [
             ]
         };
 

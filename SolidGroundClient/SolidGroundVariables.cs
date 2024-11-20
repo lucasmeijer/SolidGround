@@ -1,4 +1,5 @@
 using System.Reflection;
+using SolidGround;
 
 namespace SolidGroundClient;
 
@@ -6,6 +7,7 @@ public abstract class SolidGroundVariables
 {
     public virtual string? ApplicationInformation => null;
     public virtual string? PromptingGuidelines => null;
+    public virtual EvaluationCriterion[] EvaluationCriteria => [];
     
     public IEnumerable<PropertyInfo> Properties => GetType()
         .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )

@@ -1,10 +1,8 @@
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Primitives;
 using SolidGround;
 
 namespace SolidGroundClient;
@@ -47,12 +45,26 @@ public class SolidGroundSession(HttpContext httpContext,
     List<string> _tagNames = [];
     string? _name = null;
     decimal? _costInDollar = null;
+    string? _clientAppIdentifier = null;
 
     public void AddTag(string tagName) => _tagNames.Add(tagName);
     public void SetName(string name) => _name = name;
-    
+    public void SetClientAppIdentifier(string clientAppIdentifier) => _clientAppIdentifier = clientAppIdentifier;
     public void SetReproducingRequest(RequestDto request) => _reproducingRequest = request;
-    
+
+    public Task EnqueueSendFeedbackOnPreviousOutput(string clientAppOutputIdentifier, string feedback) =>
+        SolidGroundBackgroundService.Enqueue(new()
+        {
+            ApiKey = apiKey,
+            Method = HttpMethod.Post,
+            Url = "/api/feedback",
+            Payload = new SetFeedbackDto()
+            {
+                ClientAppIdentifier = clientAppOutputIdentifier,
+                Feedback = feedback
+            }
+        });
+
     public async Task CompleteAsync(bool allowStorage)
     {
         if (IsSolidGroundInitiated)
@@ -85,7 +97,8 @@ public class SolidGroundSession(HttpContext httpContext,
     {
         Cost = _costInDollar,
         OutputComponents = [.._outputComponents],
-        StringVariables = VariablesAsStringVariableDtos()
+        StringVariables = VariablesAsStringVariableDtos(),
+        ClientAppIdentifier = _clientAppIdentifier
     };
 
     StringVariableDto[] VariablesAsStringVariableDtos()

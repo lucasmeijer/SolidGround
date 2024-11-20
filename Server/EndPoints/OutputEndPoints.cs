@@ -14,15 +14,17 @@ static class OutputEndPoints
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     public static class Routes
     {
-        public static readonly RouteTemplate api_output_id = RouteTemplate.Create("/api/outputs/{id:int}");
+        public static readonly RouteTemplate api_outputs_id = RouteTemplate.Create("/api/outputs/{id:int}");
+        public static readonly RouteTemplate api_outputs_evaluations_id = RouteTemplate.Create("/api/outputs/evaluations/{id:int}");
+        public static readonly RouteTemplate api_feedback = RouteTemplate.Create("/api/feedback");
         public static readonly RouteTemplate api_output_id_prompt = RouteTemplate.Create("/api/outputs/{id:int}/prompt");
     }
     
     public static void MapOutputEndPoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet(Routes.api_output_id, (int id) => new OutputTurboFrame(id, true));
+        app.MapGet(Routes.api_outputs_id, (int id) => new OutputTurboFrame(id, true));
         
-        app.MapDelete(Routes.api_output_id, async (AppDbContext db, int id) =>
+        app.MapDelete(Routes.api_outputs_id, async (AppDbContext db, int id) =>
         {
             var obj = await db.Outputs.FindAsync(id);
             if (obj == null)
@@ -34,6 +36,33 @@ static class OutputEndPoints
             return new TurboStream("remove", Target: OutputTurboFrame.TurboFrameIdFor(id));
         });
 
+        app.MapPost(Routes.api_feedback, async (SetFeedbackDto setFeedbackDto, AppDbContext db) =>
+        {
+            var output = await db.Outputs.FirstOrDefaultAsync(o => o.ClientAppIdentifier == setFeedbackDto.ClientAppIdentifier);
+            if (output == null)
+                return Results.NotFound();
+
+            var outputEvaluation = new OutputEvaluation()
+            {
+                Output = output,
+                JsonPayload = JsonSerializer.Serialize(new JsonObject { ["text"] = setFeedbackDto.Feedback })
+            };
+            db.OutputEvaluations.Add(outputEvaluation);
+            await db.SaveChangesAsync();
+
+            return TypedResults.Created(Routes.api_outputs_evaluations_id.For(outputEvaluation.Id));
+        }).RequireTenantApiKey();
+        
+        app.MapDelete(Routes.api_outputs_evaluations_id, async (int id, AppDbContext db) =>
+        {
+            var e = await db.OutputEvaluations.FindAsync(id);
+            if (e == null)
+                return Results.NotFound();
+            db.OutputEvaluations.Remove(e);
+            await db.SaveChangesAsync();
+            return Results.NoContent();
+        });
+        
         app.MapGet(Routes.api_output_id_prompt, async (int id, AppDbContext db,HttpClient httpClient, Tenant tenant, IWebHostEnvironment env) =>
         {
             var output = await db.Outputs
@@ -129,18 +158,5 @@ static class OutputEndPoints
             
             return Results.Text(prompt.ToString());
         });
-        //
-        // app.MapPatch(Routes.api_output_id, async (AppDbContext db, int id, OutputDto outputDto) =>
-        // {
-        //     var output = await db.Outputs.FindAsync(id);
-        //     if (output == null)
-        //         return Results.NotFound($"Output {id} not found.");
-        //     var outputObject = InputEndPoints.OutputFor(outputDto, null);
-        //     output.Components = outputObject.Components;
-        //     output.StringVariables = outputObject.StringVariables;
-        //     output.Status = ExecutionStatus.Completed;
-        //     await db.SaveChangesAsync();
-        //     return Results.Ok();
-        // }).RequireTenantApiKey();
     }
 }

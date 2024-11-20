@@ -14,7 +14,7 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
     public static string TurboFrameIdFor(int outputId) => $"output_{outputId}";
     protected override bool SkipTurboFrameTags => true;
 
-    protected override string LazySrc => OutputEndPoints.Routes.api_output_id.For(OutputId);
+    protected override string LazySrc => OutputEndPoints.Routes.api_outputs_id.For(OutputId);
 
     protected override Delegate RenderFunc => async (AppDbContext db) =>
     {
@@ -33,10 +33,10 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                                """);
 
 
+        var evals = await db.OutputEvaluations.Where(e => e.OutputId == OutputId).ToArrayAsync();
       
-
         return new Html($"""
-                         <turbo-frame data-src="{OutputEndPoints.Routes.api_output_id.For(OutputId)}" id="{TurboFrameId}" class="flex-1 w-0" {(finished ? "" : "data-turbo-cache='false'")}>
+                         <turbo-frame data-src="{OutputEndPoints.Routes.api_outputs_id.For(OutputId)}" id="{TurboFrameId}" class="flex-1 w-0" {(finished ? "" : "data-turbo-cache='false'")}>
                          <div class="flex flex-row gap-2 items-stretch" {(finished ? "" : "data-controller='autoreload'")}>
                              <details class="bg-gray-50 flex-1 shadow-md rounded-lg group/output {ColorFor(output)}" {(StartOpened ? "open" : "")}>
                                  <summary class="p-4 cursor-pointer flex justify-between items-center rounded-lg ">
@@ -62,6 +62,8 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                                           Copy For Prompt
                                      </button>
 
+                                     {evals.Render(RenderEval)}
+
                                      <details class="my-4">    
                                          <summary class="text-sm">Details</summary>
                                          <div class="p-4">
@@ -80,6 +82,15 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
                          """);
     };
 
+    static Html RenderEval(OutputEvaluation eval)
+    {
+        var o = JsonNode.Parse(eval.JsonPayload);
+        if (o == null || !o.AsObject().TryGetPropertyValue("text", out var textElement) || textElement == null)
+            return $"Feedback object is broken.";
+        
+        return "Feedback: "+textElement;
+    }
+    
     static Html[] ResultHtmlsFor(Output output)
     {
         var result = ResultComponentFor(output);

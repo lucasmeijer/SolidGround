@@ -134,7 +134,8 @@ static class InputEndPoints
             Components = [..outputComponents],
             StringVariables = [..variablesElement],
             Status = ExecutionStatus.Completed,
-            Input = input!
+            Input = input!,
+            ClientAppIdentifier = outputDto.ClientAppIdentifier,
         };
     }
 
@@ -168,13 +169,18 @@ static class InputEndPoints
             //apparently we're not a form
         }
 
-        var tagIds = await db.Tags.Where(t => inputDto.TagNames.Contains(t.Name)).ToListAsync();
+        var whenAll = await Task.WhenAll(inputDto.TagNames.Select(async tagName =>
+        {
+            //this is actually not super safe, with name not being unique, but good enough for now.
+            var tag = await db.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
+            return tag ?? new Tag() { Name = tagName };
+        }));
         
         return new()
         {
             Files = inputFiles,
             Name = inputDto.Name,
-            Tags = tagIds,
+            Tags = whenAll.ToList(),
             Strings = inputStrings,
             OriginalRequest_ContentType = originalRequestContentType,
             OriginalRequest_Body = bodyBase64,

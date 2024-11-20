@@ -50,7 +50,8 @@ public class InputEndPointTests : IntegrationTestBase
             {
                 OutputComponents = [],
                 StringVariables = [],
-                Cost = null
+                Cost = null,
+                ClientAppIdentifier = null
             },
             Request = new()
             {
@@ -100,25 +101,33 @@ public class InputEndPointTests : IntegrationTestBase
         Assert.Equal("hallo", input.Name);
     }
 
-    static InputDto SimpleDto => new()
+    static InputDto SimpleDto
     {
-        TagNames = [],
-        Name = null,
-        Output = new()
+        get
         {
-            OutputComponents = [],
-            StringVariables = [],
-            Cost = null
-        },
-        Request = new()
+            var dto = new InputDto()
         {
-            BodyBase64 = "asd",
-            ContentType = "text/html",
-            Route = "/api/hello",
-            QueryString = null,
-            Method = "get"
+            TagNames = [],
+            Name = null,
+            Output = new()
+            {
+                OutputComponents = [],
+                StringVariables = [],
+                Cost = null,
+                ClientAppIdentifier = null
+            },
+            Request = new()
+            {
+                BodyBase64 = "asd",
+                ContentType = "text/html",
+                Route = "/api/hello",
+                QueryString = null,
+                Method = "get"
+            }
+        };
+            return dto;
         }
-    };
+    }
 
     [Fact]
     public async Task PostToTags_Returns_Created()

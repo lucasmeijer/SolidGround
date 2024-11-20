@@ -35,6 +35,7 @@ sealed class AppDbContext : DbContext
     public DbSet<InputString> InputStrings { get; set; }
     public DbSet<InputFile> InputFiles { get; set; }
     public DbSet<Output> Outputs { get; set; }
+    public DbSet<OutputEvaluation> OutputEvaluations { get; set; }
     public DbSet<OutputComponent> OutputComponents { get; set; }
     public DbSet<Execution> Executions { get; set; }
     
@@ -51,12 +52,11 @@ sealed class AppDbContext : DbContext
             .WithMany(i => i.Tags)
             .UsingEntity(j => j.ToTable("InputSetInputs"));
         
-        // Ensure foreign keys are enforced with cascade delete
         modelBuilder.Entity<Output>()
             .HasOne(o => o.Execution)
             .WithMany(e => e.Outputs)
             .OnDelete(DeleteBehavior.Cascade);
-
+        
         modelBuilder.Entity<StringVariable>()
             .HasOne(sv => sv.Execution)
             .WithMany(e => e.StringVariables)
@@ -162,6 +162,14 @@ class InputFile
     public byte[] Bytes { get; [UsedImplicitly] set; } = [];
 }
 
+class OutputEvaluation
+{
+    public int Id { get; set; }
+    public int OutputId { get; [UsedImplicitly] set; }
+    public Output Output { get; [UsedImplicitly] set; }  = null!;
+    public string JsonPayload { get; [UsedImplicitly] set; } = null!;
+}
+
 class Output
 {
     public int Id { get; [UsedImplicitly] set; }
@@ -177,6 +185,8 @@ class Output
     public List<OutputComponent> Components { get; set; } = [];
     
     public List<StringVariable> StringVariables { get; set; } = [];
+    [MaxLength(100)]
+    public string? ClientAppIdentifier { get; [UsedImplicitly] set; }
     
     public string TurboFrameId => $"output_{Id}";
 }

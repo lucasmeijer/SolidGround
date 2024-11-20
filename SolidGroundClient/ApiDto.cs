@@ -72,6 +72,9 @@ record SolidGroundRouteInfo
     
     [JsonPropertyName("string_variables")]
     public required StringVariableDto[] StringVariables { get; init; }
+
+    [JsonPropertyName("evaluation_criteria")]
+    public required EvaluationCriterion[] EvaluationCriteria { get; init; }
 }
 
 public record OutputDto
@@ -84,6 +87,18 @@ public record OutputDto
     
     [JsonPropertyName("cost")]
     public required decimal? Cost { get; init; }
+    
+    [JsonPropertyName("client_app_identifier")]
+    public required string? ClientAppIdentifier { get; init; }
+}
+
+public record SetFeedbackDto
+{
+    [JsonPropertyName("client_app_identifier")]
+    public required string ClientAppIdentifier { get; init; }
+    
+    [JsonPropertyName("feedback")]
+    public required string Feedback { get; init; }
 }
 
 public record RunExecutionDto
@@ -107,5 +122,14 @@ public record RunExecutionDto
 public record ExecutionStatusDto
 {
     [JsonPropertyName("finished")]
-    public bool Finished { get; init; }
+    public required bool Finished { get; init; }
+}
+
+public record EvaluationCriterion
+{
+    [JsonPropertyName("short_name")]
+    public required string ShortName { get; init; }
+    
+    [JsonPropertyName("desired_property")]
+    public required string DesiredProperty { get; init; }
 }
