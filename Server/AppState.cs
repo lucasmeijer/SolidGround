@@ -78,3 +78,9 @@ record SchrijfEvenMeeGgzTenant : SchrijfEvenMeeTenant
     public override string Identifier => "ggz";
     public override string ApiKey => "solidground-8c4b2d9a-f5e1-4d7c-b3a6-9f2e8d4c7b1a";
 }
+
+record SchrijfEvenMeeBlauwbertTenant : SchrijfEvenMeeTenant
+{
+    public override string Identifier => "blauwberg";
+    public override string ApiKey => "solidground-1f3e8d7b-a2c4-4f9d-95e8-6b7a2c1d9f3e";
+}
