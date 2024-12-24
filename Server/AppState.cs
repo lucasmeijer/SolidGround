@@ -23,7 +23,7 @@ public abstract record Tenant
         new SchrijfEvenMeeGgzTenant(),
         new SchrijfEvenMeeScintillaTenant(),
         new SchrijfEvenMeeChristinaTenant(),
-        new SchrijfEvenMeeWMOTenant(),
+        new SchrijfEvenMeeHilversumTenant(),
         new SchrijfEvenMeeBlauwbergTenant()
     ];
 } 
@@ -87,8 +87,8 @@ record SchrijfEvenMeeBlauwbergTenant : SchrijfEvenMeeTenant
     public override string ApiKey => "solidground-1f3e8d7b-a2c4-4f9d-95e8-6b7a2c1d9f3e";
 }
 
-record SchrijfEvenMeeWMOTenant : SchrijfEvenMeeTenant
+record SchrijfEvenMeeHilversumTenant : SchrijfEvenMeeTenant
 {
-    public override string Identifier => "wmo";
+    public override string Identifier => "hilversum";
     public override string ApiKey => "solidground-9c4d2e8f-b5a6-47c9-83d1-5f9e2b4a7c8d";
 }
