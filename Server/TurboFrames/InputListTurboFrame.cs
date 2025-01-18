@@ -8,7 +8,7 @@ record InputListTurboFrame(int[] InputIds, int[] ExecutionIds) : TurboFrame("inp
     protected override Delegate RenderFunc => async (IServiceProvider serviceProvider) => new Html($"""
           <div class="flex-col flex gap-4" id="inputlistdiv" data-inputids="{InputIdsAsJson}">
           {WarningElements().Render()}
-          {await InputIds.Select(id => new InputTurboFrame(id, ExecutionIds, true)).RenderAsync(serviceProvider)}
+          {await InputIds.Select(id => new InputTurboFrame(id, ExecutionIds, false)).RenderAsync(serviceProvider)}
           </div>
          """);
 

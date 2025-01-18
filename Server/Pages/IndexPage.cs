@@ -22,7 +22,7 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
 
         var inputIds = await queryable
             .OrderByDescending(i => i.CreationTime)
-            .Take(10)
+            .Take(100)
             .Select(t => t.Id).ToArrayAsync();
 
         var tenant = serviceProvider.GetRequiredService<Tenant>();
