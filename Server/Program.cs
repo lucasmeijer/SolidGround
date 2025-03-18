@@ -86,7 +86,9 @@ partial class Program
 
             foreach (var tenant in Tenant.All.OfType<SchrijfEvenMeeTenant>())
             {
-                if (request.Host.Host == "solidground." + tenant.Identifier + ".schrijfevenmee.nl")
+                if (request.Host.Host == $"solidground.{tenant.Identifier}.schrijfevenmee.nl")
+                    return tenant;
+                if (request.Host.Host == $"{tenant.Identifier}.solidground.schrijfevenmee.nl")
                     return tenant;
             }
             
