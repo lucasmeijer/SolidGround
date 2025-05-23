@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +11,13 @@ namespace SolidGround;
 
 public static class LoginEndPoints
 {
+    static string ComputeHash(string input)
+    {
+        using var sha256 = SHA256.Create();
+        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
+        return Convert.ToBase64String(bytes);
+    }
+    
     public static void MapLoginEndPoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/login", (string? RedirectUrl) =>
@@ -17,7 +26,7 @@ public static class LoginEndPoints
         }).AllowAnonymous();
         app.MapPost("/login", async (HttpContext context, [FromForm] string username, [FromForm] string password, [FromForm] string? redirecturl) =>
             {
-                if (password != "1234")
+                if (ComputeHash(password) != "FGBMFUaSHVIrjUl8NzTzHne+Zazxz5p0oLK+dGwaK6s=") //cld
                 {
                     return Results.Unauthorized();
                 }

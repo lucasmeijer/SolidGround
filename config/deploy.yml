@@ -24,7 +24,7 @@ env:
 
 proxy:
   ssl: true
-  host: solidground.flashcards.lucasmeijer.com,huisarts.solidground.schrijfevenmee.nl,assessment.solidground.schrijfevenmee.nl,ggz.solidground.schrijfevenmee.nl,christina.solidground.schrijfevenmee.nl,scintilla.solidground.schrijfevenmee.nl,blauwberg.solidground.schrijfevenmee.nl,hilversum.solidground.schrijfevenmee.nl,hypotheker.solidground.schrijfevenmee.nl,solidground.schrijfevenmee.nl
+  host: solidground.flashcards.lucasmeijer.com,huisarts.solidground.schrijfevenmee.nl,assessment.solidground.schrijfevenmee.nl,ggz.solidground.schrijfevenmee.nl,christina.solidground.schrijfevenmee.nl,scintilla.solidground.schrijfevenmee.nl,blauwberg.solidground.schrijfevenmee.nl,hilversum.solidground.schrijfevenmee.nl,hypotheker.solidground.schrijfevenmee.nl,solidground.schrijfevenmee.nl, solidground.leessimpel.nl
   app_port: 8080
   response_timeout: 600
   healthcheck:
