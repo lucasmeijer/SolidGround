@@ -37,7 +37,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         var webAppFactory = await SetupHorseJokeClientApp();
         var client = webAppFactory.HttpClient;
 
-        var cif = await ExecutionsEndPoints.ClientInfoFor(null, client, true);
+        var cif = await ExecutionsEndPoints.ClientInfoFor(new SchrijfEvenMeeHuisArtsTenant(), client, true);
 
         var expected = new SolidGroundRouteInfo
         {
@@ -56,18 +56,28 @@ public class ExecutionEndpointTests : IntegrationTestBase
                 {
                     Name = "TestEnum",
                     Value = "One",
-                    Options = ["One", "Two", "Three"]
+                    Options =
+                    [
+                        "One",
+                        "Two",
+                        "Three"
+                    ]
                 },
                 new()
                 {
                     Name = "Bool",
                     Value = "false",
-                    Options = ["true", "false"]
+                    Options =
+                    [
+                        "true",
+                        "false"
+                    ]
                 }
             ],
             EvaluationCriteria =
             [
-            ]
+            ],
+            SolidGroundTenantIdentifier = null
         };
 
         Assert.Equivalent(expected, cif);
@@ -119,7 +129,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
         await SetupTestWebApplicationFactory(endpointBuilder =>
         {
             endpointBuilder.MapGet("/joke", (string subject, SolidGroundSessionAccessor accessor) => (impl ?? DefaultJokeImplementation)(accessor, subject))
-                .ExposeToSolidGround<TestVariables>();
+                .ExposeToSolidGround<TestVariables>(null);
         });
 
     async Task<IResult> DefaultJokeImplementation(SolidGroundSessionAccessor accessor, string subject)

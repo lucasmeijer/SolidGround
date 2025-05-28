@@ -245,11 +245,9 @@ static class ExecutionsEndPoints
     }
 
     
-    public static async Task<SolidGroundRouteInfo> ClientInfoFor(Tenant? tenant, HttpClient httpClient, bool isDevelopment)
+    public static async Task<SolidGroundRouteInfo> ClientInfoFor(Tenant tenant, HttpClient httpClient, bool isDevelopment)
     {
-        var s = tenant == null
-            ? ""
-            : (isDevelopment ? tenant.LocalBaseUrl : tenant.BaseUrl);
+        var s = (isDevelopment ? tenant.LocalBaseUrl : tenant.BaseUrl);
         var requestUrl = $"{s}/solidground";
         var routesArray = await httpClient.GetFromJsonAsync<SolidGroundRouteInfo[]>(requestUrl) ?? throw new Exception("No available variables found");
         
