@@ -32,8 +32,7 @@ static class RequestDtoExtensions
 public record SolidGroundSessionAccessor(SolidGroundSession? Session);
 
 public class SolidGroundSession(HttpContext httpContext,
-    IServiceProvider serviceProvider,
-    string apiKey)
+    IServiceProvider serviceProvider)
 {
     SolidGroundBackgroundService SolidGroundBackgroundService { get; } = serviceProvider.GetRequiredService<SolidGroundBackgroundService>(); 
     RequestDto? _reproducingRequest;
@@ -52,7 +51,7 @@ public class SolidGroundSession(HttpContext httpContext,
     public void SetClientAppIdentifier(string clientAppIdentifier) => _clientAppIdentifier = clientAppIdentifier;
     public void SetReproducingRequest(RequestDto request) => _reproducingRequest = request;
 
-    public Task EnqueueSendFeedbackOnPreviousOutput(string clientAppOutputIdentifier, string feedback) =>
+    public Task EnqueueSendFeedbackOnPreviousOutput(string clientAppOutputIdentifier, string feedback, string apiKey) =>
         SolidGroundBackgroundService.Enqueue(new()
         {
             ApiKey = apiKey,
@@ -65,7 +64,7 @@ public class SolidGroundSession(HttpContext httpContext,
             }
         });
 
-    public async Task CompleteAsync(bool allowStorage)
+    public async Task CompleteAsync(bool allowStorage, string apiKey)
     {
         if (IsSolidGroundInitiated)
             throw new ResultException(Results.Json(OutputDto()));
@@ -73,13 +72,13 @@ public class SolidGroundSession(HttpContext httpContext,
         if (allowStorage)
         {
             var reproducingRequest = _reproducingRequest ?? await httpContext.Request.Capture();
-            await SolidGroundBackgroundService.Enqueue(SendRequestFor(reproducingRequest));
+            await SolidGroundBackgroundService.Enqueue(SendRequestFor(reproducingRequest, apiKey));
         }
     }
 
     public bool IsSolidGroundInitiated => httpContext.Request.Headers.TryGetValue(SolidGroundConstants.SolidGroundInitiated, out _);
 
-    SendRequest SendRequestFor(RequestDto capturedRequest) => new()
+    SendRequest SendRequestFor(RequestDto capturedRequest, string apiKey) => new()
     {
         Method = HttpMethod.Post,
         Url = $"/api/input",

@@ -51,13 +51,16 @@ record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_detail
                          """);
     };
 //{await input.Outputs.Select(output => new OutputTurboFrame(output.Id, false)).RenderAsync(serviceProvider)}
-    static Html RenderInputFile(InputFile inputFile, Input input) => new($"""
-                                                                          <div class="w-32 h-32 overflow-hidden">
-                                                                              <a href="{UrlFor(inputFile, input)}" target="_blank">
-                                                                                  <img src="{UrlFor(inputFile, input)}" alt="Your image description" class="w-full h-full object-cover">
-                                                                              </a>
-                                                                          </div>
-                                                                          """);
+    static Html RenderInputFile(InputFile inputFile, Input input)
+    {
+        return new Html($"""
+            <div class="w-32 h-32 overflow-hidden">
+                <a href="{UrlFor(inputFile, input)}" target="_blank">{inputFile.Name} {inputFile.MimeType}
+                    <img src="{UrlFor(inputFile, input)}" alt="Your image description" class="w-full h-full object-cover">
+                </a>
+            </div>
+            """);
+    }
 
     protected override string LazySrc => InputEndPoints.Routes.api_input_id_details.For(InputId);
 

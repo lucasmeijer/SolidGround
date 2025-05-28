@@ -146,6 +146,8 @@ partial class Program
         app.UseResultException();
         
         app.MapGet("/", (AppState appState) => new SolidGroundPage("SolidGround", new IndexPageBodyContent(appState)));
+        
+        app.MapGet("/{input_id}", (AppState appState, string input_id) => new SolidGroundPage("SolidGround", new IndexPageBodyContent(appState)));
 
         app.MapTagsEndPoints();
         app.MapSearchEndPoints();

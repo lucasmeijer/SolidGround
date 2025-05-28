@@ -99,3 +99,9 @@ record SchrijfEvenMeeHilversumTenant : SchrijfEvenMeeTenant
     public override string Identifier => "hilversum";
     public override string ApiKey => "solidground-9c4d2e8f-b5a6-47c9-83d1-5f9e2b4a7c8d";
 }
+
+record SchrijfEvenMeeTranscripts : SchrijfEvenMeeTenant
+{
+    public override string Identifier => "transcripts";
+    public override string ApiKey => "solidground-6f3d2e4b-9a3c-45b1-a6c2-d8e1f0a9c7b3";
+}

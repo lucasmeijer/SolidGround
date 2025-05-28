@@ -122,13 +122,13 @@ public class ExecutionEndpointTests : IntegrationTestBase
                 .ExposeToSolidGround<TestVariables>();
         });
 
-    static async Task<IResult> DefaultJokeImplementation(SolidGroundSessionAccessor accessor, string subject)
+    async Task<IResult> DefaultJokeImplementation(SolidGroundSessionAccessor accessor, string subject)
     {
         var session = accessor.Session ?? throw new ArgumentException("asd");
         var joke = session.GetVariables<TestVariables>().Prompt + " " + subject;
         session.AddResult(joke);
 
-        await session.CompleteAsync(true);
+        await session.CompleteAsync(true, Tenant.ApiKey);
         return Results.Ok(joke);
     }
     
@@ -223,7 +223,7 @@ public class ExecutionEndpointTests : IntegrationTestBase
     Task<WebApplicationUnderTest<int>> SetupTestWebApplicationFactory(Action<IEndpointRouteBuilder>? addEndPoints)
     {
         var builder = WebApplication.CreateBuilder();
-        builder.Services.AddSolidGround(_ => Tenant.ApiKey);
+        builder.Services.AddSolidGround();
         builder.Services.AddRouting();
         
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string>
