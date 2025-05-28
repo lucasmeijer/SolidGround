@@ -56,12 +56,12 @@ record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_detail
         return new Html($"""
             <div class="w-32 h-32 overflow-hidden">
                 <a href="{UrlFor(inputFile, input)}" target="_blank">{inputFile.Name} {inputFile.MimeType}
-                    <img src="{UrlFor(inputFile, input)}" alt="Your image description" class="w-full h-full object-cover">
+          
                 </a>
             </div>
             """);
     }
-
+//        <img src="{UrlFor(inputFile, input)}" alt="Your image description" class="w-full h-full object-cover">
     protected override string LazySrc => InputEndPoints.Routes.api_input_id_details.For(InputId);
 
     static string UrlFor(InputFile inputFile, Input input) => ImagesEndPoints.Routes.images_inputid_imageindex.For(input.Id, inputFile.Index);

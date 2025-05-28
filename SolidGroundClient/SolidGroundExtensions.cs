@@ -13,28 +13,38 @@ class SolidGroundMetadata
 {
     readonly Func<IServiceProvider,SolidGroundVariables> _variablesProvider;
 
-    public SolidGroundMetadata(SolidGroundVariables variables) => _variablesProvider = _ => variables;
+    public SolidGroundMetadata(SolidGroundVariables variables, string? solidGroundTenantIdentifier)
+    {
+        _variablesProvider = _ => variables;
+        SolidGroundTenantIdentifier = solidGroundTenantIdentifier;
+    }
 
-    public SolidGroundMetadata(Func<IServiceProvider,SolidGroundVariables> variablesProvider) => _variablesProvider = variablesProvider;
+    public SolidGroundMetadata(Func<IServiceProvider,SolidGroundVariables> variablesProvider, string? solidGroundTenantIdentifier)
+    {
+        _variablesProvider = variablesProvider;
+        SolidGroundTenantIdentifier = solidGroundTenantIdentifier;
+    }
+
+    public string? SolidGroundTenantIdentifier { get; }
 
     public SolidGroundVariables For(IServiceProvider sp) => _variablesProvider.Invoke(sp);
 }
 
 public static class SolidGroundExtensions
 {
-    public static IEndpointConventionBuilder ExposeToSolidGround<T>(this IEndpointConventionBuilder builder) where T : SolidGroundVariables, new()
+    public static IEndpointConventionBuilder ExposeToSolidGround<T>(this IEndpointConventionBuilder builder, string? tenantIdentifier) where T : SolidGroundVariables, new()
     {
         builder.Add(endpointBuilder =>
         {
-            endpointBuilder.Metadata.Add(new SolidGroundMetadata(new T()));
+            endpointBuilder.Metadata.Add(new SolidGroundMetadata(new T(), tenantIdentifier));
         });
         return builder;
     }
-    public static IEndpointConventionBuilder ExposeToSolidGround(this IEndpointConventionBuilder builder, Func<IServiceProvider,SolidGroundVariables> variablesProvider)
+    public static IEndpointConventionBuilder ExposeToSolidGround(this IEndpointConventionBuilder builder, Func<IServiceProvider,SolidGroundVariables> variablesProvider, string? tenantIdentifier)
     {
         builder.Add(endpointBuilder =>
         {
-            endpointBuilder.Metadata.Add(new SolidGroundMetadata(variablesProvider));
+            endpointBuilder.Metadata.Add(new SolidGroundMetadata(variablesProvider, tenantIdentifier));
         });
         return builder;
     }
@@ -90,14 +100,16 @@ public static class SolidGroundExtensions
                 {
                     Route = routeEndpoint.RoutePattern.RawText!,
                     StringVariables = variables.Properties.Select(p => new StringVariableDto()
-                    {
-                        Name = p.Name,
-                        Value = variables.GetPropertyAsString(p),
-                        Options = variables.GetPropertyOptions(p)
-                    }).ToArray(),
+                        {
+                            Name = p.Name,
+                            Value = variables.GetPropertyAsString(p),
+                            Options = variables.GetPropertyOptions(p)
+                        })
+                        .ToArray(),
                     ApplicationInformation = variables.ApplicationInformation,
                     PromptingGuidelines = variables.PromptingGuidelines,
                     EvaluationCriteria = variables.EvaluationCriteria,
+                    SolidGroundTenantIdentifier = metadata.SolidGroundTenantIdentifier,
                 });
                 
             }

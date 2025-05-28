@@ -64,6 +64,9 @@ record SolidGroundRouteInfo
     [JsonPropertyName("route")] 
     public required string Route { get; init; }
     
+    [JsonPropertyName("solidground_tenantidentifier")] 
+    public required string? SolidGroundTenantIdentifier  { get; init; }
+    
     [JsonPropertyName("application_information")]
     public required string? ApplicationInformation { get; init; }
     

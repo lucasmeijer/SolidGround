@@ -255,8 +255,15 @@ static class ExecutionsEndPoints
         
         if (routesArray.Length == 0)
             throw new ResultException(Results.BadRequest($"No routes found at {requestUrl}"));
-            
-        return routesArray[0];
+
+        if (routesArray.Length == 1)
+            return routesArray[0];
+
+        var matching = routesArray.SingleOrDefault(r => r.SolidGroundTenantIdentifier == tenant.Identifier);
+        if (matching != null)
+            return matching;
+        
+        return routesArray.FirstOrDefault(r => r.SolidGroundTenantIdentifier == null) ?? throw new NotSupportedException("No matching, and no null");
     }
 
     static Uri RequestUrlFor(string baseUrl, Input input)
