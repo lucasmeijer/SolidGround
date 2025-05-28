@@ -25,7 +25,8 @@ public abstract record Tenant
         new SchrijfEvenMeeChristinaTenant(),
         new SchrijfEvenMeeHilversumTenant(),
         new SchrijfEvenMeeBlauwbergTenant(),
-        new SchrijfEvenMeeHypothekerTenant()
+        new SchrijfEvenMeeHypothekerTenant(),
+        new SchrijfEvenMeeTranscripts()
     ];
 } 
 
