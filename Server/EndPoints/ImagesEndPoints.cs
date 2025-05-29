@@ -9,7 +9,7 @@ static class ImagesEndPoints
     [SuppressMessage("ReSharper", "InconsistentNaming")] // ReSharper disable IdentifierTypo
     public static class Routes
     {
-        public static readonly RouteTemplate images_inputid_imageindex = RouteTemplate.Create("/images/{inputId:int}/{imageIndex:int}");
+        public static readonly RouteTemplate images_inputid_imageindex = RouteTemplate.Create("/images/{inputId:int}/{imageIndex:int}/{imageFileName:alpha}");
     }
 
     public static void MapImagesEndPoints(this IEndpointRouteBuilder app)
