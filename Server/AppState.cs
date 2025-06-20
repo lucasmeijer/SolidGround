@@ -26,6 +26,7 @@ public abstract record Tenant
         new SchrijfEvenMeeHilversumTenant(),
         new SchrijfEvenMeeBlauwbergTenant(),
         new SchrijfEvenMeeHypothekerTenant(),
+        new SchrijfEvenMeeHvoTenant(),
         new SchrijfEvenMeeTranscripts()
     ];
 } 
@@ -93,6 +94,12 @@ record SchrijfEvenMeeHypothekerTenant : SchrijfEvenMeeTenant
 {
     public override string Identifier => "hypotheker";
     public override string ApiKey => "solidground-4a3bf824-b846-4402-9f2d-7a6e8cd3f1b1";
+}
+
+record SchrijfEvenMeeHvoTenant : SchrijfEvenMeeTenant
+{
+    public override string Identifier => "hvo";
+    public override string ApiKey => "solidground-7f9e2c41-d658-4b29-8a14-3e5f7b92c8d6";
 }
 
 record SchrijfEvenMeeHilversumTenant : SchrijfEvenMeeTenant
