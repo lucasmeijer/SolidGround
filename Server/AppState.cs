@@ -27,7 +27,8 @@ public abstract record Tenant
         new SchrijfEvenMeeBlauwbergTenant(),
         new SchrijfEvenMeeHypothekerTenant(),
         new SchrijfEvenMeeHvoTenant(),
-        new SchrijfEvenMeeTranscripts()
+        new SchrijfEvenMeeTranscripts(),
+        new SchrijfEvenArthurTenant(),
     ];
 } 
 
@@ -71,6 +72,14 @@ record SchrijfEvenVanillaTenant : SchrijfEvenMeeTenant
     public override string Identifier => "vanilla";
     public override string ApiKey => "solidground-2d8e5f1c-b7a9-4e6f-8c3b-2d9a5f7e4b1c";
 }
+
+record SchrijfEvenArthurTenant : SchrijfEvenMeeTenant
+{
+    public override string BaseUrl => "https://arthur.schrijfevenmee.nl";
+    public override string Identifier => "arthur";
+    public override string ApiKey => "solidground-7f2b9e4a-c1d6-4a8f-9e2c-5b7d8f3a6e9b";
+}
+
 
 record SchrijfEvenMeeScintillaTenant : SchrijfEvenMeeTenant
 {
