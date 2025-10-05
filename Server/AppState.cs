@@ -16,7 +16,7 @@ public abstract record Tenant
     public abstract string LocalBaseUrl { get; }
 
     public static Tenant[] All = [
-        new FlashCardsTenant(), 
+        new FlashCardsTenant(),
         new SchrijfEvenMeeAssessmentTenant(), 
         new SchrijfEvenMeeHuisArtsTenant(),
         new SchrijfEvenVanillaTenant(),
@@ -40,6 +40,16 @@ record FlashCardsTenant : Tenant
     public override string BaseUrl => "https://flashcards.lucasmeijer.com";
     public override string LocalBaseUrl => "https://localhost:7220";
 }
+
+record LeesSimpelTenant : Tenant
+{
+    public override string Identifier => "leessimpel";
+    public override User[] Users => [new("lucas", "aewfah2342342jaoief")];
+    public override string ApiKey => "solidground-7b9d1f3e-5a2c-4e6b-8d0f-2a4c6e8b0d2f";
+    public override string BaseUrl => "https://solidground.leessimpel.nl";
+    public override string LocalBaseUrl => "https://localhost:7220";
+}
+
 
 record SchrijfEvenMeeHuisArtsTenant : SchrijfEvenMeeTenant
 {

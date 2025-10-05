@@ -34,11 +34,10 @@ class SolidGroundApplicationUnderTest : WebApplicationUnderTest<AppDbContext>
         };
 
         //hit the login endpoint so we get assigned a cookie, so all subsequent tests work
-        var httpResponseMessage = await client.PostAsync("/login", new FormUrlEncodedContent(new[]
-        {
+        var httpResponseMessage = await client.PostAsync("/login", new FormUrlEncodedContent([
             new KeyValuePair<string, string>("username", "your-username"),
-            new KeyValuePair<string, string>("password", "1234"),
-        }));
+            new KeyValuePair<string, string>("password", "cldyyd123")
+        ]));
         httpResponseMessage.EnsureSuccessStatusCode();
         // //A succesful login will return .Found for redirect, which is technically not "succesful".
         // Assert.Equal(HttpStatusCode.Found, httpResponseMessage.StatusCode);
