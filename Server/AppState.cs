@@ -17,6 +17,7 @@ public abstract record Tenant
 
     public static Tenant[] All = [
         new FlashCardsTenant(),
+        new LeesSimpelTenant(),
         new SchrijfEvenMeeAssessmentTenant(), 
         new SchrijfEvenMeeHuisArtsTenant(),
         new SchrijfEvenVanillaTenant(),
