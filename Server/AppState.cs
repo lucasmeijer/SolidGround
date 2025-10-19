@@ -47,8 +47,9 @@ record LeesSimpelTenant : Tenant
     public override string Identifier => "leessimpel";
     public override User[] Users => [new("lucas", "aewfah2342342jaoief")];
     public override string ApiKey => "solidground-7b9d1f3e-5a2c-4e6b-8d0f-2a4c6e8b0d2f";
-    public override string BaseUrl => "https://solidground.leessimpel.nl";
-    public override string LocalBaseUrl => "https://localhost:7220";
+    public override string BaseUrl => "https://api.leessimpel.nl";
+    public override string LocalBaseUrl => "https://api.leessimpel.nl";
+    //public override string LocalBaseUrl => "https://localhost:7220";
 }
 
 
