@@ -18,7 +18,21 @@ record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_detail
             .AsSplitQuery()
             .FirstOrDefaultAsync(i => i.Id == InputId) ?? throw new BadHttpRequestException("input not found");
 
-        Html RenderBody() => input.Files.Count > 0 ? new Html() : new($"""
+        Html RenderStrings() => input.Strings.Count == 0 ? new Html() : new($"""
+               <div class="border rounded p-4 bg-white">
+                   <h3 class="font-semibold text-sm mb-3">Form Data</h3>
+                   <div class="space-y-2">
+                       {input.Strings.Render(str => new Html($"""
+                           <div class="text-sm">
+                               <div class="font-medium text-gray-700">{str.Name}</div>
+                               <div class="text-gray-600 mt-1 whitespace-pre-wrap">{str.Value}</div>
+                           </div>
+                       """))}
+                   </div>
+               </div>
+           """);
+
+        Html RenderBody() => input.Files.Count > 0 || input.Strings.Count > 0 ? new Html() : new($"""
                <details class="p-2 border-b last:border-b-0 text-sm group/component">
                    <summary class="cursor-pointer flex justify-between items-center hover:bg-gray-50">
                        <h3 class="font-semibold">RequestBody</h3>
@@ -34,9 +48,10 @@ record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_detail
         
         return new Html($"""
                          <div class="p-4 flex-col flex gap-4">
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-4">
                                  {input.Files.Render(inputFile => RenderInputFile(inputFile, input))}
                              </div>
+                             {RenderStrings()}
                              {RenderBody()}    
                              <div class="flex justify-between">
                                  <div>
@@ -53,15 +68,29 @@ record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_detail
 //{await input.Outputs.Select(output => new OutputTurboFrame(output.Id, false)).RenderAsync(serviceProvider)}
     static Html RenderInputFile(InputFile inputFile, Input input)
     {
-        return new Html($"""
-            <div class="w-32 h-32 overflow-hidden">
-                <a href="{UrlFor(inputFile, input)}" target="_blank">{inputFile.Name} {inputFile.MimeType}
-          
-                </a>
-            </div>
-            """);
+        var isImage = inputFile.MimeType.StartsWith("image/");
+        if (isImage)
+        {
+            return new Html($"""
+                <div class="border rounded overflow-hidden bg-gray-50">
+                    <a href="{UrlFor(inputFile, input)}" target="_blank">
+                        <img src="{UrlFor(inputFile, input)}" alt="{inputFile.Name}" class="max-w-sm max-h-96 object-contain">
+                    </a>
+                    <div class="p-2 text-xs text-gray-600">{inputFile.Name}</div>
+                </div>
+                """);
+        }
+        else
+        {
+            return new Html($"""
+                <div class="border rounded p-4 bg-gray-50">
+                    <a href="{UrlFor(inputFile, input)}" target="_blank" class="text-blue-600 hover:underline">
+                        {inputFile.Name} ({inputFile.MimeType})
+                    </a>
+                </div>
+                """);
+        }
     }
-//        <img src="{UrlFor(inputFile, input)}" alt="Your image description" class="w-full h-full object-cover">
     protected override string LazySrc => InputEndPoints.Routes.api_input_id_details.For(InputId);
 
     static string UrlFor(InputFile inputFile, Input input) => ImagesEndPoints.Routes.images_inputid_imageindex.For(input.Id, inputFile.Index, inputFile.Name);

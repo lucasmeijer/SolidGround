@@ -212,16 +212,14 @@ static class InputEndPoints
         {
             var contentDisposition = ContentDispositionHeaderValue.Parse(section.ContentDisposition);
 
-            var fileName = contentDisposition.FileName.Value ?? throw new ArgumentException("Missing name in content-type");
-            
             if (contentDisposition.IsFileDisposition())
             {
+                var fileName = contentDisposition.FileName.Value ?? throw new ArgumentException("File disposition missing filename");
                 list.Add(new()
                 {
                     Index = fileCounter++,
                     Name = fileName,
-                    MimeType = contentDisposition.DispositionType.Value ??
-                               throw new ArgumentException($"element {fileName} has no disposition-type"),
+                    MimeType = section.ContentType ?? "application/octet-stream",
                     Bytes = await section.Body.ToBytesAsync()
                 });
                 continue;
@@ -229,11 +227,12 @@ static class InputEndPoints
 
             if (contentDisposition.IsFormDisposition())
             {
+                var fieldName = contentDisposition.Name.Value ?? throw new ArgumentException("Form disposition missing name");
                 using var streamReader = new StreamReader(section.Body);
                 inputStrings1.Add(new()
                 {
                     Index = stringCounter++,
-                    Name = fileName,
+                    Name = fieldName,
                     Value = await streamReader.ReadToEndAsync()
                 });
             }
