@@ -12,10 +12,7 @@ volumes:
   - "/persistent_storage_solidground:/persistent_storage"
   
 registry:
-  server: ghcr.io
-  username: lucasmeijer
-  password:
-    - KAMAL_REGISTRY_PASSWORD
+  server: localhost:5555
 
 env:
     clear:
