@@ -27,6 +27,18 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
 
         var tenant = serviceProvider.GetRequiredService<Tenant>();
         var appSnapShot = new AppSnapshot(AppState, inputIds);
+
+        // Show usage report link only for assessment tenant
+        var usageReportLink = tenant is SchrijfEvenMeeAssessmentTenant
+            ? """
+              <div class="bg-white shadow-md rounded-lg p-4">
+                  <a href="/usage-report" class="text-blue-600 hover:text-blue-800 font-medium">
+                      📊 View Usage Report
+                  </a>
+              </div>
+              """
+            : "";
+
         return new($"""
                     <script>
                         window.appSnapshot = JSON.parse(`{JsonSerializer.Serialize(appSnapShot, JsonSerializerOptions.Web)}`);
@@ -35,6 +47,7 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
                         <div class="bg-white shadow-md rounded-lg group flex justify-center items-center p-4 text-lg">
                             SolidGround For {tenant.Identifier}
                         </div>
+                       {usageReportLink}
                        {await new FilterBarTurboFrame(AppState).RenderAsync(serviceProvider)}
                        {await new InputListTurboFrame(inputIds, AppState.Executions).RenderAsync(serviceProvider)}
                     </div>

@@ -97,7 +97,7 @@ partial class Program
                 "solidground.flashcards.lucasmeijer.com" => new FlashCardsTenant(),
                 "solidground.schrijfevenmee.nl" => new SchrijfEvenVanillaTenant(),
                 "solidground.leessimpel.nl" => new LeesSimpelTenant(),
-                "localhost" => new LeesSimpelTenant(),
+                "localhost" => new SchrijfEvenMeeAssessmentTenant(),
                 _ => throw new NotSupportedException("unknown domain: "+request.Host.Host)
             };
         });
@@ -157,6 +157,7 @@ partial class Program
         app.MapImagesEndPoints();
         app.MapExecutionsEndPoints();
         app.MapLoginEndPoints();
+        app.MapUsageReportEndPoints();
         return app;
     }
 }

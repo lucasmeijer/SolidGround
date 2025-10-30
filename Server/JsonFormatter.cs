@@ -9,15 +9,19 @@ public static class JsonFormatter
     {
         if (maybeJson == null)
             return new ("<pre class=\"json-highlight whitespace-pre-wrap break-all\">Null</pre>");
-        try
+        
+        if (maybeJson.Contains('{'))
         {
-            var doc = JsonDocument.Parse(maybeJson);
-            return FormatJsonToHtml(doc);
+            try
+            {
+                var doc = JsonDocument.Parse(maybeJson);
+                return FormatJsonToHtml(doc);
+            }
+            catch (JsonException)
+            {
+            }    
         }
-        catch (JsonException)
-        {
-            return new ($"<pre class=\"json-highlight whitespace-pre-wrap break-all\"><code>{EscapeTags(maybeJson)}</code></pre>");
-        }
+        return new ($"<pre class=\"json-highlight whitespace-pre-wrap break-all\"><code>{EscapeTags(maybeJson)}</code></pre>");
     }
 
     static string EscapeTags(string content)
