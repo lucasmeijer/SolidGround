@@ -1,7 +1,5 @@
 using System.Text;
-using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
-using SolidGround.Pages;
 using TurboFrames;
 
 namespace SolidGround;
@@ -12,10 +10,10 @@ record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_detail
     {
         var input = await db.Inputs
             .Include(i => i.Tags)
-            .Include(i => i.Outputs)
             .Include(i => i.Files)
             .Include(i => i.Strings)
             .AsSplitQuery()
+            .AsNoTracking()
             .FirstOrDefaultAsync(i => i.Id == InputId) ?? throw new BadHttpRequestException("input not found");
 
         Html RenderStrings() => input.Strings.Count == 0 ? new Html() : new($"""
@@ -65,10 +63,12 @@ record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_detail
                          </div>
                          """);
     };
-//{await input.Outputs.Select(output => new OutputTurboFrame(output.Id, false)).RenderAsync(serviceProvider)}
+
     static Html RenderInputFile(InputFile inputFile, Input input)
     {
         var isImage = inputFile.MimeType.StartsWith("image/");
+        var isAudio = inputFile.MimeType.StartsWith("audio/");
+        var isVideo = inputFile.MimeType.StartsWith("video/");
         if (isImage)
         {
             return new Html($"""
@@ -80,16 +80,29 @@ record InputDetailsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_detail
                 </div>
                 """);
         }
-        else
+
+        if (isAudio || isVideo)
         {
+            var mediaElement = isAudio
+                ? $"<audio controls src=\"{UrlFor(inputFile, input)}\" class=\"w-full\"></audio>"
+                : $"<video controls src=\"{UrlFor(inputFile, input)}\" class=\"max-w-sm max-h-96\"></video>";
             return new Html($"""
-                <div class="border rounded p-4 bg-gray-50">
-                    <a href="{UrlFor(inputFile, input)}" target="_blank" class="text-blue-600 hover:underline">
+                <div class="border rounded p-4 bg-gray-50 space-y-2">
+                    {mediaElement}
+                    <a href="{UrlFor(inputFile, input)}" target="_blank" class="text-blue-600 hover:underline text-xs">
                         {inputFile.Name} ({inputFile.MimeType})
                     </a>
                 </div>
                 """);
         }
+
+        return new Html($"""
+            <div class="border rounded p-4 bg-gray-50">
+                <a href="{UrlFor(inputFile, input)}" target="_blank" class="text-blue-600 hover:underline">
+                    {inputFile.Name} ({inputFile.MimeType})
+                </a>
+            </div>
+            """);
     }
     protected override string LazySrc => InputEndPoints.Routes.api_input_id_details.For(InputId);
 

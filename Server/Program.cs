@@ -136,8 +136,6 @@ partial class Program
         app.UseAuthorization();
         app.UseHealthChecks("/up");
 
-        app.UseStaticFiles();
-
         app.UseResultException();
         
         app.MapGet("/", (AppState appState) => new SolidGroundPage("SolidGround", new IndexPageBodyContent(appState)));

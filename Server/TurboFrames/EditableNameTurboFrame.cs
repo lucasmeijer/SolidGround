@@ -15,13 +15,7 @@ abstract record EditableNameTurboFrame(string TurboFrameId, bool EditMode) : Tur
     Html Html(string currentName)
     {
         return !EditMode 
-            ? new Html($"""
-                        <h3 class="font-semibold">
-                            <a href="{EditRoute}" data-turbo-frame="{TurboFrameId}">
-                                {currentName}
-                            </a>
-                        </h3>
-                        """) 
+            ? ReadOnlyContents(TurboFrameId, currentName, EditRoute)
             : new Html($"""
                         <form action="{ChangeNameEndPoint}" method="post" data-controller='formtojson'">
                             <input type="text" name="name" value="{currentName}" />
@@ -30,4 +24,18 @@ abstract record EditableNameTurboFrame(string TurboFrameId, bool EditMode) : Tur
                         </form>
                         """);
     }
+
+    public static Html ReadOnlyFrame(string turboFrameId, string currentName, string editRoute) => new($"""
+                        <turbo-frame id="{turboFrameId}">
+                            {ReadOnlyContents(turboFrameId, currentName, editRoute)}
+                        </turbo-frame>
+                        """);
+
+    static Html ReadOnlyContents(string turboFrameId, string currentName, string editRoute) => new($"""
+                        <h3 class="font-semibold">
+                            <a href="{editRoute}" data-turbo-frame="{turboFrameId}">
+                                {currentName}
+                            </a>
+                        </h3>
+                        """);
 }

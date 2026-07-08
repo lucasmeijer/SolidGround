@@ -4,8 +4,6 @@ using TurboFrames;
 
 namespace SolidGround;
 
-record OutputListItem(int Id, int InputId, string ExecutionName, ExecutionStatus Status, decimal? Cost);
-
 record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameIdFor(OutputId))
 {
     public static string TurboFrameIdFor(int outputId) => $"output_{outputId}";
@@ -18,12 +16,7 @@ record OutputTurboFrame(int OutputId, bool StartOpened) : TurboFrame(TurboFrameI
         var output = await db.Outputs
             .AsNoTracking()
             .Where(o => o.Id == OutputId)
-            .Select(o => new OutputListItem(
-                o.Id,
-                o.InputId,
-                o.Execution.Name ?? "Naamloos",
-                o.Status,
-                o.Cost))
+            .SelectListItems()
             .FirstOrDefaultAsync()
             ?? throw new ResultException(Results.NotFound($"Output {OutputId} not found"));
 

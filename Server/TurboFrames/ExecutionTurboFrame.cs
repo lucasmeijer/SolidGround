@@ -1,25 +1,10 @@
-using Microsoft.EntityFrameworkCore;
 using TurboFrames;
 
 namespace SolidGround;
 
-record ExecutionTurboFrame(int ExecutionId, bool Checked) : TurboFrame(TurboFrameIdFor(ExecutionId))
+static class ExecutionTurboFrame
 {
     public static string TurboFrameIdFor(int executionId) => $"execution_{executionId}";
-    protected override bool SkipTurboFrameTags => true;
-    protected override Delegate RenderFunc => async (AppDbContext db) =>
-    {
-        var execution = ExecutionId == -1
-            ? new ExecutionListItem(-1, "Original")
-            : await db.Executions
-                .AsNoTracking()
-                .Where(e => e.Id == ExecutionId)
-                .Select(e => new ExecutionListItem(e.Id, e.Name ?? TimeHelper.HowMuchTimeAgo(e.StartTime)))
-                .FirstOrDefaultAsync()
-              ?? throw new NotFoundException($"Execution {ExecutionId} not found");
-
-        return RenderSummary(execution, Checked);
-    };
 
     public static Html RenderSummary(ExecutionListItem execution, bool isChecked) => new($"""
           <turbo-frame id="{TurboFrameIdFor(execution.Id)}">
@@ -38,16 +23,10 @@ record ExecutionTurboFrame(int ExecutionId, bool Checked) : TurboFrame(TurboFram
         if (execution.Id == -1)
             return "Original";
 
-        var turboFrameId = $"execution_{execution.Id}_name";
-        return new Html($"""
-                        <turbo-frame id="{turboFrameId}">
-                            <h3 class="font-semibold">
-                                <a href="{ExecutionsEndPoints.Routes.api_executions_id_name_edit.For(execution.Id)}" data-turbo-frame="{turboFrameId}">
-                                    {execution.DisplayName}
-                                </a>
-                            </h3>
-                        </turbo-frame>
-                        """);
+        return EditableNameTurboFrame.ReadOnlyFrame(
+            $"execution_{execution.Id}_name",
+            execution.DisplayName,
+            ExecutionsEndPoints.Routes.api_executions_id_name_edit.For(execution.Id));
     }
 
     static Html CloseButton(int executionId) => new($"""

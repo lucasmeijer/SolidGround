@@ -170,19 +170,25 @@ static class InputEndPoints
             //apparently we're not a form
         }
 
-        var whenAll = await Task.WhenAll(inputDto.TagNames.Select(async tagName =>
+        var tagNames = inputDto.TagNames.Distinct().ToArray();
+        var existingTagsByName = (await db.Tags
+                .Where(t => tagNames.Contains(t.Name))
+                .ToArrayAsync())
+            .GroupBy(t => t.Name)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var tags = tagNames.Select(tagName =>
         {
-            //this is actually not super safe, with name not being unique, but good enough for now.
-            var tag = await db.Tags.FirstOrDefaultAsync(t => t.Name == tagName) ?? new Tag { Name = tagName };
+            var tag = existingTagsByName.GetValueOrDefault(tagName) ?? new Tag { Name = tagName };
             tag.PreventAutoDelete = false;
             return tag;
-        }));
+        }).ToList();
         
         return new()
         {
             Files = inputFiles,
             Name = inputDto.Name,
-            Tags = whenAll.ToList(),
+            Tags = tags,
             Strings = inputStrings,
             OriginalRequest_ContentType = originalRequestContentType,
             OriginalRequest_Body = bodyBase64,

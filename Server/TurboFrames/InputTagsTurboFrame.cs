@@ -10,10 +10,13 @@ record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_tags")
         var input = await db
                         .Inputs
                         .Include(i => i.Tags)
+                        .AsNoTracking()
                         .FirstOrDefaultAsync(i => i.Id == InputId)
                     ?? throw new BadHttpRequestException("input not found");
 
-        var allTags = await db.Tags.ToArrayAsync();
+        var allTags = await db.Tags.AsNoTracking().ToArrayAsync();
+        var inputTagIds = input.Tags.Select(t => t.Id).ToHashSet();
+        var availableTags = allTags.Where(t => !inputTagIds.Contains(t.Id)).ToArray();
         
         return new Html($"""
                          <div class="flex-grow flex flex-wrap items-center gap-2">
@@ -22,7 +25,7 @@ record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_tags")
                          </div>
                          """);
 
-        Html[] RenderAvailableTags() => AvailableTags().Length == 0
+        Html[] RenderAvailableTags() => availableTags.Length == 0
             ? []
             : [
                 new($"""
@@ -35,7 +38,7 @@ record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_tags")
                          method="post" >
                              <select name="{JsonPropertyHelper.JsonNameFor((InputEndPoints.AddTagToInputDto o) => o.TagId)}" class="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                  <option value="0">Select tag</option>
-                                 {AvailableTags().Render(tag => new($"<option value=\"{tag.Id}\">{tag.Name}</option>"))}
+                                 {availableTags.Render(tag => new($"<option value=\"{tag.Id}\">{tag.Name}</option>"))}
                              </select>
                              <div data-formtojson-target="errorMessage" class="error-message"></div>
                          </form>
@@ -55,6 +58,5 @@ record InputTagsTurboFrame(int InputId) : TurboFrame($"input_{InputId}_tags")
                                                 </span>
                                                 """);
 
-        Tag[] AvailableTags() => allTags.Where(at => input.Tags.All(it => it.Id != at.Id)).ToArray();
     };
 }

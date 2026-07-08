@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TurboFrames;
 
@@ -9,8 +8,10 @@ record FilterBarTurboFrame(AppState AppState) : TurboFrame(TurboFrameId)
     public new static string TurboFrameId => "filter_bar";
     protected override Delegate RenderFunc => async (AppDbContext db, IServiceProvider sp) =>
     {
-        var allTags = await db.Tags.ToArrayAsync();
-        var availableTags = allTags.Where(at => AppState.Tags.All(t => t != at.Id)).ToArray();
+        var allTags = await db.Tags.AsNoTracking().ToArrayAsync();
+        var selectedTagIds = AppState.Tags.ToHashSet();
+        var selectedTags = allTags.Where(t => selectedTagIds.Contains(t.Id)).ToArray();
+        var availableTags = allTags.Where(t => !selectedTagIds.Contains(t.Id)).ToArray();
         return new Html($"""
                               <div data-controller="filterbar" class="bg-white shadow-md rounded-lg group flex flex-col p-4">
                                  <div class="flex items-center gap-4 h-16">
@@ -34,7 +35,7 @@ record FilterBarTurboFrame(AppState AppState) : TurboFrame(TurboFrameId)
                                       <span class="text-gray-700 font-semibold">Filter:</span>
                                     
                                       <div class="flex items-center gap-2 flex-none">
-                                          {await AppState.Tags.RenderAsync(RenderExistingTag)}
+                                          {selectedTags.Render(RenderExistingTag)}
                                           <select data-action="change->filterbar#addTagDropdownChanged" class="text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
                                               <option value="">Add tag</option>
                                               {availableTags.Render(t => new($"""<option value="{t.Id}">{t.Name}</option>"""))}
@@ -45,24 +46,15 @@ record FilterBarTurboFrame(AppState AppState) : TurboFrame(TurboFrameId)
                                   {await new FilterBarExecutionsList(AppState.Executions).RenderAsync(sp)}
                              </div>
                          """);
-        /**/
-
-        async Task<Html> RenderExistingTag(int tagId)
-        {
-            var tag = await db.Tags.FindAsync(tagId);
-            if (tag == null) 
-                return "";
-            
-            return new($"""
-                        <span class="inline-flex items-center px-6 h-12 rounded-full text-sm font-medium bg-{tag.Color()}-100 text-{tag.Color()}-800">
-                          {tag.Name}
-                          <button data-action="click->filterbar#removeTag" data-filterbar-tagid-param="{tag.Id}" class="text-{tag.Color()}-400 hover:text-@color-600 focus:outline-none">
-                              <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                              </svg>
-                          </button>
-                        </span>
-                        """);
-        }
+        Html RenderExistingTag(Tag tag) => new($"""
+                    <span class="inline-flex items-center px-6 h-12 rounded-full text-sm font-medium bg-{tag.Color()}-100 text-{tag.Color()}-800">
+                      {tag.Name}
+                      <button data-action="click->filterbar#removeTag" data-filterbar-tagid-param="{tag.Id}" class="text-{tag.Color()}-400 hover:text-@color-600 focus:outline-none">
+                          <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                          </svg>
+                      </button>
+                    </span>
+                    """);
     };
 }

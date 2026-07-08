@@ -32,7 +32,7 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
             .ToArrayAsync();
 
         var inputItems = inputs
-            .Select(i => new InputListItem(i.Id, i.Name ?? TimeHelper.HowMuchTimeAgo(i.CreationTime)))
+            .Select(i => InputListItem.From(i.Id, i.Name, i.CreationTime))
             .ToArray();
         var inputIds = inputItems.Select(i => i.Id).ToArray();
 
@@ -47,12 +47,7 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
                 .OrderBy(o => o.InputId)
                 .ThenBy(o => o.ExecutionId)
                 .ThenBy(o => o.Id)
-                .Select(o => new OutputListItem(
-                    o.Id,
-                    o.InputId,
-                    o.Execution.Name ?? "Naamloos",
-                    o.Status,
-                    o.Cost))
+                .SelectListItems()
                 .ToArrayAsync();
 
         var tenant = serviceProvider.GetRequiredService<Tenant>();

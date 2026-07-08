@@ -1,7 +1,4 @@
-using JetBrains.Annotations;
-using Microsoft.AspNetCore.Html;
-
-namespace SolidGround.Pages;
+namespace SolidGround;
 
 public static class Buttons
 {
