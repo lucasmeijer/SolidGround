@@ -118,13 +118,7 @@ partial class Program
         var app = builder.Build();
         app.MapControllers();
 
-        // {
-        //     using var scope = app.Services.CreateScope();
-        //     var services = scope.ServiceProvider;
-        //     var dbContext = services.GetRequiredService<AppDbContext>();
-        //     if (dbContext.Database.IsRelational())
-        //             dbContext.Database.Migrate();
-        // }
+        MigrateTenantDatabases(app, hardCodedTenant);
 
         if (!app.Environment.IsDevelopment())
         {
@@ -159,6 +153,23 @@ partial class Program
         app.MapLoginEndPoints();
         app.MapUsageReportEndPoints();
         return app;
+    }
+
+    static void MigrateTenantDatabases(WebApplication app, Tenant? hardCodedTenant)
+    {
+        using var scope = app.Services.CreateScope();
+        var databaseConfiguration = scope.ServiceProvider.GetRequiredService<IDatabaseConfigurationForTenant>();
+        var tenants = hardCodedTenant == null ? Tenant.All : [hardCodedTenant];
+
+        foreach (var tenant in tenants)
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+            databaseConfiguration.Configure(optionsBuilder, tenant);
+            using var dbContext = new AppDbContext(optionsBuilder.Options);
+
+            if (dbContext.Database.IsRelational())
+                dbContext.Database.Migrate();
+        }
     }
 }
 
