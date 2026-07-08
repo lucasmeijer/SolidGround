@@ -15,6 +15,7 @@ static class OutputEndPoints
     public static class Routes
     {
         public static readonly RouteTemplate api_outputs_id = RouteTemplate.Create("/api/outputs/{id:int}");
+        public static readonly RouteTemplate api_outputs_id_details = RouteTemplate.Create("/api/outputs/{id:int}/details");
         public static readonly RouteTemplate api_outputs_evaluations_id = RouteTemplate.Create("/api/outputs/evaluations/{id:int}");
         public static readonly RouteTemplate api_feedback = RouteTemplate.Create("/api/feedback");
         public static readonly RouteTemplate api_output_id_prompt = RouteTemplate.Create("/api/outputs/{id:int}/prompt");
@@ -23,6 +24,7 @@ static class OutputEndPoints
     public static void MapOutputEndPoints(this IEndpointRouteBuilder app)
     {
         app.MapGet(Routes.api_outputs_id, (int id) => new OutputTurboFrame(id, true));
+        app.MapGet(Routes.api_outputs_id_details, (int id) => new OutputDetailsTurboFrame(id));
         
         app.MapDelete(Routes.api_outputs_id, async (AppDbContext db, int id) =>
         {
