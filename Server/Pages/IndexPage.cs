@@ -30,6 +30,7 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
             .Select(t => t.Id).ToArrayAsync();
 
         var tenant = serviceProvider.GetRequiredService<Tenant>();
+        var freeDiskSpace = FreeDiskSpaceFor(serviceProvider.GetRequiredService<IConfiguration>());
         var appSnapShot = new AppSnapshot(AppState, inputIds);
 
         // Show usage report link only for assessment tenant
@@ -54,7 +55,38 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
                        {usageReportLink}
                        {await new FilterBarTurboFrame(AppState).RenderAsync(serviceProvider)}
                        {await new InputListTurboFrame(inputIds, AppState.Executions).RenderAsync(serviceProvider)}
+                       <div class="text-center text-xs text-gray-500 py-4">
+                           Free disk space: {freeDiskSpace}
+                       </div>
                     </div>
                     """);
+    }
+
+    static string FreeDiskSpaceFor(IConfiguration configuration)
+    {
+        try
+        {
+            var persistentStorage = Path.GetFullPath(configuration["PERSISTENT_STORAGE"] ?? ".");
+            var root = Path.GetPathRoot(persistentStorage);
+            return root == null ? "unknown" : FormatBytes(new DriveInfo(root).AvailableFreeSpace);
+        }
+        catch
+        {
+            return "unknown";
+        }
+    }
+
+    static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.#} {units[unit]}";
     }
 }

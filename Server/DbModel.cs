@@ -94,6 +94,7 @@ class Tag
     [UsedImplicitly] public int Id { get; set; }
     [MaxLength(200)]
     [UsedImplicitly] public string Name { get; set; } = null!;
+    [UsedImplicitly] public bool PreventAutoDelete { get; set; }
     [UsedImplicitly] public List<Input> Inputs { get; set; } = [];
 }
 

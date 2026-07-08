@@ -14,6 +14,7 @@ public abstract record Tenant
     public abstract string ApiKey { get; }
     public abstract string BaseUrl { get; }
     public abstract string LocalBaseUrl { get; }
+    public virtual int RetentionDays => 90;
 
     public static Tenant[] All = [
         new FlashCardsTenant(),
@@ -130,13 +131,18 @@ record SchrijfEvenMeeHilversumTenant : SchrijfEvenMeeTenant
     public override string ApiKey => "solidground-9c4d2e8f-b5a6-47c9-83d1-5f9e2b4a7c8d";
 }
 
-record SchrijfEvenMeeHilversumTranscriptTenant : SchrijfEvenMeeTenant
+abstract record SchrijfEvenMeeTranscriptTenant : SchrijfEvenMeeTenant
+{
+    public override int RetentionDays => 30;
+}
+
+record SchrijfEvenMeeHilversumTranscriptTenant : SchrijfEvenMeeTranscriptTenant
 {
     public override string Identifier => "hilversumtranscript";
     public override string ApiKey => "solidground-5a17c0b4-3f2d-48a0-91e3-4d88ef29b2d1";
 }
     
-record SchrijfEvenMeeTranscripts : SchrijfEvenMeeTenant
+record SchrijfEvenMeeTranscripts : SchrijfEvenMeeTranscriptTenant
 {
     public override string Identifier => "transcripts";
     public override string ApiKey => "solidground-6f3d2e4b-9a3c-45b1-a6c2-d8e1f0a9c7b3";

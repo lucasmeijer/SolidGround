@@ -28,7 +28,7 @@ static class InputEndPoints
 
     public static void MapInputEndPoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost(Routes.api_input, async (AppDbContext db, [FromBody] InputDto inputDto) =>
+        app.MapPost(Routes.api_input, async (AppDbContext db, Tenant tenant, [FromBody] InputDto inputDto, CancellationToken cancellationToken) =>
             {
                 var input = await InputFor(inputDto, db);
 
@@ -43,7 +43,8 @@ static class InputEndPoints
                     StringVariables = output.StringVariables,
                 });
 
-                int written = await db.SaveChangesAsync();
+                await db.SaveChangesAsync(cancellationToken);
+                await RetentionCleanup.DeleteExpiredInputs(db, tenant, cancellationToken);
 
                 return TypedResults.Created(Routes.api_input_id.For(input.Id));
 
@@ -172,8 +173,9 @@ static class InputEndPoints
         var whenAll = await Task.WhenAll(inputDto.TagNames.Select(async tagName =>
         {
             //this is actually not super safe, with name not being unique, but good enough for now.
-            var tag = await db.Tags.FirstOrDefaultAsync(t => t.Name == tagName);
-            return tag ?? new Tag() { Name = tagName };
+            var tag = await db.Tags.FirstOrDefaultAsync(t => t.Name == tagName) ?? new Tag { Name = tagName };
+            tag.PreventAutoDelete = false;
+            return tag;
         }));
         
         return new()

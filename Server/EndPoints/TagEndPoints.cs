@@ -42,7 +42,7 @@ static class TagEndPoints
                 if (existing != null)
                     return Results.Conflict();
 
-                db.Tags.Add(new Tag { Name = createTagDto.Name });
+                db.Tags.Add(new Tag { Name = createTagDto.Name, PreventAutoDelete = true });
                 await db.SaveChangesAsync();
 
                 httpContext.Response.StatusCode = StatusCodes.Status201Created;
