@@ -18,7 +18,11 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
             .Where(input => input.Tags.Count(t => queryTags.Contains(t.Id)) == queryTags.Length);
             
         if (!string.IsNullOrEmpty(searchString))
-            queryable = queryable.Where(i => EF.Functions.Like(i.Name, $"%{searchString}%"));
+            queryable = queryable.Where(i =>
+                EF.Functions.Like(i.Name, $"%{searchString}%") ||
+                i.Outputs.Any(o =>
+                    EF.Functions.Like(o.ClientAppIdentifier, $"%{searchString}%") ||
+                    o.Components.Any(c => EF.Functions.Like(c.Value, $"%{searchString}%"))));
 
         var inputIds = await queryable
             .OrderByDescending(i => i.CreationTime)
