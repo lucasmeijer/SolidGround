@@ -3,24 +3,14 @@ using TurboFrames;
 
 namespace SolidGround;
 
-record InputListTurboFrame(InputListItem[] Inputs, OutputListItem[] Outputs) : TurboFrame("inputlist")
+record InputListTurboFrame(InputListItem[] Inputs) : TurboFrame("inputlist")
 {
-    protected override Delegate RenderFunc => () =>
-    {
-        var outputsByInput = Outputs
-            .GroupBy(o => o.InputId)
-            .ToDictionary(g => g.Key, g => g.ToArray());
-
-        return new Html($"""
+    protected override Delegate RenderFunc => () => new Html($"""
           <div class="flex-col flex gap-4" id="inputlistdiv" data-inputids="{InputIdsAsJson}">
           {WarningElements().Render()}
-          {Inputs.Render(input => InputTurboFrame.RenderSummary(
-              input,
-              outputsByInput.GetValueOrDefault(input.Id) ?? [],
-              false))}
+          {Inputs.Render(input => InputTurboFrame.RenderSummary(input, false))}
           </div>
          """);
-    };
 
     string InputIdsAsJson => JsonSerializer.Serialize(Inputs.Select(i => i.Id).ToArray());
 

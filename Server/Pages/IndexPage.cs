@@ -36,20 +36,6 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
             .ToArray();
         var inputIds = inputItems.Select(i => i.Id).ToArray();
 
-        var selectedExecutions = AppState.Executions;
-        OutputListItem[] outputItems = inputIds.Length == 0
-            ? []
-            : await appDbContext.Outputs
-                .AsNoTracking()
-                .Where(o => inputIds.Contains(o.InputId) &&
-                            (selectedExecutions.Contains(o.ExecutionId) ||
-                             (selectedExecutions.Contains(-1) && !o.Execution.SolidGroundInitiated)))
-                .OrderBy(o => o.InputId)
-                .ThenBy(o => o.ExecutionId)
-                .ThenBy(o => o.Id)
-                .SelectListItems()
-                .ToArrayAsync();
-
         var tenant = serviceProvider.GetRequiredService<Tenant>();
         var freeDiskSpace = FreeDiskSpaceFor(serviceProvider.GetRequiredService<IConfiguration>());
         var appSnapShot = new AppSnapshot(AppState, inputIds);
@@ -75,7 +61,7 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
                         </div>
                        {usageReportLink}
                        {await new FilterBarTurboFrame(AppState).RenderAsync(serviceProvider)}
-                       {await new InputListTurboFrame(inputItems, outputItems).RenderAsync(serviceProvider)}
+                       {await new InputListTurboFrame(inputItems).RenderAsync(serviceProvider)}
                        <div class="text-center text-xs text-gray-500 py-4">
                            Free disk space: {freeDiskSpace}
                        </div>

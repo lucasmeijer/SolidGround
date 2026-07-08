@@ -23,6 +23,7 @@ static class InputEndPoints
         public static readonly RouteTemplate api_input_id_name_edit = RouteTemplate.Create("/api/input/{id:int}/name/edit");
         public static readonly RouteTemplate api_input_id_tags = RouteTemplate.Create("/api/input/{id:int}/tags");
         public static readonly RouteTemplate api_input_id_tags_tagid = RouteTemplate.Create("/api/input/{id:int}/tags/{tagid:int}");
+        public static readonly RouteTemplate api_input_id_content = RouteTemplate.Create("/api/input/{id:int}/content");
         public static readonly RouteTemplate api_input_id_details = RouteTemplate.Create("/api/input/{id:int}/details");
     }
 
@@ -51,6 +52,7 @@ static class InputEndPoints
             }).DisableAntiforgery()
             .RequireTenantApiKey();
         
+        app.MapGet(Routes.api_input_id_content, (int id) => new InputContentTurboFrame(id));
         app.MapGet(Routes.api_input_id_details, (int id) => new InputDetailsTurboFrame(id));
         app.MapGet(Routes.api_input_id_name, (int id) => new InputNameTurboFrame(id, EditMode:false));
         app.MapGet(Routes.api_input_id_name_edit, (int id) => new InputNameTurboFrame(id, EditMode:true));
