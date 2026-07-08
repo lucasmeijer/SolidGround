@@ -7,13 +7,24 @@ record FilterBarExecutionsList(int[] SelectedExecutions) : TurboFrame(TurboFrame
 {
     public new static string TurboFrameId => "filter_bar_executions_list";
 
-    protected override Delegate RenderFunc => async (AppDbContext db, IServiceProvider sp) =>
+    protected override Delegate RenderFunc => async (AppDbContext db) =>
     {
-        int[] allExecutionIds = [-1,..await db.Executions.Where(e=>e.SolidGroundInitiated).Select(e=>e.Id).ToArrayAsync()];
+        var executions = await db.Executions
+            .AsNoTracking()
+            .Where(e => e.SolidGroundInitiated)
+            .OrderBy(e => e.Id)
+            .Select(e => new { e.Id, e.Name, e.StartTime })
+            .ToArrayAsync();
+
+        ExecutionListItem[] allExecutions =
+        [
+            new(-1, "Original"),
+            ..executions.Select(e => new ExecutionListItem(e.Id, e.Name ?? TimeHelper.HowMuchTimeAgo(e.StartTime)))
+        ];
         
         return new Html($"""
                           <div class="grid grid-cols-4 gap-2">
-                              {await allExecutionIds.Select(id => new ExecutionTurboFrame(id, SelectedExecutions.Contains(id))).RenderAsync(sp)}
+                              {allExecutions.Render(execution => ExecutionTurboFrame.RenderSummary(execution, SelectedExecutions.Contains(execution.Id)))}
                              <button onclick="document.getElementById('new_execution_dialog').showModal()" class="flex rounded-md bg-purple-100 items-center justify-between p-2 h-14">
                                  New execution
                              </button>

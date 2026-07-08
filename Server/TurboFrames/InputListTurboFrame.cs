@@ -3,18 +3,28 @@ using TurboFrames;
 
 namespace SolidGround;
 
-record InputListTurboFrame(int[] InputIds, int[] ExecutionIds) : TurboFrame("inputlist")
+record InputListTurboFrame(InputListItem[] Inputs, OutputListItem[] Outputs) : TurboFrame("inputlist")
 {
-    protected override Delegate RenderFunc => async (IServiceProvider serviceProvider) => new Html($"""
+    protected override Delegate RenderFunc => () =>
+    {
+        var outputsByInput = Outputs
+            .GroupBy(o => o.InputId)
+            .ToDictionary(g => g.Key, g => g.ToArray());
+
+        return new Html($"""
           <div class="flex-col flex gap-4" id="inputlistdiv" data-inputids="{InputIdsAsJson}">
           {WarningElements().Render()}
-          {await InputIds.Select(id => new InputTurboFrame(id, ExecutionIds, false)).RenderAsync(serviceProvider)}
+          {Inputs.Render(input => InputTurboFrame.RenderSummary(
+              input,
+              outputsByInput.GetValueOrDefault(input.Id) ?? [],
+              false))}
           </div>
          """);
+    };
 
-    string InputIdsAsJson => JsonSerializer.Serialize(InputIds);
+    string InputIdsAsJson => JsonSerializer.Serialize(Inputs.Select(i => i.Id).ToArray());
 
-    Html[] WarningElements() => InputIds.Length == 0
+    Html[] WarningElements() => Inputs.Length == 0
         ? [new("""<div class="bg-white shadow-md rounded-lg p-4">No inputs matching this filter.</div>""")]
         : [];
 }

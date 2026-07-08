@@ -13,9 +13,10 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
         var searchString = AppState.Search.Trim();
 
         int[] queryTags = AppState.Tags;
-        var queryable = appDbContext.Inputs
-            .Include(i => i.Tags)
-            .Where(input => input.Tags.Count(t => queryTags.Contains(t.Id)) == queryTags.Length);
+        var queryable = appDbContext.Inputs.AsNoTracking();
+
+        if (queryTags.Length > 0)
+            queryable = queryable.Where(input => input.Tags.Count(t => queryTags.Contains(t.Id)) == queryTags.Length);
             
         if (!string.IsNullOrEmpty(searchString))
             queryable = queryable.Where(i =>
@@ -24,10 +25,35 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
                     EF.Functions.Like(o.ClientAppIdentifier, $"%{searchString}%") ||
                     o.Components.Any(c => EF.Functions.Like(c.Value, $"%{searchString}%"))));
 
-        var inputIds = await queryable
+        var inputs = await queryable
             .OrderByDescending(i => i.CreationTime)
             .Take(100)
-            .Select(t => t.Id).ToArrayAsync();
+            .Select(i => new { i.Id, i.Name, i.CreationTime })
+            .ToArrayAsync();
+
+        var inputItems = inputs
+            .Select(i => new InputListItem(i.Id, i.Name ?? TimeHelper.HowMuchTimeAgo(i.CreationTime)))
+            .ToArray();
+        var inputIds = inputItems.Select(i => i.Id).ToArray();
+
+        var selectedExecutions = AppState.Executions;
+        OutputListItem[] outputItems = inputIds.Length == 0
+            ? []
+            : await appDbContext.Outputs
+                .AsNoTracking()
+                .Where(o => inputIds.Contains(o.InputId) &&
+                            (selectedExecutions.Contains(o.ExecutionId) ||
+                             (selectedExecutions.Contains(-1) && !o.Execution.SolidGroundInitiated)))
+                .OrderBy(o => o.InputId)
+                .ThenBy(o => o.ExecutionId)
+                .ThenBy(o => o.Id)
+                .Select(o => new OutputListItem(
+                    o.Id,
+                    o.InputId,
+                    o.Execution.Name ?? "Naamloos",
+                    o.Status,
+                    o.Cost))
+                .ToArrayAsync();
 
         var tenant = serviceProvider.GetRequiredService<Tenant>();
         var freeDiskSpace = FreeDiskSpaceFor(serviceProvider.GetRequiredService<IConfiguration>());
@@ -54,7 +80,7 @@ record IndexPageBodyContent(AppState AppState) : PageFragment
                         </div>
                        {usageReportLink}
                        {await new FilterBarTurboFrame(AppState).RenderAsync(serviceProvider)}
-                       {await new InputListTurboFrame(inputIds, AppState.Executions).RenderAsync(serviceProvider)}
+                       {await new InputListTurboFrame(inputItems, outputItems).RenderAsync(serviceProvider)}
                        <div class="text-center text-xs text-gray-500 py-4">
                            Free disk space: {freeDiskSpace}
                        </div>
